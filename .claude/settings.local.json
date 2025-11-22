@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(taskkill:*)",
+      "Bash(test:*)",
+      "Bash(python manage.py:*)",
+      "Bash(git ls-remote:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

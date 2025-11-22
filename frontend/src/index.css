@@ -1,0 +1,338 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Cores de tabela Fase I e II adicionadas */
+
+@layer base {
+  :root {
+    --tamanho-fonte-pequeno: 0.875rem;
+    --tamanho-fonte-medio: 1rem;
+    --tamanho-fonte-grande: 1.125rem;
+    --espacamento-xxs: 0.25rem;
+    --espacamento-xs: 0.5rem;
+    --espacamento-sm: 0.75rem;
+    --espacamento-md: 1rem;
+    --espacamento-lg: 1.5rem;
+    --espacamento-xl: 2rem;
+    --raio-borda-padrao: 0.5rem;
+
+    /* Fundos */
+    --cor-fundo: 17 24 39;
+    --cor-superficie: 31 41 55;
+    --cor-superficie-elevada: 45 55 72;
+    --cor-superficie-hover: 55 65 81;
+
+    /* Textos */
+    --cor-texto: 243 244 246;
+    --cor-texto-primario: 243 244 246;
+    --cor-texto-secundario: 209 213 219;
+    --cor-texto-terciario: 156 163 175;
+    --cor-texto-medio: 229 231 235;
+
+    /* Bordas */
+    --cor-borda: 55 65 81;
+    --cor-borda-leve: 45 55 72;
+    --cor-borda-forte: 75 85 99;
+
+    /* Ícones */
+    --cor-icone: 156 163 175;
+
+    /* Texto sobre fundos coloridos */
+    --cor-texto-sobre-destaque: 255 255 255;
+
+    /* Cores de status */
+    --cor-destaque: 129 140 248;
+    --cor-sucesso: 34 197 94;
+    --cor-alerta: 250 204 21;
+    --cor-erro: 248 113 113;
+    --cor-info: 59 130 246;
+
+    /* Gradientes */
+    --cor-brand-gradient-inicio: #818CF8;
+    --cor-brand-gradient-fim: #6366F1;
+
+    /* Fases do TCC */
+    --cor-fase1-cabecalho: 59 130 246;
+    --cor-fase1-linha: 37 99 235;
+    --cor-fase2-cabecalho: 168 85 247;
+    --cor-fase2-linha: 147 51 234;
+
+    --fonte-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  html {
+    background-color: rgb(var(--cor-fundo));
+    color: rgb(var(--cor-texto));
+    font-family: var(--fonte-base);
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: transparent;
+  }
+
+  [data-tema="white"] {
+    /* Fundos */
+    --cor-fundo: 249 250 251;
+    --cor-superficie: 255 255 255;
+    --cor-superficie-elevada: 255 255 255;
+    --cor-superficie-hover: 243 244 246;
+
+    /* Textos */
+    --cor-texto: 17 24 39;
+    --cor-texto-primario: 17 24 39;
+    --cor-texto-secundario: 75 85 99;
+    --cor-texto-terciario: 156 163 175;
+    --cor-texto-medio: 55 65 81;
+
+    /* Bordas */
+    --cor-borda: 229 231 235;
+    --cor-borda-leve: 243 244 246;
+    --cor-borda-forte: 209 213 219;
+
+    /* Ícones */
+    --cor-icone: 156 163 175;
+
+    /* Texto sobre fundos coloridos */
+    --cor-texto-sobre-destaque: 255 255 255;
+
+    /* Cores de status */
+    --cor-destaque: 59 130 246;
+    --cor-sucesso: 34 197 94;
+    --cor-alerta: 234 179 8;
+    --cor-erro: 239 68 68;
+    --cor-info: 59 130 246;
+
+    /* Gradientes */
+    --cor-brand-gradient-inicio: #3B82F6;
+    --cor-brand-gradient-fim: #2563EB;
+
+    /* Fases do TCC */
+    --cor-fase1-cabecalho: 59 130 246;
+    --cor-fase1-linha: 37 99 235;
+    --cor-fase2-cabecalho: 168 85 247;
+    --cor-fase2-linha: 147 51 234;
+  }
+
+  [data-tema="black"] {
+    /* Fundos */
+    --cor-fundo: 0 0 0;
+    --cor-superficie: 17 17 17;
+    --cor-superficie-elevada: 26 26 26;
+    --cor-superficie-hover: 38 38 38;
+
+    /* Textos */
+    --cor-texto: 255 255 255;
+    --cor-texto-primario: 255 255 255;
+    --cor-texto-secundario: 156 163 175;
+    --cor-texto-terciario: 107 114 128;
+    --cor-texto-medio: 209 213 219;
+
+    /* Bordas */
+    --cor-borda: 64 64 64;
+    --cor-borda-leve: 38 38 38;
+    --cor-borda-forte: 82 82 82;
+
+    /* Ícones */
+    --cor-icone: 107 114 128;
+
+    /* Texto sobre fundos coloridos */
+    --cor-texto-sobre-destaque: 255 255 255;
+
+    /* Cores de status */
+    --cor-destaque: 16 185 129;
+    --cor-sucesso: 72 187 120;
+    --cor-alerta: 252 211 77;
+    --cor-erro: 248 113 113;
+    --cor-info: 96 165 250;
+
+    /* Gradientes */
+    --cor-brand-gradient-inicio: #22C55E;
+    --cor-brand-gradient-fim: #047857;
+
+    /* Fases do TCC */
+    --cor-fase1-cabecalho: 30 64 175;
+    --cor-fase1-linha: 37 99 235;
+    --cor-fase2-cabecalho: 126 34 206;
+    --cor-fase2-linha: 147 51 234;
+  }
+
+  [data-tema="dark"] {
+    /* Fundos */
+    --cor-fundo: 17 24 39;
+    --cor-superficie: 31 41 55;
+    --cor-superficie-elevada: 45 55 72;
+    --cor-superficie-hover: 55 65 81;
+
+    /* Textos */
+    --cor-texto: 243 244 246;
+    --cor-texto-primario: 243 244 246;
+    --cor-texto-secundario: 209 213 219;
+    --cor-texto-terciario: 156 163 175;
+    --cor-texto-medio: 229 231 235;
+
+    /* Bordas */
+    --cor-borda: 55 65 81;
+    --cor-borda-leve: 45 55 72;
+    --cor-borda-forte: 75 85 99;
+
+    /* Ícones */
+    --cor-icone: 156 163 175;
+
+    /* Texto sobre fundos coloridos */
+    --cor-texto-sobre-destaque: 255 255 255;
+
+    /* Cores de status */
+    --cor-destaque: 129 140 248;
+    --cor-sucesso: 34 197 94;
+    --cor-alerta: 250 204 21;
+    --cor-erro: 248 113 113;
+    --cor-info: 59 130 246;
+
+    /* Gradientes */
+    --cor-brand-gradient-inicio: #A855F7;
+    --cor-brand-gradient-fim: #6366F1;
+
+    /* Fases do TCC */
+    --cor-fase1-cabecalho: 37 99 235;
+    --cor-fase1-linha: 59 130 246;
+    --cor-fase2-cabecalho: 147 51 234;
+    --cor-fase2-linha: 168 85 247;
+  }
+
+  [data-tema="sigaa"] {
+    /* Fundos */
+    --cor-fundo: 232 238 247;
+    --cor-superficie: 255 255 255;
+    --cor-superficie-elevada: 255 255 255;
+    --cor-superficie-hover: 243 244 246;
+
+    /* Textos */
+    --cor-texto: 51 51 51;
+    --cor-texto-primario: 51 51 51;
+    --cor-texto-secundario: 75 85 99;
+    --cor-texto-terciario: 156 163 175;
+    --cor-texto-medio: 55 65 81;
+
+    /* Bordas */
+    --cor-borda: 209 213 219;
+    --cor-borda-leve: 229 231 235;
+    --cor-borda-forte: 156 163 175;
+
+    /* Ícones */
+    --cor-icone: 156 163 175;
+
+    /* Texto sobre fundos coloridos */
+    --cor-texto-sobre-destaque: 255 255 255;
+
+    /* Cores de status */
+    --cor-destaque: 18 53 91;
+    --cor-sucesso: 34 197 94;
+    --cor-alerta: 250 204 21;
+    --cor-erro: 248 113 113;
+    --cor-info: 37 99 235;
+
+    /* Gradientes */
+    --cor-brand-gradient-inicio: #1B3A6B;
+    --cor-brand-gradient-fim: #102142;
+
+    /* Fases do TCC */
+    --cor-fase1-cabecalho: 191 219 254;
+    --cor-fase1-linha: 239 246 255;
+    --cor-fase2-cabecalho: 233 213 255;
+    --cor-fase2-linha: 250 245 255;
+  }
+
+  [data-tamanho-fonte="pequeno"] {
+    --tamanho-fonte-pequeno: 0.65rem;
+    --tamanho-fonte-medio: 0.80rem;
+    --tamanho-fonte-grande: 0.95rem;
+  }
+
+  [data-tamanho-fonte="medio"] {
+    --tamanho-fonte-pequeno: 0.875rem;
+    --tamanho-fonte-medio: 1rem;
+    --tamanho-fonte-grande: 1.125rem;
+  }
+
+  [data-tamanho-fonte="grande"] {
+    --tamanho-fonte-pequeno: 1.10rem;
+    --tamanho-fonte-medio: 1.25rem;
+    --tamanho-fonte-grande: 1.40rem;
+  }
+
+  [data-familia-fonte="padrao"] {
+    --fonte-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  [data-familia-fonte="serif"] {
+    --fonte-base: 'Georgia', 'Times New Roman', 'Times', serif;
+  }
+
+  [data-familia-fonte="mono"] {
+    --fonte-base: 'Courier New', 'Courier', monospace;
+  }
+
+  /* Corrigir autofill do navegador (senhas salvas) */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    box-shadow: 0 0 0 1000px rgb(var(--cor-superficie)) inset;
+    -webkit-text-fill-color: rgb(var(--cor-texto));
+    caret-color: rgb(var(--cor-texto));
+  }
+
+  input,
+  textarea,
+  select {
+    background-color: rgb(var(--cor-superficie));
+    color: rgb(var(--cor-texto));
+    border-color: rgb(var(--cor-borda));
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgb(var(--cor-texto) / 0.6);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+  }
+
+  /* Corrigir estilos de campos inválidos (previne texto preto em temas escuros) */
+  input:invalid:not(:placeholder-shown),
+  textarea:invalid:not(:placeholder-shown),
+  select:invalid:not(:placeholder-shown) {
+    color: rgb(var(--cor-texto));
+    background-color: rgb(var(--cor-superficie));
+    caret-color: rgb(var(--cor-texto));
+  }
+
+  /* Só mostra borda vermelha quando o formulário tiver classe 'was-validated' */
+  form.was-validated input:invalid:not(:placeholder-shown),
+  form.was-validated input:invalid:focus:not(:placeholder-shown) {
+    border-color: rgb(var(--cor-erro));
+  }
+
+  form.was-validated select:invalid {
+    border-color: rgb(var(--cor-erro));
+  }
+
+  form.was-validated input:invalid:not(:placeholder-shown):focus,
+  form.was-validated textarea:invalid:not(:placeholder-shown):focus,
+  form.was-validated select:invalid:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px rgb(var(--cor-erro));
+  }
+
+  /* Firefox específico */
+  form.was-validated input:-moz-ui-invalid:not(:placeholder-shown),
+  form.was-validated textarea:-moz-ui-invalid:not(:placeholder-shown),
+  form.was-validated select:-moz-ui-invalid {
+    color: rgb(var(--cor-texto));
+    background-color: rgb(var(--cor-superficie));
+    border-color: rgb(var(--cor-erro));
+  }
+}

@@ -1,0 +1,359 @@
+digraph model_graph {
+  // Dotfile by Django-Extensions graph_models
+  // Created: 2025-11-10 20:42
+  // Cli Options: notificacoes --dot -o diagrama_3_notificacoes.dot
+
+  fontname = "Roboto"
+  fontsize = 8
+  splines  = true
+  rankdir = "TB"
+  
+
+  node [
+    fontname = "Roboto"
+    fontsize = 8
+    shape = "plaintext"
+  ]
+
+  edge [
+    fontname = "Roboto"
+    fontsize = 8
+  ]
+
+  // Labels
+
+
+  notificacoes_models_Notificacao [label=<
+    <TABLE BGCOLOR="white" BORDER="1" CELLBORDER="0" CELLSPACING="0">
+    <TR><TD COLSPAN="2" CELLPADDING="5" ALIGN="CENTER" BGCOLOR="#1b563f">
+    <FONT FACE="Roboto" COLOR="white" POINT-SIZE="10"><B>
+    Notificacao
+    </B></FONT></TD></TR>
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto"><B>id</B></FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto"><B>BigAutoField</B></FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT COLOR="#7B7B7B" FACE="Roboto"><B>tcc</B></FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT COLOR="#7B7B7B" FACE="Roboto"><B>ForeignKey (id)</B></FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto"><B>usuario</B></FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto"><B>ForeignKey (id)</B></FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">action_url</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">CharField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">criado_em</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">DateTimeField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">lida</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">lido_em</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">DateTimeField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">mensagem</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">TextField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">metadata</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">JSONField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">prioridade</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">CharField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">tipo</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">CharField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">titulo</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">CharField</FONT>
+    </TD></TR>
+  
+  
+    </TABLE>
+    >]
+
+  notificacoes_models_PreferenciasEmail [label=<
+    <TABLE BGCOLOR="white" BORDER="1" CELLBORDER="0" CELLSPACING="0">
+    <TR><TD COLSPAN="2" CELLPADDING="5" ALIGN="CENTER" BGCOLOR="#1b563f">
+    <FONT FACE="Roboto" COLOR="white" POINT-SIZE="10"><B>
+    PreferenciasEmail
+    </B></FONT></TD></TR>
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto"><B>id</B></FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto"><B>BigAutoField</B></FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto"><B>usuario</B></FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto"><B>OneToOneField (id)</B></FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">aluno_aceitar_convite_orientador</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">aluno_agendamento_defesa</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">aluno_ajuste_monografia</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">aluno_continuidade_aprovada</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">aluno_finalizacao_tcc</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">aluno_resultado_fase_1</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">aluno_termo_disponivel</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">atualizado_em</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">DateTimeField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">coord_avaliacoes_fase1_completas</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">coord_avaliacoes_fase2_completas</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">coord_continuidade_aprovada</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">coord_convite_aluno</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">coord_defesa_agendada</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">coord_monografia_aprovada</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">coord_termo_enviado</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">criado_em</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT COLOR="#7B7B7B" FACE="Roboto">DateTimeField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">prof_continuidade_aprovada</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">prof_finalizacao_tcc</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">prof_lembrete_termo</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">prof_receber_monografia</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+  
+    <TR><TD ALIGN="LEFT" BORDER="0">
+    <FONT FACE="Roboto">prof_resultado_fase_1</FONT>
+    </TD><TD ALIGN="LEFT">
+    <FONT FACE="Roboto">BooleanField</FONT>
+    </TD></TR>
+  
+  
+    </TABLE>
+    >]
+
+
+
+
+  // Relations
+  users_models_Usuario [label=<
+  <TABLE BGCOLOR="white" BORDER="0" CELLBORDER="0" CELLSPACING="0">
+  <TR><TD COLSPAN="2" CELLPADDING="4" ALIGN="CENTER" BGCOLOR="#1b563f">
+  <FONT FACE="Roboto" POINT-SIZE="12" COLOR="white">Usuario</FONT>
+  </TD></TR>
+  </TABLE>
+  >]
+  notificacoes_models_Notificacao -> users_models_Usuario
+  [label=" usuario (notificacoes)"] [arrowhead=none, arrowtail=dot, dir=both];
+  tccs_models_TCC [label=<
+  <TABLE BGCOLOR="white" BORDER="0" CELLBORDER="0" CELLSPACING="0">
+  <TR><TD COLSPAN="2" CELLPADDING="4" ALIGN="CENTER" BGCOLOR="#1b563f">
+  <FONT FACE="Roboto" POINT-SIZE="12" COLOR="white">TCC</FONT>
+  </TD></TR>
+  </TABLE>
+  >]
+  notificacoes_models_Notificacao -> tccs_models_TCC
+  [label=" tcc (notificacoes)"] [arrowhead=none, arrowtail=dot, dir=both];
+  users_models_Usuario [label=<
+  <TABLE BGCOLOR="white" BORDER="0" CELLBORDER="0" CELLSPACING="0">
+  <TR><TD COLSPAN="2" CELLPADDING="4" ALIGN="CENTER" BGCOLOR="#1b563f">
+  <FONT FACE="Roboto" POINT-SIZE="12" COLOR="white">Usuario</FONT>
+  </TD></TR>
+  </TABLE>
+  >]
+  notificacoes_models_PreferenciasEmail -> users_models_Usuario
+  [label=" usuario (preferencias_email)"] [arrowhead=none, arrowtail=none, dir=both];
+
+
+}

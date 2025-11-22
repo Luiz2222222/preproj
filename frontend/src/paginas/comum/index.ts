@@ -1,0 +1,1 @@
+export { ConfiguracoesPreferencias } from './ConfiguracoesPreferencias'

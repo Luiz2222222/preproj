@@ -1,0 +1,303 @@
+import { EtapaTCC, StatusDocumento, TipoDocumento } from '../types/enums';
+import type { TCC, DocumentoTCC } from '../types';
+
+// Definição dos grupos da timeline
+interface GrupoTimeline {
+  id: string;
+  numero: number;
+  label: string;
+}
+
+const GRUPOS_TIMELINE: GrupoTimeline[] = [
+  { id: 'ORIENTACAO', numero: 1, label: 'Orientação' },
+  { id: 'DESENVOLVIMENTO', numero: 2, label: 'Desenvolvimento' },
+  { id: 'FORMACAO_BANCA', numero: 3, label: 'Formação banca - Fase I' },
+  { id: 'AVALIACAO_FASE1', numero: 4, label: 'Avaliação - Fase I' },
+  { id: 'AGENDAMENTO_DEFESA', numero: 5, label: 'Agendamento da defesa' },
+  { id: 'AVALIACAO_FASE2', numero: 6, label: 'Avaliação - Fase II' },
+  { id: 'FINALIZACAO', numero: 7, label: 'Finalização' }
+];
+
+interface TimelineHorizontalDetalhadoProps {
+  tcc: TCC;
+  documentos?: DocumentoTCC[];
+  className?: string;
+}
+
+// Mapear etapa para grupo
+function obterGrupoAtual(etapa: EtapaTCC): string {
+  switch (etapa) {
+    case EtapaTCC.INICIALIZACAO:
+      return 'ORIENTACAO';
+    case EtapaTCC.DESENVOLVIMENTO:
+      return 'DESENVOLVIMENTO';
+    case EtapaTCC.FORMACAO_BANCA_FASE_1:
+      return 'FORMACAO_BANCA';
+    case EtapaTCC.AVALIACAO_FASE_1:
+    case EtapaTCC.VALIDACAO_FASE_1:
+      return 'AVALIACAO_FASE1';
+    case EtapaTCC.AGENDAMENTO_APRESENTACAO:
+      return 'AGENDAMENTO_DEFESA';
+    case EtapaTCC.APRESENTACAO_FASE_2:
+      return 'AVALIACAO_FASE2';
+    case EtapaTCC.APROVADO:
+      return 'FINALIZACAO';
+    case EtapaTCC.ANALISE_FINAL_COORDENADOR:
+    case EtapaTCC.AGUARDANDO_AJUSTES_FINAIS:
+    case EtapaTCC.CONCLUIDO:
+      return 'FINALIZACAO';
+    case EtapaTCC.DESCONTINUADO:
+      return 'DESENVOLVIMENTO';
+    case EtapaTCC.REPROVADO_FASE_1:
+      return 'AVALIACAO_FASE1';
+    case EtapaTCC.REPROVADO_FASE_2:
+      return 'AVALIACAO_FASE2';
+    default:
+      return 'ORIENTACAO';
+  }
+}
+
+// Obter label do sub-estado com lógica completa
+function obterLabelSubEstado(tcc: TCC, documentos: DocumentoTCC[] = []): string {
+  const etapa = tcc.etapa_atual;
+
+  // Calcular monografia mais recente
+  const monografias = documentos.filter(d => d.tipo_documento === TipoDocumento.MONOGRAFIA);
+  const ultimaMonografia = monografias.length > 0
+    ? monografias.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())[0]
+    : null;
+
+  switch (etapa) {
+    // ===== ORIENTAÇÃO =====
+    case EtapaTCC.INICIALIZACAO:
+      return 'Aguardando aceite de solicitação';
+
+    // ===== DESENVOLVIMENTO =====
+    case EtapaTCC.DESENVOLVIMENTO:
+      // Monografia aprovada + termo enviado
+      if (tcc.flag_liberado_avaliacao) {
+        return 'Desenvolvimento escrito concluído';
+      }
+      // Monografia aprovada mas sem termo
+      if (ultimaMonografia?.status === StatusDocumento.APROVADO && tcc.flag_continuidade) {
+        return 'Aguardando envio de solicitação de avaliação';
+      }
+      // Tem monografia mas não foi avaliada
+      if (ultimaMonografia && ultimaMonografia.status === StatusDocumento.PENDENTE) {
+        return 'Aguardando avaliação do orientador';
+      }
+      // Sem monografia
+      if (!ultimaMonografia) {
+        return 'Aguardando envio de TCC';
+      }
+      // Fallback
+      return 'Aguardando Avaliação do Orientador';
+
+    case EtapaTCC.DESCONTINUADO:
+      return 'Descontinuado';
+
+    // ===== FORMAÇÃO BANCA - FASE I =====
+    case EtapaTCC.FORMACAO_BANCA_FASE_1:
+      // TODO: Quando implementar banca_formada no backend, descomentar:
+      // return tcc.banca_formada ? 'Banca Formada' : 'Aguardando Formação da Banca';
+      return 'Aguardando formação da banca';
+
+    // ===== AVALIAÇÃO - FASE I =====
+    case EtapaTCC.AVALIACAO_FASE_1:
+      return 'Banca em avaliação';
+
+    case EtapaTCC.VALIDACAO_FASE_1:
+      return 'Aguardando aprovação da coordenação';
+
+    case EtapaTCC.REPROVADO_FASE_1:
+      return 'Reprovado';
+
+    // ===== AGENDAMENTO DA DEFESA =====
+    case EtapaTCC.AGENDAMENTO_APRESENTACAO:
+      // TODO: Quando implementar data_defesa no backend, descomentar:
+      // if (tcc.data_defesa && tcc.hora_defesa) {
+      //   return `Defesa Agendada ${tcc.data_defesa} ${tcc.hora_defesa}`;
+      // }
+      return 'Aguardando agendamento';
+
+    // ===== AVALIAÇÃO - FASE II =====
+    case EtapaTCC.APRESENTACAO_FASE_2:
+      if (tcc.data_defesa && tcc.hora_defesa) {
+        return `Defesa agendada: ${tcc.data_defesa} às ${tcc.hora_defesa}`;
+      }
+      return 'Aguardando avaliação da defesa';
+
+    case EtapaTCC.APROVADO:
+      return 'Aprovado na defesa';
+
+    case EtapaTCC.REPROVADO_FASE_2:
+      return 'Reprovado';
+
+    // ===== FINALIZAÇÃO =====
+    case EtapaTCC.ANALISE_FINAL_COORDENADOR:
+      return 'Aguardando análise do coordenador';
+
+    case EtapaTCC.AGUARDANDO_AJUSTES_FINAIS:
+      return 'Aguardando ajustes da banca';
+
+    case EtapaTCC.CONCLUIDO:
+      return 'Concluído';
+
+    default:
+      return '';
+  }
+}
+
+// Obter status do grupo
+function obterStatusGrupo(grupoId: string, grupoAtual: string, etapaAtual: EtapaTCC): string {
+  const gruposOrdenados = GRUPOS_TIMELINE.map(g => g.id);
+  const indiceAtual = gruposOrdenados.indexOf(grupoAtual);
+  const indiceGrupo = gruposOrdenados.indexOf(grupoId);
+
+  // Caso especial: se TCC está CONCLUÍDO e o grupo é FINALIZACAO, marcar como concluído (verde)
+  if (etapaAtual === EtapaTCC.CONCLUIDO && grupoId === 'FINALIZACAO') {
+    return 'concluido';
+  }
+
+  if (indiceGrupo === indiceAtual) return 'em_andamento';
+  if (indiceGrupo < indiceAtual) return 'concluido';
+  return 'futuro';
+}
+
+// Cores do ponto baseadas no status
+function getPointColor(status: string): string {
+  switch (status) {
+    case 'concluido':
+      return 'bg-cor-sucesso';
+    case 'em_andamento':
+      return 'bg-cor-alerta';
+    case 'aguardando':
+      return 'bg-cor-alerta';
+    case 'problema':
+      return 'bg-cor-erro';
+    default:
+      return 'bg-cor-borda';
+  }
+}
+
+// Cor do texto baseada no status
+function getTextColor(status: string): string {
+  switch (status) {
+    case 'concluido':
+      return 'text-cor-sucesso';
+    case 'em_andamento':
+      return 'text-cor-alerta';
+    case 'aguardando':
+      return 'text-cor-alerta';
+    case 'problema':
+      return 'text-cor-erro';
+    default:
+      return 'text-cor-borda';
+  }
+}
+
+// Removido: função getStatusIcon não é mais necessária
+// Os círculos sempre exibirão o número da etapa
+
+export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoProps) => {
+  const { tcc, documentos = [], className = '' } = props;
+  const grupoAtual = obterGrupoAtual(tcc.etapa_atual);
+  const subEstadoLabel = obterLabelSubEstado(tcc, documentos);
+
+  return (
+    <div className={`w-full bg-cor-superficie rounded-lg shadow-sm p-6 ${className}`}>
+      {/* Timeline */}
+      <div className="relative">
+        {/* Linha conectora única - não ultrapassa primeiro e último ponto */}
+        <div
+          className="absolute top-6 h-0.5 bg-cor-borda/60"
+          style={{
+            left: 'calc(100% / 14)',
+            right: 'calc(100% / 14)'
+          }}
+        />
+
+        {/* Container para os grupos */}
+        <div className="relative flex justify-between items-start">
+          {GRUPOS_TIMELINE.map((grupo) => {
+            const status = obterStatusGrupo(grupo.id, grupoAtual, tcc.etapa_atual);
+            const isAtual = grupo.id === grupoAtual;
+            const pointColor = getPointColor(status);
+            const textColor = getTextColor(status);
+
+            return (
+              <div
+                key={grupo.id}
+                className="flex flex-col items-center relative"
+                style={{
+                  flex: '0 0 14.28%',
+                  maxWidth: '14.28%'
+                }}
+              >
+                {/* Ponto com número da etapa */}
+                <div className="relative z-10">
+                  <div
+                    className={`
+                      w-12 h-12 rounded-full flex items-center justify-center
+                      ${pointColor} text-white font-bold text-sm
+                      ${isAtual ? 'ring-4 ring-offset-2 ring-cor-borda/30 scale-110' : ''}
+                      transition-all duration-300 transform hover:scale-105
+                    `}
+                  >
+                    {grupo.numero}
+                  </div>
+                </div>
+
+                {/* Label do grupo */}
+                <div className="mt-3 text-center">
+                  <p className={`text-xs font-medium ${textColor} ${isAtual ? 'font-bold' : ''}`}>
+                    {grupo.label}
+                  </p>
+                </div>
+
+                {/* Status embaixo - só para grupos já passados ou atual */}
+                {(status === 'concluido' || isAtual || status === 'problema') && isAtual && subEstadoLabel && (
+                  <div className="mt-2 px-2">
+                    <p className={`text-xs text-center ${
+                      status === 'problema' ? 'text-cor-erro font-semibold' :
+                      isAtual ? 'text-cor-destaque font-medium' :
+                      'text-cor-texto'
+                    }`}>
+                      {subEstadoLabel}
+                    </p>
+                  </div>
+                )}
+
+                {/* Informações adicionais (data de defesa, etc) */}
+                {isAtual && tcc.data_defesa && (grupo.id === 'AGENDAMENTO_DEFESA' || grupo.id === 'AVALIACAO_FASE2') && (
+                  <div className="mt-2 px-2 py-1 bg-cor-destaque/10 rounded-md">
+                    <div className="text-xs text-cor-destaque text-center font-medium">
+                      <div>{tcc.data_defesa}</div>
+                      {tcc.hora_defesa && (
+                        <div>às {tcc.hora_defesa}</div>
+                      )}
+                      {tcc.local_defesa && (
+                        <div className="text-xs text-cor-texto/60 mt-1">
+                          {tcc.local_defesa}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Flag de continuidade confirmada */}
+                {grupo.id === 'DESENVOLVIMENTO' && tcc.flag_continuidade && isAtual && (
+                  <div className="mt-2 flex justify-center">
+                    <span className="inline-flex items-center justify-center px-3 py-1 text-xs bg-cor-sucesso/20 text-cor-sucesso rounded-full font-medium mx-auto">
+                      Continuidade aprovada
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
