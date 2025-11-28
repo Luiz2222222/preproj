@@ -34,6 +34,12 @@ export function SidebarProfessor() {
     return false
   }
 
+  // Pegar o número do badge
+  const getBadgeCount = (path: string): number => {
+    if (path === '/professor/dashboard') return pendingActionsCount
+    return 0
+  }
+
   // Limpar flag quando há novas pendências
   useEffect(() => {
     if (pendingActionsCount > 0) {
@@ -61,7 +67,9 @@ export function SidebarProfessor() {
           <LayoutDashboard className="h-5 w-5" />
           <span>Dashboard</span>
           {shouldShowBadge('/professor/dashboard') && (
-            <span className="absolute right-2 h-2 w-2 bg-[rgb(var(--cor-erro))] rounded-full" />
+            <span className="absolute right-2 min-w-[18px] h-[18px] px-1 bg-[rgb(var(--cor-erro))] rounded-full text-[10px] font-bold text-white flex items-center justify-center">
+              {getBadgeCount('/professor/dashboard') > 9 ? '9+' : getBadgeCount('/professor/dashboard')}
+            </span>
           )}
         </NavLink>
 

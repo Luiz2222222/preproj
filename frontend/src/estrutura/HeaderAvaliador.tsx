@@ -12,7 +12,7 @@ interface HeaderAvaliadorProps {
 export function HeaderAvaliador({ onMenuToggle }: HeaderAvaliadorProps) {
   const navigate = useNavigate();
   const { usuario, logout } = useAutenticacao();
-  const { countNaoLidas } = useNotificacoes();
+  const { countNaoLidas, marcarTodasComoLidas } = useNotificacoes();
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const notificationButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -76,7 +76,12 @@ export function HeaderAvaliador({ onMenuToggle }: HeaderAvaliadorProps) {
           <div className="relative">
             <button
               ref={notificationButtonRef}
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => {
+                if (!showNotifications) {
+                  marcarTodasComoLidas()
+                }
+                setShowNotifications(!showNotifications)
+              }}
               className="relative p-2 hover:bg-cor-fundo rounded-lg transition"
             >
               <Bell className="h-5 w-5 text-cor-texto" />

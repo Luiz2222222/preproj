@@ -164,8 +164,7 @@ export function SolicitacoesPendentes() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))] mb-2">Solicitações Pendentes</h1>
-        <p className="text-[rgb(var(--cor-texto-secundario))]">Gerencie todas as solicitações de orientação dos alunos</p>
+        <h1 className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">Solicitações Pendentes</h1>
       </div>
 
       {/* Barra de busca */}

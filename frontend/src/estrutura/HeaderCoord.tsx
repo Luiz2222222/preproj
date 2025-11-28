@@ -19,7 +19,7 @@ export function HeaderCoord() {
   const navigate = useNavigate()
   const { usuario, logout } = useAutenticacao()
   const { sucesso, erro } = useToast()
-  const { countNaoLidas } = useNotificacoes()
+  const { countNaoLidas, marcarTodasComoLidas } = useNotificacoes()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -92,7 +92,12 @@ export function HeaderCoord() {
             <div className="relative">
               <button
                 ref={notificationButtonRef}
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={() => {
+                  if (!showNotifications) {
+                    marcarTodasComoLidas()
+                  }
+                  setShowNotifications(!showNotifications)
+                }}
                 className="relative p-2 rounded-lg hover:bg-cor-fundo transition-colors"
               >
                 <Bell className="h-5 w-5 text-cor-texto" />

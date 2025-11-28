@@ -661,13 +661,26 @@ export function IniciarTCC() {
                 </div>
               )}
 
-              <div>
-                <p className="text-cor-texto/70 text-sm">Documentos</p>
-                <ul className="text-cor-texto">
-                  {planoDesenvolvimento && <li>- {planoDesenvolvimento.name}</li>}
-                  {termoAceite && <li>- {termoAceite.name}</li>}
-                </ul>
-              </div>
+              {formData.possuiCoorientador && formData.coorientador_nome && (
+                <div>
+                  <p className="text-cor-texto/70 text-sm">Coorientador</p>
+                  <p className="font-medium text-cor-texto">{formData.coorientador_nome}</p>
+                </div>
+              )}
+
+              {planoDesenvolvimento && (
+                <div>
+                  <p className="text-cor-texto/70 text-sm">Plano de desenvolvimento</p>
+                  <p className="font-medium text-cor-texto">{planoDesenvolvimento.name}</p>
+                </div>
+              )}
+
+              {termoAceite && (
+                <div>
+                  <p className="text-cor-texto/70 text-sm">Termo de aceite de orientação</p>
+                  <p className="font-medium text-cor-texto">{termoAceite.name}</p>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3">

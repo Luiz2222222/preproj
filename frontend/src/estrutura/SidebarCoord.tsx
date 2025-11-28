@@ -58,6 +58,14 @@ export function SidebarCoord() {
     return false
   }
 
+  // Pegar o número do badge
+  const getBadgeCount = (path: string): number => {
+    if (path === '/dashboard') return pendingCounts.total
+    if (path === '/solicitacoes') return pendingCounts.solicitacoes
+    if (path === '/tccs') return pendingCounts.tccs
+    return 0
+  }
+
   // Limpar flags quando há novas pendências
   useEffect(() => {
     if (pendingCounts.total > 0) {
@@ -162,7 +170,9 @@ export function SidebarCoord() {
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
                 {item.path && shouldShowBadge(item.path) && (
-                  <span className="absolute right-2 h-2 w-2 bg-[rgb(var(--cor-erro))] rounded-full" />
+                  <span className="absolute right-2 min-w-[18px] h-[18px] px-1 bg-[rgb(var(--cor-erro))] rounded-full text-[10px] font-bold text-white flex items-center justify-center">
+                    {getBadgeCount(item.path) > 9 ? '9+' : getBadgeCount(item.path)}
+                  </span>
                 )}
               </NavLink>
             )}

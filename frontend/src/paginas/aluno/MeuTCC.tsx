@@ -97,13 +97,12 @@ export function MeuTCC() {
             </button>
 
             <div className="flex items-start gap-3">
-              <XCircle className="h-6 w-6 text-[rgb(var(--cor-erro))] flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
                   Solicitação recusada
                 </h3>
                 <p className="text-pequeno text-[rgb(var(--cor-texto-medio))] mb-3">
-                  Sua solicitação de orientação foi recusada pelo coordenador em{' '}
+                  Sua solicitação de orientação foi recusada pela coordenação em{' '}
                   {(() => {
                     const data = new Date(recusa.recusado_em)
                     const dataStr = data.toLocaleDateString('pt-BR', {
@@ -113,18 +112,16 @@ export function MeuTCC() {
                     })
                     const horaStr = data.toLocaleTimeString('pt-BR', {
                       hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit'
+                      minute: '2-digit'
                     })
                     return `${dataStr} ${horaStr}`
                   })()}
                 </p>
-                <div className="bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-erro))]/30 rounded p-3">
-                  <p className="text-pequeno font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
-                    Parecer da coordenação:
-                  </p>
-                  <p className="text-medio text-[rgb(var(--cor-texto-medio))]">{recusa.parecer}</p>
-                </div>
+                {recusa.parecer && (
+                  <div className="bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-erro))]/30 rounded p-3">
+                    <p className="text-medio text-[rgb(var(--cor-texto-medio))]">{recusa.parecer}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

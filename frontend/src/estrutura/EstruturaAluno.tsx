@@ -26,7 +26,7 @@ export function EstruturaAluno({ children }: PropsWithChildren) {
   const navigate = useNavigate()
   const { usuario, logout } = useAutenticacao()
   const { sucesso, erro } = useToast()
-  const { countNaoLidas } = useNotificacoes()
+  const { countNaoLidas, marcarTodasComoLidas } = useNotificacoes()
   const pendingActionsCount = usePendingActionsAluno()
   const [resetando, setResetando] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -57,6 +57,12 @@ export function EstruturaAluno({ children }: PropsWithChildren) {
       return pendingActionsCount > 0 && visited !== 'true'
     }
     return false
+  }
+
+  // Pegar o número do badge
+  const getBadgeCount = (path: string): number => {
+    if (path === '/aluno') return pendingActionsCount
+    return 0
   }
 
   // Limpar flag de visitado quando o contador muda (nova ação pendente)
@@ -170,7 +176,12 @@ export function EstruturaAluno({ children }: PropsWithChildren) {
               <div className="relative">
                 <button
                   ref={notificationButtonRef}
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={() => {
+                    if (!showNotifications) {
+                      marcarTodasComoLidas()
+                    }
+                    setShowNotifications(!showNotifications)
+                  }}
                   className="relative p-2 rounded-lg hover:bg-cor-fundo transition-colors"
                 >
                   <Bell className="h-5 w-5 text-cor-texto" />
@@ -266,7 +277,9 @@ export function EstruturaAluno({ children }: PropsWithChildren) {
                   <Icon className="h-5 w-5" strokeWidth={1.6} />
                   <span>{item.label}</span>
                   {shouldShowBadge(item.path) && (
-                    <span className="absolute right-2 h-2 w-2 bg-[rgb(var(--cor-erro))] rounded-full" />
+                    <span className="absolute right-2 min-w-[18px] h-[18px] px-1 bg-[rgb(var(--cor-erro))] rounded-full text-[10px] font-bold text-white flex items-center justify-center">
+                      {getBadgeCount(item.path) > 9 ? '9+' : getBadgeCount(item.path)}
+                    </span>
                   )}
                 </Link>
               )

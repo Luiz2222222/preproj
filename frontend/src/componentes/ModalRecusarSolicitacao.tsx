@@ -16,24 +16,10 @@ export function ModalRecusarSolicitacao({
   carregando = false
 }: ModalRecusarSolicitacaoProps) {
   const [parecer, setParecer] = useState('')
-  const [erro, setErro] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    const parecerTrimmed = parecer.trim()
-    if (!parecerTrimmed) {
-      setErro('O parecer é obrigatório')
-      return
-    }
-
-    if (parecerTrimmed.length < 10) {
-      setErro('O parecer deve ter no mínimo 10 caracteres')
-      return
-    }
-
-    setErro('')
-    onConfirm(parecerTrimmed)
+    onConfirm(parecer.trim())
   }
 
   return (
@@ -62,45 +48,23 @@ export function ModalRecusarSolicitacao({
         <form onSubmit={handleSubmit} className="p-6">
           <p className="text-[rgb(var(--cor-texto-secundario))] mb-6">
             Você está prestes a recusar a solicitação de orientação de{' '}
-            <strong>{solicitacao.aluno_nome}</strong>. O aluno receberá uma notificação com o
-            parecer que você fornecer abaixo.
+            <strong>{solicitacao.aluno_nome}</strong>.
           </p>
 
           {/* Campo de parecer */}
           <div className="mb-6">
             <label htmlFor="parecer" className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-2">
-              Parecer da Coordenação <span className="text-[rgb(var(--cor-erro))]">*</span>
+              Parecer da Coordenação
             </label>
             <textarea
               id="parecer"
               value={parecer}
-              onChange={(e) => {
-                setParecer(e.target.value)
-                if (erro) setErro('')
-              }}
+              onChange={(e) => setParecer(e.target.value)}
               disabled={carregando}
               rows={5}
-              placeholder="Explique o motivo da recusa. O aluno receberá esta mensagem..."
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-erro))] focus:border-[rgb(var(--cor-erro))] resize-none ${
-                erro ? 'border-[rgb(var(--cor-erro))]' : 'border-[rgb(var(--cor-borda))]'
-              } disabled:opacity-50 disabled:bg-[rgb(var(--cor-superficie-hover))]`}
+              placeholder="Deixe um parecer (opcional)..."
+              className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-erro))] focus:border-[rgb(var(--cor-erro))] resize-none disabled:opacity-50 disabled:bg-[rgb(var(--cor-superficie-hover))]"
             />
-            {erro && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-[rgb(var(--cor-erro))]">
-                <AlertCircle className="h-4 w-4" />
-                <span>{erro}</span>
-              </div>
-            )}
-            <p className="text-xs text-[rgb(var(--cor-texto-terciario))] mt-1">
-              Mínimo de 10 caracteres. Seja claro e objetivo.
-            </p>
-          </div>
-
-          <div className="bg-[rgb(var(--cor-erro))]/10 border border-[rgb(var(--cor-erro))]/30 rounded-lg p-4 mb-6">
-            <p className="text-sm text-[rgb(var(--cor-erro))]">
-              <strong>Atenção:</strong> Esta ação não pode ser desfeita. O TCC voltará para a etapa
-              inicial e o aluno precisará fazer uma nova solicitação.
-            </p>
           </div>
 
           {/* Botões de ação */}
@@ -115,7 +79,7 @@ export function ModalRecusarSolicitacao({
             </button>
             <button
               type="submit"
-              disabled={carregando || !parecer.trim()}
+              disabled={carregando}
               className="flex-1 py-2.5 px-4 bg-[rgb(var(--cor-erro))] text-white rounded-lg hover:bg-[rgb(var(--cor-erro))]/90 disabled:opacity-50 font-medium transition-colors flex items-center justify-center gap-2"
             >
               {carregando ? (

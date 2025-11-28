@@ -400,10 +400,17 @@ export function DashboardCoordenador() {
                   return (
                     <div
                       key={acao.id}
-                      className={`p-3 rounded-lg border hover:shadow-sm transition-all ${bgColor} ${borderColor}`}
+                      onClick={() => {
+                        if (acao.tipo === 'solicitacao' && acao.solicitacaoId) {
+                          handleVerDetalhes(acao.solicitacaoId)
+                        } else if ((acao.tipo === 'banca' || acao.tipo === 'validacao') && acao.tccId) {
+                          handleFormarBanca(acao.tccId)
+                        }
+                      }}
+                      className={`p-3 rounded-lg border hover:shadow-sm transition-all cursor-pointer ${bgColor} ${borderColor}`}
                     >
                       {/* Header simplificado */}
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-cor-texto mb-1">
                             {acao.titulo}
@@ -413,14 +420,7 @@ export function DashboardCoordenador() {
                           </p>
                         </div>
                         <button
-                          onClick={() => {
-                            if (acao.tipo === 'solicitacao' && acao.solicitacaoId) {
-                              handleVerDetalhes(acao.solicitacaoId)
-                            } else if ((acao.tipo === 'banca' || acao.tipo === 'validacao') && acao.tccId) {
-                              handleFormarBanca(acao.tccId)
-                            }
-                          }}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-cor-destaque text-white hover:bg-cor-destaque/90"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-cor-destaque text-white hover:bg-cor-destaque/90 pointer-events-none"
                         >
                           Ir
                           <ArrowRight className="h-3 w-3" />
@@ -441,7 +441,7 @@ export function DashboardCoordenador() {
                     handleFormarBanca(primeiraAcao.tccId)
                   }
                 }}
-                className="w-full px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium shadow-md transition-all bg-cor-alerta text-white hover:bg-cor-alerta/90"
+                className="w-full px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium shadow-md transition-all bg-cor-destaque text-white hover:bg-cor-destaque/90"
               >
                 <AlertCircle className="h-5 w-5" />
                 Ir para a primeira ação da lista ({acoesPendentes.length} pendentes)

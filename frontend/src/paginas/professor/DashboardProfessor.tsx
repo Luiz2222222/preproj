@@ -290,9 +290,10 @@ export function DashboardProfessor() {
                   return (
                     <div
                       key={`mono-${tcc.id}`}
-                      className="p-3 rounded-lg border bg-[rgb(var(--cor-destaque))]/5 border-[rgb(var(--cor-destaque))]/20 hover:shadow-sm transition-all"
+                      onClick={() => handleAvaliarMonografia(tcc.id)}
+                      className="p-3 rounded-lg border bg-[rgb(var(--cor-destaque))]/5 border-[rgb(var(--cor-destaque))]/20 hover:shadow-sm transition-all cursor-pointer"
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
                             Monografia aguardando avaliação
@@ -303,15 +304,9 @@ export function DashboardProfessor() {
                           <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-1">
                             Aluno: {tcc.aluno_dados.nome_completo}
                           </p>
-                          {monografia && (
-                            <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-0.5">
-                              Status: {monografia.status === StatusDocumento.PENDENTE ? 'Pendente' : 'Em análise'}
-                            </p>
-                          )}
                         </div>
                         <button
-                          onClick={() => handleAvaliarMonografia(tcc.id)}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90 pointer-events-none"
                         >
                           Ir
                           <ArrowRight className="h-3 w-3" />
@@ -329,7 +324,7 @@ export function DashboardProfessor() {
                     handleAvaliarMonografia(orientandosComMonografiaPendente[0].id)
                   }
                 }}
-                className="w-full px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium shadow-md transition-all bg-[rgb(var(--cor-alerta))] text-white hover:bg-[rgb(var(--cor-alerta))]/90"
+                className="w-full px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium shadow-md transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90"
               >
                 <AlertCircle className="h-5 w-5" />
                 Ir para a primeira ação da lista ({orientandosComMonografiaPendente.length} pendentes)

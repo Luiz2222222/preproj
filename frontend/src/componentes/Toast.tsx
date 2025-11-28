@@ -85,7 +85,7 @@ export function Toast({ toast, onClose }: ToastProps) {
 
 export function ToastContainer({ children }: { children: React.ReactNode }) {
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 pointer-events-none">
+    <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-3 pointer-events-none">
       <div className="pointer-events-auto flex flex-col gap-3">
         {children}
       </div>

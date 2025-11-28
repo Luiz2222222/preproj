@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAutenticacao } from '../autenticacao'
 import { useMeuTCC, useDocumentosTCC, useCalendarioSemestre } from '../hooks'
-import { FileText, Clock, Plus, Eye, Download, AlertCircle, Calendar, Activity, CheckCircle, Upload } from 'lucide-react'
+import { FileText, Clock, Plus, Eye, Download, AlertCircle, Calendar, Activity, CheckCircle, Upload, X } from 'lucide-react'
 import { EtapaTCC, TipoDocumento, StatusDocumento } from '../types'
 import { SkeletonCard } from '../componentes/Skeleton'
 import { TimelineHorizontalDetalhado, ModalEnviarDocumento } from '../componentes'
@@ -20,7 +20,8 @@ import { formatarDataCurta } from '../utils/datas'
 export function DashboardAluno() {
   useAutenticacao()
   const { sucesso, erro: toastErro } = useToast()
-  const { tcc, carregando, recarregar: recarregarTCC } = useMeuTCC()
+  const { tcc, recusa, carregando, recarregar: recarregarTCC } = useMeuTCC()
+  const [mostrarRecusa, setMostrarRecusa] = useState(true)
   const { calendario } = useCalendarioSemestre()
   const { enviarDocumento, enviando } = useDocumentosTCC({
     tccId: tcc?.id || null,
@@ -151,6 +152,48 @@ export function DashboardAluno() {
 
     return (
       <div>
+        {/* Aviso de solicitação recusada */}
+        {recusa && mostrarRecusa && (
+          <div className="bg-[rgb(var(--cor-erro))]/10 border-2 border-[rgb(var(--cor-erro))]/40 rounded-lg p-5 shadow-sm relative mb-6">
+            <button
+              onClick={() => setMostrarRecusa(false)}
+              className="absolute top-3 right-3 text-[rgb(var(--cor-erro))] hover:text-[rgb(var(--cor-erro))]/80 transition-colors"
+              aria-label="Fechar aviso"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
+                  Solicitação recusada
+                </h3>
+                <p className="text-pequeno text-[rgb(var(--cor-texto-medio))] mb-3">
+                  Sua solicitação de orientação foi recusada pela coordenação em{' '}
+                  {(() => {
+                    const data = new Date(recusa.recusado_em)
+                    const dataStr = data.toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })
+                    const horaStr = data.toLocaleTimeString('pt-BR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                    return `${dataStr} ${horaStr}`
+                  })()}
+                </p>
+                {recusa.parecer && (
+                  <div className="bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-erro))]/30 rounded p-3">
+                    <p className="text-medio text-[rgb(var(--cor-texto-medio))]">{recusa.parecer}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-cor-superficie rounded-lg p-8 shadow text-center">
           <div className="max-w-md mx-auto">
             <FileText className="h-16 w-16 text-cor-destaque mx-auto mb-4" />

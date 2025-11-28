@@ -39,18 +39,9 @@ export function ModalAprovarSolicitacao({
         {/* Conteúdo */}
         <div className="p-6">
           <p className="text-[rgb(var(--cor-texto-secundario))] mb-6">
-            Você está prestes a aprovar a solicitação de orientação de{' '}
-            <strong>{solicitacao.aluno_nome}</strong>. O aluno será vinculado ao professor{' '}
-            <strong>{solicitacao.professor_dados.nome_completo}</strong> e o TCC passará para a
-            etapa de desenvolvimento.
+            Você está prestes a aceitar a solicitação de orientação de{' '}
+            <strong>{solicitacao.aluno_nome}</strong>.
           </p>
-
-          <div className="bg-[rgb(var(--cor-sucesso))]/10 border border-[rgb(var(--cor-sucesso))]/30 rounded-lg p-4 mb-6">
-            <p className="text-sm text-[rgb(var(--cor-sucesso))]">
-              <strong>Atenção:</strong> Esta ação não pode ser desfeita. O TCC será automaticamente
-              atualizado para a etapa de desenvolvimento.
-            </p>
-          </div>
 
           {/* Botões de ação */}
           <div className="flex gap-3">
