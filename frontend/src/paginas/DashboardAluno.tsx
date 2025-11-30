@@ -275,6 +275,28 @@ export function DashboardAluno() {
 
   return (
     <div>
+      {/* Alerta de Monografia Rejeitada */}
+      {ultimaMonografia?.status === StatusDocumento.REJEITADO && (
+        <div className="bg-[rgb(var(--cor-erro))]/10 border-2 border-[rgb(var(--cor-erro))]/40 rounded-lg p-5 shadow-sm mb-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-6 w-6 text-[rgb(var(--cor-erro))] flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
+                Ajustes solicitados pelo orientador
+              </h3>
+              <p className="text-pequeno text-[rgb(var(--cor-texto-medio))]">
+                Sua monografia foi analisada e necessita de correções antes de prosseguir.{ultimaMonografia.feedback && ' Mensagem do orientador:'}
+              </p>
+              {ultimaMonografia.feedback && (
+                <div className="bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-erro))]/30 rounded p-3 mt-2">
+                  <p className="text-medio text-[rgb(var(--cor-texto-medio))]">{ultimaMonografia.feedback}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Grade de 3 Cards de Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Card 1: Ação Pendente */}

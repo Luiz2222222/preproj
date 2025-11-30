@@ -13,7 +13,8 @@ import { Badge } from '../../componentes/Badge'
 import { SkeletonCard, SkeletonList } from '../../componentes/Skeleton'
 import { useToast } from '../../contextos/ToastProvider'
 import { CardStatus } from '../../componentes/CardStatus'
-import { TimelineHorizontalDetalhado, TimelineVerticalEventos, ModalEnviarDocumento } from '../../componentes'
+import { TimelineHorizontalDetalhado, ModalEnviarDocumento } from '../../componentes'
+import { TimelineVerticalDetalhada } from '../../componentes/TimelineVerticalDetalhada'
 import { AlertaPrazo } from '../../componentes/AlertaPrazo'
 import { estaBloqueado, mensagensBloqueio, prazoExpirado } from '../../utils/permissoes'
 
@@ -181,6 +182,28 @@ export function MeuTCC() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {/* Alerta de Monografia Rejeitada */}
+      {ultimaMonografia?.status === StatusDocumento.REJEITADO && (
+        <div className="bg-[rgb(var(--cor-erro))]/10 border-2 border-[rgb(var(--cor-erro))]/40 rounded-lg p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <XCircle className="h-6 w-6 text-[rgb(var(--cor-erro))] flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
+                Ajustes solicitados pelo orientador
+              </h3>
+              <p className="text-pequeno text-[rgb(var(--cor-texto-medio))]">
+                Sua monografia foi analisada e necessita de correções antes de prosseguir.{ultimaMonografia.feedback && ' Mensagem do orientador:'}
+              </p>
+              {ultimaMonografia.feedback && (
+                <div className="bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-erro))]/30 rounded p-3 mt-2">
+                  <p className="text-medio text-[rgb(var(--cor-texto-medio))]">{ultimaMonografia.feedback}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Cabeçalho */}
       <div className="flex items-start justify-between">
         <div>
@@ -333,7 +356,7 @@ export function MeuTCC() {
             documentos={tcc.documentos as any}
           />
         ) : (
-          <TimelineVerticalEventos eventos={eventos} carregando={carregandoEventos} />
+          <TimelineVerticalDetalhada tcc={tcc} eventos={eventos} carregando={carregandoEventos} />
         )}
       </div>
 

@@ -4,13 +4,13 @@
 
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, User, Calendar, FileText, Eye, Download, AlertCircle, CheckCircle, XCircle, Upload, Presentation } from 'lucide-react'
+import { ArrowLeft, User, Calendar, FileText, Download, AlertCircle, CheckCircle, XCircle, Upload, Presentation } from 'lucide-react'
 import { useTCCProfessorDetalhe, useTimelineTCC, useDocumentosTCC, useAcoesProfessor, useAvaliacoesFase2 } from '../../hooks'
-import { EtapaTCCLabels, EtapaTCC, StatusDocumento, TipoDocumento } from '../../types'
+import { EtapaTCCLabels, EtapaTCC, StatusDocumento, TipoDocumento, CursoLabels } from '../../types'
 import FormAgendamentoDefesa from './components/FormAgendamentoDefesa'
 import { Badge } from '../../componentes/Badge'
 import { SkeletonCard, SkeletonList } from '../../componentes/Skeleton'
-import { TimelineVerticalEventos } from '../../componentes'
+import { TimelineVerticalDetalhada } from '../../componentes/TimelineVerticalDetalhada'
 import { AlertaPrazo } from '../../componentes/AlertaPrazo'
 import { useToast } from '../../contextos/ToastProvider'
 import { extrairMensagemErro } from '../../servicos/api'
@@ -28,7 +28,7 @@ export function DetalheOrientandoProfessor() {
   const { usuario } = useAutenticacao()
 
   const { tcc, carregando, erro, naoEncontrado, recarregar } = useTCCProfessorDetalhe(tccId)
-  const { eventos, carregando: carregandoEventos } = useTimelineTCC({
+  const { eventos, carregando: carregandoEventos, recarregar: recarregarEventos } = useTimelineTCC({
     tccId: tcc?.id || null,
     autoCarregar: !!tcc
   })
@@ -92,6 +92,7 @@ export function DetalheOrientandoProfessor() {
       setParecer('')
       await recarregarDocumentos()
       await recarregar()
+      await recarregarEventos()
     } catch (err) {
       toastErro(extrairMensagemErro(err))
     }
@@ -131,6 +132,7 @@ export function DetalheOrientandoProfessor() {
       sucesso('Continuidade confirmada com sucesso!')
       await recarregar()
       await recarregarDocumentos()
+      await recarregarEventos()
     } catch (err) {
       toastErro(extrairMensagemErro(err))
     }
@@ -145,6 +147,7 @@ export function DetalheOrientandoProfessor() {
       setArquivoTermo(null)
       await recarregar()
       await recarregarDocumentos()
+      await recarregarEventos()
     } catch (err) {
       toastErro(extrairMensagemErro(err))
     }
@@ -297,89 +300,85 @@ export function DetalheOrientandoProfessor() {
         </div>
       </div>
 
-      {/* Card de Informações Principais */}
-      <div className="bg-cor-superficie rounded-lg p-6 shadow">
-        <h2 className="font-semibold text-cor-texto mb-4">Informações do Orientando</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Aluno */}
-          {tcc.aluno_dados && (
-            <div>
-              <p className="text-pequeno text-cor-texto opacity-60 mb-1">Aluno</p>
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-cor-destaque" />
-                <p className="text-medio font-semibold text-cor-texto">
-                  {tcc.aluno_dados.nome_completo}
-                </p>
-              </div>
-              {tcc.aluno_dados.email && (
-                <p className="text-pequeno text-cor-texto opacity-60 mt-1">
-                  {tcc.aluno_dados.email}
-                </p>
-              )}
-            </div>
-          )}
 
-          {/* Orientador */}
-          {tcc.orientador_dados && (
-            <div>
-              <p className="text-pequeno text-cor-texto opacity-60 mb-1">Orientador</p>
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-cor-destaque" />
-                <p className="text-medio font-semibold text-cor-texto">
-                  {tcc.orientador_dados.nome_completo}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Coorientador (se houver) */}
-          {tcc.coorientador_nome && (
-            <div>
-              <p className="text-pequeno text-cor-texto opacity-60 mb-1">Coorientador Externo</p>
-              <p className="text-medio text-cor-texto">{tcc.coorientador_nome}</p>
-              {tcc.coorientador_titulacao && (
-                <p className="text-pequeno text-cor-texto opacity-60">
-                  {tcc.coorientador_titulacao}
-                  {tcc.coorientador_afiliacao && ` - ${tcc.coorientador_afiliacao}`}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Datas */}
-          <div>
-            <p className="text-pequeno text-cor-texto opacity-60 mb-1">Criado em</p>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-cor-destaque" />
-              <p className="text-medio text-cor-texto">
-                {new Date(tcc.criado_em).toLocaleDateString('pt-BR')}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Resumo */}
-        {tcc.resumo && (
-          <div className="mt-4 pt-4 border-t border-cor-borda">
-            <p className="text-pequeno text-cor-texto opacity-60 mb-1">Resumo</p>
-            <p className="text-medio text-cor-texto">{tcc.resumo}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Grid de 2 Colunas: Timeline e Documentos */}
+      {/* Grid de 2 Colunas: Informações + Timeline e Documentos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Timeline de Eventos */}
-        <div className="bg-cor-superficie rounded-lg p-6 shadow">
-          <h2 className="font-semibold text-cor-texto mb-4 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-cor-destaque" />
-            Timeline de Eventos
-          </h2>
-          {carregandoEventos ? (
-            <SkeletonList count={4} />
-          ) : (
-            <TimelineVerticalEventos eventos={eventos} carregando={false} />
-          )}
+        {/* Coluna Esquerda: Informações + Timeline */}
+        <div className="space-y-6">
+          {/* Card de Informações do Orientando */}
+          <div className="bg-cor-superficie rounded-lg p-6 shadow">
+            <h2 className="font-semibold text-cor-texto mb-4">Informações do Orientando</h2>
+            <div className="space-y-4">
+              {/* Aluno */}
+              {tcc.aluno_dados && (
+                <div>
+                  <p className="text-pequeno text-cor-texto opacity-60 mb-1">Aluno</p>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-cor-destaque" />
+                    <p className="text-medio font-semibold text-cor-texto">
+                      {tcc.aluno_dados.nome_completo}
+                    </p>
+                  </div>
+                  {tcc.aluno_dados.email && (
+                    <p className="text-pequeno text-cor-texto opacity-60 mt-1">
+                      {tcc.aluno_dados.email}
+                    </p>
+                  )}
+                  {tcc.aluno_dados.curso && (
+                    <p className="text-pequeno text-cor-texto opacity-60 mt-1">
+                      {CursoLabels[tcc.aluno_dados.curso] || tcc.aluno_dados.curso}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Coorientador (se houver) */}
+              {tcc.coorientador_nome && (
+                <div>
+                  <p className="text-pequeno text-cor-texto opacity-60 mb-1">Coorientador Externo</p>
+                  <p className="text-medio text-cor-texto">{tcc.coorientador_nome}</p>
+                  {tcc.coorientador_titulacao && (
+                    <p className="text-pequeno text-cor-texto opacity-60">
+                      {tcc.coorientador_titulacao}
+                      {tcc.coorientador_afiliacao && ` - ${tcc.coorientador_afiliacao}`}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Datas */}
+              <div>
+                <p className="text-pequeno text-cor-texto opacity-60 mb-1">Criado em</p>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-cor-destaque" />
+                  <p className="text-medio text-cor-texto">
+                    {new Date(tcc.criado_em).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Resumo */}
+              {tcc.resumo && (
+                <div className="pt-4 border-t border-cor-borda">
+                  <p className="text-pequeno text-cor-texto opacity-60 mb-1">Resumo</p>
+                  <p className="text-medio text-cor-texto">{tcc.resumo}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Timeline de Eventos */}
+          <div className="bg-cor-superficie rounded-lg p-6 shadow">
+            <h2 className="font-semibold text-cor-texto mb-4 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-cor-destaque" />
+              Timeline de Eventos
+            </h2>
+            {carregandoEventos ? (
+              <SkeletonList count={4} />
+            ) : (
+              <TimelineVerticalDetalhada tcc={tcc} eventos={eventos} carregando={carregandoEventos} />
+            )}
+          </div>
         </div>
 
         {/* Documentos: Monografias e Iniciais (empilhados verticalmente) */}
@@ -520,12 +519,11 @@ export function DetalheOrientandoProfessor() {
                     {doc.arquivo && (
                       <a
                         href={doc.arquivo}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        download
                         className="ml-3 p-2 text-cor-destaque hover:bg-cor-fundo rounded transition-colors"
-                        title="Visualizar"
+                        title="Baixar"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Download className="h-4 w-4" />
                       </a>
                     )}
                   </div>
@@ -659,7 +657,7 @@ export function DetalheOrientandoProfessor() {
                 {documentosMonografia.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between p-3 border border-cor-borda rounded-lg hover:bg-cor-fundo transition-colors"
+                    className="flex items-center justify-between p-3 border border-cor-borda rounded-lg hover:bg-cor-fundo/50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-cor-texto truncate">
@@ -686,44 +684,35 @@ export function DetalheOrientandoProfessor() {
                     </div>
                     <div className="flex items-center gap-2 ml-3">
                       {doc.arquivo && (
-                        <>
-                          <button
-                            onClick={() => window.open(doc.arquivo!, '_blank')}
-                            className="p-2 text-cor-destaque hover:bg-cor-fundo rounded transition-colors"
-                            title="Visualizar"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              const link = document.createElement('a')
-                              link.href = doc.arquivo!
-                              link.download = doc.nome_original
-                              link.click()
-                            }}
-                            className="p-2 text-cor-destaque hover:bg-cor-fundo rounded transition-colors"
-                            title="Baixar"
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                        </>
+                        <button
+                          onClick={() => {
+                            const link = document.createElement('a')
+                            link.href = doc.arquivo!
+                            link.download = doc.nome_original
+                            link.click()
+                          }}
+                          className="p-2 text-cor-destaque hover:bg-cor-fundo rounded transition-colors"
+                          title="Baixar"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
                       )}
                       {/* Botões de Avaliação (apenas para documentos pendentes E dentro do prazo) */}
                       {doc.status === StatusDocumento.PENDENTE && permiteAvaliarMonografia && (
                         <>
                           <button
                             onClick={() => handleAbrirModalAvaliar(doc, 'APROVADO')}
-                            className="p-2 text-[rgb(var(--cor-sucesso))] hover:bg-[rgb(var(--cor-sucesso))]/5 rounded transition-colors"
-                            title="Aprovar"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-[rgb(var(--cor-sucesso))] text-white text-xs rounded-lg hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors font-medium"
                           >
-                            <CheckCircle className="h-4 w-4" />
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Aprovar
                           </button>
                           <button
                             onClick={() => handleAbrirModalAvaliar(doc, 'REJEITADO')}
-                            className="p-2 text-[rgb(var(--cor-erro))] hover:bg-[rgb(var(--cor-erro))]/5 rounded transition-colors"
-                            title="Solicitar Ajustes"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-[rgb(var(--cor-erro))] text-white text-xs rounded-lg hover:bg-[rgb(var(--cor-erro))]/90 transition-colors font-medium"
                           >
-                            <XCircle className="h-4 w-4" />
+                            <XCircle className="h-3.5 w-3.5" />
+                            Ajustes
                           </button>
                         </>
                       )}
@@ -762,12 +751,11 @@ export function DetalheOrientandoProfessor() {
                     {doc.arquivo && (
                       <a
                         href={doc.arquivo}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        download
                         className="ml-3 p-2 text-cor-destaque hover:bg-cor-fundo rounded transition-colors"
-                        title="Visualizar"
+                        title="Baixar"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Download className="h-4 w-4" />
                       </a>
                     )}
                   </div>
@@ -804,18 +792,14 @@ export function DetalheOrientandoProfessor() {
 
             <div className="mb-6">
               <label className="block text-sm font-medium text-cor-texto mb-2">
-                {tipoAvaliacao === 'APROVADO' ? 'Parecer (opcional):' : 'Parecer (obrigatório):'}
+                Mensagem:
               </label>
               <textarea
                 value={parecer}
                 onChange={(e) => setParecer(e.target.value)}
                 className="w-full px-3 py-2 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque bg-cor-fundo text-cor-texto"
                 rows={4}
-                placeholder={
-                  tipoAvaliacao === 'APROVADO'
-                    ? 'Digite um parecer opcional sobre o documento...'
-                    : 'Explique as correções necessárias...'
-                }
+                placeholder="Escreva uma mensagem (opcional)"
               />
             </div>
 
@@ -833,7 +817,7 @@ export function DetalheOrientandoProfessor() {
               </button>
               <button
                 onClick={handleAvaliar}
-                disabled={avaliando || (tipoAvaliacao === 'REJEITADO' && !parecer.trim())}
+                disabled={avaliando}
                 className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 text-white ${
                   tipoAvaliacao === 'APROVADO'
                     ? 'bg-[rgb(var(--cor-sucesso))] hover:bg-[rgb(var(--cor-sucesso))]/90'

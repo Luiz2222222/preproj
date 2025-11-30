@@ -245,13 +245,13 @@ def notificar_documento(sender, instance, created, **kwargs):
             usuario=tcc.aluno,
             tipo=TipoNotificacao.DOCUMENTO_REJEITADO,
             titulo="Documento rejeitado",
-            mensagem=f"Seu documento {instance.tipo_documento} foi rejeitado. Motivo: {instance.observacoes or 'Não informado'}",
+            mensagem=f"Seu documento {instance.tipo_documento} foi rejeitado. Motivo: {instance.feedback or 'Não informado'}",
             action_url="/aluno/meu-tcc",
             metadata={
                 "tcc_id": tcc.id,
                 "documento_id": instance.id,
                 "tipo_doc": instance.tipo_documento,
-                "motivo": instance.observacoes or ""
+                "motivo": instance.feedback or ""
             },
             tcc_id=tcc.id,
             prioridade=PrioridadeNotificacao.ALTA

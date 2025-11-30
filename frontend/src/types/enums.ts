@@ -171,6 +171,12 @@ export const StatusDocumentoLabels: Record<StatusDocumento, string> = {
 };
 
 // Cores para cada etapa (para badges e indicadores visuais)
+// Labels amigáveis para cursos
+export const CursoLabels: Record<string, string> = {
+  'ENGENHARIA_ELETRICA': 'Engenharia Elétrica',
+  'ENGENHARIA_CONTROLE_AUTOMACAO': 'Engenharia de Controle e Automação'
+};
+
 export const EtapaTCCColors: Record<EtapaTCC, string> = {
   [EtapaTCC.INICIALIZACAO]: 'bg-[rgb(var(--cor-borda))]',
   [EtapaTCC.DESENVOLVIMENTO]: 'bg-[rgb(var(--cor-destaque))]',

@@ -22,7 +22,7 @@ import {
   FilePenLine
 } from 'lucide-react'
 import { useTCCsCoordenador, useTimelineTCC } from '../../hooks'
-import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, TipoDocumentoLabels } from '../../types/enums'
+import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, TipoDocumentoLabels, CursoLabels } from '../../types/enums'
 import type { TCC } from '../../types'
 import { TimelineVerticalDetalhada } from '../../componentes/TimelineVerticalDetalhada'
 import { FormacaoBancaFase1 } from './components/FormacaoBancaFase1'
@@ -200,7 +200,7 @@ export function TCCDetalhe() {
             </div>
             <div>
               <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">Curso</p>
-              <p className="font-medium text-[rgb(var(--cor-texto-primario))]">{tcc.aluno_dados?.curso || 'N/A'}</p>
+              <p className="font-medium text-[rgb(var(--cor-texto-primario))]">{tcc.aluno_dados?.curso ? CursoLabels[tcc.aluno_dados.curso] || tcc.aluno_dados.curso : 'N/A'}</p>
             </div>
           </div>
         </div>

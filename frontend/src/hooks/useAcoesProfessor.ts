@@ -35,7 +35,7 @@ export function useAcoesProfessor(): UseAcoesProfessorReturn {
 
       await api.patch(`/documentos/${documentoId}/`, {
         status,
-        parecer
+        feedback: parecer
       })
     } catch (err) {
       if (axios.isAxiosError(err)) {

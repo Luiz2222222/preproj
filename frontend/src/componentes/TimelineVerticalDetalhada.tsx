@@ -172,29 +172,6 @@ export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carrega
 
   return (
     <div className="w-full">
-      {/* Cabeçalho */}
-      <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-2">
-          Acompanhamento Detalhado do TCC
-        </h3>
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Visualização completa de todas as etapas e sub-etapas
-          </p>
-          <span className="text-sm font-medium text-gray-700">
-            {estadoAtual.progresso}% Concluído
-          </span>
-        </div>
-
-        {/* Barra de progresso */}
-        <div className="mt-3 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out"
-            style={{ width: `${estadoAtual.progresso}%` }}
-          />
-        </div>
-      </div>
-
       {/* Timeline Vertical */}
       <div className="relative">
         {/* Linha vertical conectora */}
