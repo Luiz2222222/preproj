@@ -103,7 +103,7 @@ function obterLabelSubEstado(tcc: TCC, documentos: DocumentoTCC[] = []): string 
       return 'Aguardando envio de TCC';
 
     case EtapaTCC.DESCONTINUADO:
-      return 'Descontinuado';
+      return 'TCC descontinuado';
 
     // ===== FORMAÇÃO BANCA - FASE I =====
     case EtapaTCC.FORMACAO_BANCA_FASE_1:
@@ -166,6 +166,11 @@ function obterStatusGrupo(grupoId: string, grupoAtual: string, etapaAtual: Etapa
   // Caso especial: se TCC está CONCLUÍDO e o grupo é FINALIZACAO, marcar como concluído (verde)
   if (etapaAtual === EtapaTCC.CONCLUIDO && grupoId === 'FINALIZACAO') {
     return 'concluido';
+  }
+
+  // Caso especial: se TCC está DESCONTINUADO e o grupo é DESENVOLVIMENTO, marcar como problema (vermelho)
+  if (etapaAtual === EtapaTCC.DESCONTINUADO && grupoId === 'DESENVOLVIMENTO') {
+    return 'problema';
   }
 
   if (indiceGrupo === indiceAtual) return 'em_andamento';
@@ -308,8 +313,8 @@ export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoPr
                   </div>
                 )}
 
-                {/* Flag de continuidade confirmada */}
-                {grupo.id === 'DESENVOLVIMENTO' && tcc.flag_continuidade && isAtual && (
+                {/* Flag de continuidade confirmada - não mostrar se descontinuado */}
+                {grupo.id === 'DESENVOLVIMENTO' && tcc.flag_continuidade && isAtual && tcc.etapa_atual !== EtapaTCC.DESCONTINUADO && (
                   <div className="mt-2 flex justify-center">
                     <span className="inline-flex items-center justify-center px-3 py-1 text-xs bg-cor-sucesso/20 text-cor-sucesso rounded-full font-medium mx-auto text-center">
                       Continuidade aprovada
@@ -317,8 +322,8 @@ export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoPr
                   </div>
                 )}
 
-                {/* Flag de continuidade pendente - quando monografia aprovada mas continuidade não confirmada */}
-                {grupo.id === 'DESENVOLVIMENTO' && continuidadePendente && isAtual && (
+                {/* Flag de continuidade pendente - não mostrar se descontinuado */}
+                {grupo.id === 'DESENVOLVIMENTO' && continuidadePendente && isAtual && tcc.etapa_atual !== EtapaTCC.DESCONTINUADO && (
                   <div className="mt-2 flex justify-center">
                     <span className="inline-flex items-center justify-center px-3 py-1 text-xs bg-cor-alerta/20 text-cor-alerta rounded-full font-medium mx-auto text-center">
                       Aguardando confirmação de continuidade

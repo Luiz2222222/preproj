@@ -15,6 +15,9 @@ interface UseAcoesProfessorReturn {
   confirmarContinuidade: (tccId: number) => Promise<void>
   confirmandoContinuidade: boolean
   erroContinuidade: string | null
+  rejeitarContinuidade: (tccId: number) => Promise<void>
+  rejeitandoContinuidade: boolean
+  erroRejeicaoContinuidade: string | null
   enviarTermoAvaliacao: (tccId: number, arquivo: File) => Promise<void>
   enviandoTermo: boolean
   erroTermo: string | null
@@ -25,6 +28,8 @@ export function useAcoesProfessor(): UseAcoesProfessorReturn {
   const [erro, setErro] = useState<string | null>(null)
   const [confirmandoContinuidade, setConfirmandoContinuidade] = useState(false)
   const [erroContinuidade, setErroContinuidade] = useState<string | null>(null)
+  const [rejeitandoContinuidade, setRejeitandoContinuidade] = useState(false)
+  const [erroRejeicaoContinuidade, setErroRejeicaoContinuidade] = useState<string | null>(null)
   const [enviandoTermo, setEnviandoTermo] = useState(false)
   const [erroTermo, setErroTermo] = useState<string | null>(null)
 
@@ -71,6 +76,26 @@ export function useAcoesProfessor(): UseAcoesProfessorReturn {
     }
   }
 
+  const rejeitarContinuidade = async (tccId: number) => {
+    try {
+      setRejeitandoContinuidade(true)
+      setErroRejeicaoContinuidade(null)
+
+      await api.post(`/tccs/${tccId}/rejeitar_continuidade/`)
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const mensagem = err.response?.data?.detail || 'Erro ao rejeitar continuidade'
+        setErroRejeicaoContinuidade(mensagem)
+        throw new Error(mensagem)
+      } else {
+        setErroRejeicaoContinuidade('Erro desconhecido ao rejeitar continuidade')
+        throw err
+      }
+    } finally {
+      setRejeitandoContinuidade(false)
+    }
+  }
+
   const enviarTermoAvaliacao = async (tccId: number, arquivo: File) => {
     try {
       setEnviandoTermo(true)
@@ -105,6 +130,9 @@ export function useAcoesProfessor(): UseAcoesProfessorReturn {
     confirmarContinuidade,
     confirmandoContinuidade,
     erroContinuidade,
+    rejeitarContinuidade,
+    rejeitandoContinuidade,
+    erroRejeicaoContinuidade,
     enviarTermoAvaliacao,
     enviandoTermo,
     erroTermo

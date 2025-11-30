@@ -241,9 +241,6 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
               <UserPlus className="h-5 w-5" />
               <span className="font-medium">Formar banca</span>
             </button>
-            <p className="mt-2 text-xs text-[rgb(var(--cor-texto-secundario))] text-center">
-              Clique para selecionar os professores avaliadores da banca
-            </p>
           </div>
         )}
 

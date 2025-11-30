@@ -41,6 +41,8 @@ export function DetalheOrientandoProfessor() {
     avaliando,
     confirmarContinuidade,
     confirmandoContinuidade,
+    rejeitarContinuidade,
+    rejeitandoContinuidade,
     enviarTermoAvaliacao,
     enviandoTermo
   } = useAcoesProfessor()
@@ -130,6 +132,20 @@ export function DetalheOrientandoProfessor() {
     try {
       await confirmarContinuidade(tcc.id)
       sucesso('Continuidade confirmada com sucesso!')
+      await recarregar()
+      await recarregarDocumentos()
+      await recarregarEventos()
+    } catch (err) {
+      toastErro(extrairMensagemErro(err))
+    }
+  }
+
+  const handleRejeitarContinuidade = async () => {
+    if (!tcc) return
+
+    try {
+      await rejeitarContinuidade(tcc.id)
+      sucesso('Continuidade rejeitada. O TCC foi descontinuado.')
       await recarregar()
       await recarregarDocumentos()
       await recarregarEventos()
@@ -489,16 +505,16 @@ export function DetalheOrientandoProfessor() {
               </div>
             </div>
 
-            {/* Informações */}
-            <div className="bg-cor-fundo p-3 rounded-lg mb-4">
-              <p className="text-xs text-cor-texto opacity-75">
-                {avaliacaoLiberada
-                  ? 'O termo de solicitação de avaliação foi enviado. O TCC foi liberado para formação de banca (Fase 1).'
-                  : continuidadeConfirmada
-                  ? 'Envie o termo de solicitação de avaliação para liberar o TCC para a fase de avaliação.'
-                  : 'Confirme a continuidade do orientando antes de enviar o termo.'}
-              </p>
-            </div>
+            {/* Informações - só mostra se avaliação ainda não foi liberada */}
+            {!avaliacaoLiberada && (
+              <div className="bg-cor-fundo p-3 rounded-lg mb-4">
+                <p className="text-xs text-cor-texto opacity-75">
+                  {continuidadeConfirmada
+                    ? 'Envie o termo de solicitação de avaliação para liberar o TCC para a fase de avaliação.'
+                    : 'Confirme a continuidade do orientando antes de enviar o termo.'}
+                </p>
+              </div>
+            )}
 
             {/* Documento enviado ou upload inline */}
             {avaliacaoLiberada && documentosTermo.length > 0 ? (
@@ -603,15 +619,24 @@ export function DetalheOrientandoProfessor() {
               </div>
             </div>
 
-            {/* Botão */}
+            {/* Botões de Confirmar e Rejeitar */}
             {!continuidadeConfirmada && (
-              <button
-                onClick={handleConfirmarContinuidade}
-                disabled={confirmandoContinuidade}
-                className="w-full px-4 py-2 bg-[rgb(var(--cor-sucesso))] text-white rounded-lg hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors disabled:opacity-50 font-medium"
-              >
-                {confirmandoContinuidade ? 'Confirmando...' : 'Confirmar Continuidade'}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleConfirmarContinuidade}
+                  disabled={confirmandoContinuidade || rejeitandoContinuidade}
+                  className="flex-1 px-4 py-2 bg-[rgb(var(--cor-sucesso))] text-white rounded-lg hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors disabled:opacity-50 font-medium"
+                >
+                  {confirmandoContinuidade ? 'Confirmando...' : 'Confirmar Continuidade'}
+                </button>
+                <button
+                  onClick={handleRejeitarContinuidade}
+                  disabled={confirmandoContinuidade || rejeitandoContinuidade}
+                  className="flex-1 px-4 py-2 bg-[rgb(var(--cor-erro))] text-white rounded-lg hover:bg-[rgb(var(--cor-erro))]/90 transition-colors disabled:opacity-50 font-medium"
+                >
+                  {rejeitandoContinuidade ? 'Rejeitando...' : 'Rejeitar Continuidade'}
+                </button>
+              </div>
             )}
           </div>
           )}

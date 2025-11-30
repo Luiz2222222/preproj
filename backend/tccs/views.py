@@ -572,6 +572,95 @@ class TCCViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], permission_classes=[IsProfessorOrCoordenador])
+    def rejeitar_continuidade(self, request, pk=None):
+        """
+        POST /api/tccs/{id}/rejeitar_continuidade/
+        Professor/Coorientador rejeita continuidade do aluno no TCC.
+        Move o TCC para DESCONTINUADO.
+        """
+        tcc = self.get_object()
+        usuario = request.user
+
+        # Validar que usuario é orientador ou coorientador
+        if tcc.orientador != usuario and tcc.coorientador != usuario:
+            return Response(
+                {'detail': 'Apenas orientador ou coorientador pode rejeitar continuidade'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Validar que TCC está em DESENVOLVIMENTO
+        if tcc.etapa_atual != EtapaTCC.DESENVOLVIMENTO:
+            return Response(
+                {'detail': f'TCC deve estar na etapa DESENVOLVIMENTO. Etapa atual: {tcc.get_etapa_atual_display()}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validar que continuidade ainda não foi confirmada
+        if tcc.flag_continuidade:
+            return Response(
+                {'detail': 'Continuidade já foi confirmada. Não é possível rejeitar.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validar prazo de confirmação de continuidade
+        permissoes = calcular_permissoes_tcc(tcc)
+        if not permissoes['pode_confirmar_continuidade']:
+            return Response(
+                {'detail': 'Não é possível rejeitar continuidade fora do prazo. Solicite liberação ao coordenador.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Rejeitar continuidade - mover para DESCONTINUADO
+        tcc.flag_continuidade = False
+        tcc.etapa_atual = EtapaTCC.DESCONTINUADO
+        tcc.save()
+
+        # Criar evento
+        EventoTimeline.objects.create(
+            tcc=tcc,
+            usuario=usuario,
+            tipo_evento=TipoEvento.REPROVACAO_CONTINUIDADE,
+            descricao=f'Continuidade rejeitada por {usuario.nome_completo}. TCC descontinuado.',
+            detalhes_json={'rejeitador_id': usuario.id},
+            visibilidade=Visibilidade.TODOS
+        )
+
+        # Criar notificações COM e-mail
+        from notificacoes.services import criar_notificacao_com_email, criar_notificacao_em_massa_com_email
+
+        # Notificar aluno
+        criar_notificacao_com_email(
+            usuario=tcc.aluno,
+            tipo=TipoNotificacao.CONTINUIDADE_REJEITADA,
+            titulo='Continuidade Rejeitada',
+            mensagem=f'Sua continuidade foi rejeitada por {usuario.nome_completo}. O TCC foi descontinuado.',
+            campo_preferencia='aluno_continuidade_rejeitada',
+            action_url=f'/tcc/{tcc.id}',
+            tcc_id=tcc.id,
+            prioridade=PrioridadeNotificacao.ALTA
+        )
+
+        # Notificar coordenador
+        from users.models import Usuario
+        coordenadores = Usuario.objects.filter(tipo_usuario='COORDENADOR')
+        criar_notificacao_em_massa_com_email(
+            usuarios=list(coordenadores),
+            tipo=TipoNotificacao.CONTINUIDADE_REJEITADA,
+            titulo='Continuidade Rejeitada',
+            mensagem=f'Continuidade do TCC "{tcc.titulo}" foi rejeitada por {usuario.nome_completo}. TCC descontinuado.',
+            campo_preferencia='coord_continuidade_rejeitada',
+            action_url=f'/tcc/{tcc.id}',
+            tcc_id=tcc.id,
+            prioridade=PrioridadeNotificacao.NORMAL
+        )
+
+        return Response({
+            'message': 'Continuidade rejeitada. TCC descontinuado.',
+            'flag_continuidade': tcc.flag_continuidade,
+            'etapa_atual': tcc.etapa_atual
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsProfessorOrCoordenador])
     def enviar_termo_avaliacao(self, request, pk=None):
         """
         POST /api/tccs/{id}/enviar-termo-avaliacao/

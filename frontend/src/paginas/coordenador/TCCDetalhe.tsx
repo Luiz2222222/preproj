@@ -13,7 +13,6 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  MessageSquare,
   Loader2,
   Clock,
   FileCheck,
@@ -168,10 +167,6 @@ export function TCCDetalhe() {
             <button className="px-4 py-2 text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/5 rounded-lg transition-colors flex items-center gap-2">
               <Edit className="h-4 w-4" />
               Editar
-            </button>
-            <button className="px-4 py-2 text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/5 rounded-lg transition-colors flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Enviar Mensagem
             </button>
             <button className="px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90 rounded-lg transition-colors flex items-center gap-2">
               <Download className="h-4 w-4" />
