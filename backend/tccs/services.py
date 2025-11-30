@@ -58,16 +58,34 @@ def calcular_permissoes_tcc(tcc):
         permissoes['pode_solicitar_avaliacao'] = dentro_prazo
 
     # Confirmação de continuidade
-    # Regra: só pode confirmar se monografia foi aprovada OU tem liberação manual
-    # E o prazo não expirou
+    # Regra: pode confirmar se:
+    # 1. Liberação manual OU
+    # 2. Monografia aprovada (antecipa - abre antes da janela) OU
+    # 3. hoje >= data_inicio (sem fechar após o fim - só some quando confirmar)
+    # Sem calendário = libera
     if tcc.liberar_continuidade:
+        # Liberação manual sempre permite
         permissoes['pode_confirmar_continuidade'] = True
-    elif not monografia_aprovada(tcc):
-        permissoes['pode_confirmar_continuidade'] = False
-    elif not calendario or not calendario.avaliacao_continuidade_fim:
+    elif monografia_aprovada(tcc):
+        # Monografia aprovada antecipa a liberação
+        permissoes['pode_confirmar_continuidade'] = True
+    elif not calendario:
+        # Sem calendário = libera
         permissoes['pode_confirmar_continuidade'] = True
     else:
-        permissoes['pode_confirmar_continuidade'] = hoje <= calendario.avaliacao_continuidade_fim
+        # Verificar data de início (não fecha após o fim)
+        inicio = calendario.avaliacao_continuidade_inicio
+        fim = calendario.avaliacao_continuidade_fim
+
+        if not inicio and not fim:
+            # Sem nenhuma data = libera
+            permissoes['pode_confirmar_continuidade'] = True
+        elif not inicio:
+            # Só tem fim: usa o fim como início (abre no próprio dia)
+            permissoes['pode_confirmar_continuidade'] = hoje >= fim
+        else:
+            # Tem início: abre a partir do início (não fecha depois do fim)
+            permissoes['pode_confirmar_continuidade'] = hoje >= inicio
 
     # Fase I - Permissão para avaliadores enviarem/editarem avaliações
     # Considera: liberação manual OU (prazo não expirado E não bloqueado pelo coordenador)

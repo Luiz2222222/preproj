@@ -458,8 +458,8 @@ export function DetalheOrientandoProfessor() {
             </div>
           )}
 
-          {/* Card de Termo de Solicitação de Avaliação - só aparece quando continuidade confirmada */}
-          {continuidadeConfirmada && (
+          {/* Card de Termo de Solicitação de Avaliação - aparece quando monografia aprovada E continuidade confirmada */}
+          {monografiaAprovada && continuidadeConfirmada && (
           <div className="bg-cor-superficie rounded-lg p-6 shadow">
             <h2 className="font-semibold text-cor-texto mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5 text-cor-destaque" />
@@ -546,7 +546,7 @@ export function DetalheOrientandoProfessor() {
                     className="flex flex-col items-center justify-center cursor-pointer"
                   >
                     <Upload className="h-8 w-8 text-cor-texto opacity-40 mb-2" />
-                    <p className="text-sm font-medium text-cor-texto mb-1">
+                    <p className="text-sm font-medium text-cor-texto mb-1 w-full max-w-full px-4 text-center truncate">
                       {arquivoTermo ? arquivoTermo.name : 'Clique para selecionar o arquivo PDF'}
                     </p>
                     <p className="text-xs text-cor-texto opacity-60">
@@ -577,8 +577,8 @@ export function DetalheOrientandoProfessor() {
           </div>
           )}
 
-          {/* Card de Confirmação de Continuidade - só aparece quando monografia aprovada */}
-          {monografiaAprovada && (
+          {/* Card de Confirmação de Continuidade - aparece em DESENVOLVIMENTO quando permitido ou já confirmado */}
+          {tcc.etapa_atual === EtapaTCC.DESENVOLVIMENTO && (permiteConfirmarContinuidade || continuidadeConfirmada) && (
           <div className="bg-cor-superficie rounded-lg p-6 shadow">
             <h2 className="font-semibold text-cor-texto mb-4 flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-cor-destaque" />
@@ -594,44 +594,24 @@ export function DetalheOrientandoProfessor() {
                     <CheckCircle className="h-5 w-5 text-[rgb(var(--cor-sucesso))]" />
                     <span className="text-sm font-medium text-[rgb(var(--cor-sucesso))]">Continuidade Confirmada</span>
                   </>
-                ) : monografiaAprovada ? (
+                ) : (
                   <>
                     <AlertCircle className="h-5 w-5 text-[rgb(var(--cor-alerta))]" />
                     <span className="text-sm font-medium text-[rgb(var(--cor-alerta))]">Aguardando Confirmação</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-5 w-5 text-[rgb(var(--cor-icone))]" />
-                    <span className="text-sm text-cor-texto opacity-60">Monografia deve ser aprovada primeiro</span>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Informações */}
-            <div className="bg-cor-fundo p-3 rounded-lg mb-4">
-              <p className="text-xs text-cor-texto opacity-75">
-                {continuidadeConfirmada
-                  ? 'A continuidade do orientando foi confirmada com sucesso.'
-                  : monografiaAprovada
-                  ? 'A monografia foi aprovada. Você pode confirmar a continuidade do orientando para prosseguir para a fase de avaliação.'
-                  : 'Aprove a monografia mais recente antes de confirmar a continuidade.'}
-              </p>
-            </div>
-
-            {/* Botão ou Alerta de Prazo */}
-            {monografiaAprovada && !continuidadeConfirmada && (
-              permiteConfirmarContinuidade ? (
-                <button
-                  onClick={handleConfirmarContinuidade}
-                  disabled={confirmandoContinuidade}
-                  className="w-full px-4 py-2 bg-[rgb(var(--cor-sucesso))] text-white rounded-lg hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors disabled:opacity-50 font-medium"
-                >
-                  {confirmandoContinuidade ? 'Confirmando...' : 'Confirmar Continuidade'}
-                </button>
-              ) : (
-                <AlertaPrazo mensagem={mensagensBloqueio.continuidade} variant="warning" />
-              )
+            {/* Botão */}
+            {!continuidadeConfirmada && (
+              <button
+                onClick={handleConfirmarContinuidade}
+                disabled={confirmandoContinuidade}
+                className="w-full px-4 py-2 bg-[rgb(var(--cor-sucesso))] text-white rounded-lg hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors disabled:opacity-50 font-medium"
+              >
+                {confirmandoContinuidade ? 'Confirmando...' : 'Confirmar Continuidade'}
+              </button>
             )}
           </div>
           )}

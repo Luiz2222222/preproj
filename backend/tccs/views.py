@@ -476,7 +476,7 @@ class TCCViewSet(viewsets.ModelViewSet):
         """
         POST /api/tccs/{id}/confirmar_continuidade/
         Professor/Coorientador confirma continuidade do aluno no TCC.
-        Valida que monografia mais recente está APROVADA e seta flag_continuidade=True.
+        Permitido se: liberação manual, monografia aprovada (antecipa), ou dentro do prazo.
         """
         tcc = self.get_object()
         usuario = request.user
@@ -492,24 +492,6 @@ class TCCViewSet(viewsets.ModelViewSet):
         if tcc.etapa_atual != EtapaTCC.DESENVOLVIMENTO:
             return Response(
                 {'detail': f'TCC deve estar na etapa DESENVOLVIMENTO. Etapa atual: {tcc.get_etapa_atual_display()}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Verificar monografia mais recente
-        monografia_recente = DocumentoTCC.objects.filter(
-            tcc=tcc,
-            tipo_documento=TipoDocumento.MONOGRAFIA
-        ).order_by('-criado_em').first()
-
-        if not monografia_recente:
-            return Response(
-                {'detail': 'Não há monografia enviada. Aluno deve enviar monografia antes de confirmar continuidade'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if monografia_recente.status != StatusDocumento.APROVADO:
-            return Response(
-                {'detail': f'Monografia mais recente deve estar APROVADA. Status atual: {monografia_recente.get_status_display()}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 

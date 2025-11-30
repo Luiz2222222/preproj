@@ -19,6 +19,7 @@ class CalendarioSemestreSerializer(serializers.ModelSerializer):
             'semestre',
             'reuniao_alunos',
             'envio_documentos_fim',
+            'avaliacao_continuidade_inicio',
             'avaliacao_continuidade_fim',
             'submissao_monografia_fim',
             'preparacao_bancas_fase1_inicio',

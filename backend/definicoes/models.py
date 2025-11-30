@@ -46,6 +46,7 @@ class CalendarioSemestre(models.Model):
     semestre = models.CharField('Semestre', max_length=10)  # ex: "2025.1"
     reuniao_alunos = models.DateField('Reunião com alunos', null=True, blank=True, help_text='Orientações gerais sobre o desenvolvimento do TCC')
     envio_documentos_fim = models.DateField('Prazo final para envio de documentos iniciais', null=True, blank=True)
+    avaliacao_continuidade_inicio = models.DateField('Início da janela de confirmação de continuidade', null=True, blank=True)
     avaliacao_continuidade_fim = models.DateField('Prazo final para avaliação de continuidade', null=True, blank=True)
     submissao_monografia_fim = models.DateField('Prazo final para submissão da monografia', null=True, blank=True)
     preparacao_bancas_fase1_inicio = models.DateField('Preparação das bancas (Fase I) - Início', null=True, blank=True)

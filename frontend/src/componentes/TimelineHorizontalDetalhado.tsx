@@ -78,20 +78,29 @@ function obterLabelSubEstado(tcc: TCC, documentos: DocumentoTCC[] = []): string 
       if (tcc.flag_liberado_avaliacao) {
         return 'Desenvolvimento escrito concluído';
       }
-      // Monografia aprovada mas sem termo
-      if (ultimaMonografia?.status === StatusDocumento.APROVADO && tcc.flag_continuidade) {
+      // Monografia aprovada + continuidade confirmada + aguardando termo
+      if (ultimaMonografia?.status === StatusDocumento.APROVADO && tcc.flag_continuidade && !tcc.flag_liberado_avaliacao) {
         return 'Aguardando envio de solicitação de avaliação';
+      }
+      // Monografia aprovada mas continuidade pendente - status principal
+      // A continuidade pendente será exibida como flag separada
+      if (ultimaMonografia?.status === StatusDocumento.APROVADO && !tcc.flag_continuidade) {
+        return 'TCC aprovado pelo orientador';
       }
       // Tem monografia mas não foi avaliada
       if (ultimaMonografia && ultimaMonografia.status === StatusDocumento.PENDENTE) {
         return 'Aguardando avaliação do orientador';
+      }
+      // Monografia rejeitada - aguardando novo envio
+      if (ultimaMonografia && ultimaMonografia.status === StatusDocumento.REJEITADO) {
+        return 'Aguardando envio de TCC';
       }
       // Sem monografia
       if (!ultimaMonografia) {
         return 'Aguardando envio de TCC';
       }
       // Fallback
-      return 'Aguardando Avaliação do Orientador';
+      return 'Aguardando envio de TCC';
 
     case EtapaTCC.DESCONTINUADO:
       return 'Descontinuado';
@@ -204,6 +213,20 @@ export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoPr
   const grupoAtual = obterGrupoAtual(tcc.etapa_atual);
   const subEstadoLabel = obterLabelSubEstado(tcc, documentos);
 
+  // Verificar status da monografia e permissão de continuidade
+  const monografias = documentos.filter(d => d.tipo_documento === TipoDocumento.MONOGRAFIA);
+  const ultimaMonografia = monografias.length > 0
+    ? monografias.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())[0]
+    : null;
+  const monografiaAprovada = ultimaMonografia?.status === StatusDocumento.APROVADO;
+  const monografiaAvaliada = ultimaMonografia?.status === StatusDocumento.APROVADO || ultimaMonografia?.status === StatusDocumento.REJEITADO;
+
+  // Flag de continuidade pendente:
+  // Mostra quando backend libera (data chegou ou monografia aprovada) E não confirmou
+  // Só some quando confirmar - não depende de status da monografia
+  const podeConfirmar = tcc.permissoes?.pode_confirmar_continuidade === true;
+  const continuidadePendente = podeConfirmar && !tcc.flag_continuidade;
+
   return (
     <div className={`w-full bg-cor-superficie rounded-lg shadow-sm p-6 ${className}`}>
       {/* Timeline */}
@@ -288,8 +311,17 @@ export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoPr
                 {/* Flag de continuidade confirmada */}
                 {grupo.id === 'DESENVOLVIMENTO' && tcc.flag_continuidade && isAtual && (
                   <div className="mt-2 flex justify-center">
-                    <span className="inline-flex items-center justify-center px-3 py-1 text-xs bg-cor-sucesso/20 text-cor-sucesso rounded-full font-medium mx-auto">
+                    <span className="inline-flex items-center justify-center px-3 py-1 text-xs bg-cor-sucesso/20 text-cor-sucesso rounded-full font-medium mx-auto text-center">
                       Continuidade aprovada
+                    </span>
+                  </div>
+                )}
+
+                {/* Flag de continuidade pendente - quando monografia aprovada mas continuidade não confirmada */}
+                {grupo.id === 'DESENVOLVIMENTO' && continuidadePendente && isAtual && (
+                  <div className="mt-2 flex justify-center">
+                    <span className="inline-flex items-center justify-center px-3 py-1 text-xs bg-cor-alerta/20 text-cor-alerta rounded-full font-medium mx-auto text-center">
+                      Aguardando confirmação de continuidade
                     </span>
                   </div>
                 )}
