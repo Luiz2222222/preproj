@@ -1483,61 +1483,9 @@ class TCCViewSet(viewsets.ModelViewSet):
                     visibilidade=Visibilidade.TODOS
                 )
 
-                # Criar notificações
-                # Notificar aluno COM e-mail
-                from notificacoes.services import criar_notificacao_com_email, criar_notificacao_em_massa_com_email
-                criar_notificacao_com_email(
-                    usuario=tcc.aluno,
-                    tipo=TipoNotificacao.RESULTADO_FASE_1,
-                    titulo=f'Resultado Fase I: {resultado}',
-                    mensagem=f'Sua Fase I foi {resultado.lower()} com nota {nf1_arredondado}.',
-                    campo_preferencia='aluno_resultado_fase_1',
-                    action_url=f'/tcc/{tcc.id}',
-                    tcc_id=tcc.id,
-                    prioridade=PrioridadeNotificacao.ALTA
-                )
-
-                # Notificar orientador e coorientador COM e-mail
-                usuarios_notificar = [tcc.orientador]
-                if tcc.coorientador:
-                    usuarios_notificar.append(tcc.coorientador)
-
-                criar_notificacao_em_massa_com_email(
-                    usuarios=usuarios_notificar,
-                    tipo=TipoNotificacao.RESULTADO_FASE_1,
-                    titulo=f'Resultado Fase I: {resultado}',
-                    mensagem=f'TCC "{tcc.titulo}" foi {resultado.lower()} na Fase I com nota {nf1_arredondado}.',
-                    campo_preferencia='prof_resultado_fase_1',
-                    action_url=f'/tcc/{tcc.id}',
-                    tcc_id=tcc.id,
-                    prioridade=PrioridadeNotificacao.NORMAL
-                )
-
-                # Notificar avaliadores (sem e-mail - não tem preferência para avaliadores)
-                avaliadores = [av.avaliador for av in avaliacoes_prontas]
-                criar_notificacao_em_massa(
-                    usuarios=avaliadores,
-                    tipo=TipoNotificacao.RESULTADO_FASE_1,
-                    titulo=f'Resultado Fase I: {resultado}',
-                    mensagem=f'TCC "{tcc.titulo}" foi {resultado.lower()} na Fase I com nota {nf1_arredondado}.',
-                    action_url=f'/tcc/{tcc.id}',
-                    tcc_id=tcc.id,
-                    prioridade=PrioridadeNotificacao.BAIXA
-                )
-
-                # Notificar coordenador COM e-mail
-                from users.models import Usuario
-                coordenadores = Usuario.objects.filter(tipo_usuario='COORDENADOR')
-                criar_notificacao_em_massa_com_email(
-                    usuarios=list(coordenadores),
-                    tipo=TipoNotificacao.RESULTADO_FASE_1,
-                    titulo=f'Avaliações Fase I Completas',
-                    mensagem=f'Todas as avaliações da Fase I do TCC "{tcc.titulo}" foram concluídas. Resultado: {resultado} (nota {nf1_arredondado}).',
-                    campo_preferencia='coord_avaliacoes_fase1_completas',
-                    action_url=f'/tcc/{tcc.id}',
-                    tcc_id=tcc.id,
-                    prioridade=PrioridadeNotificacao.NORMAL
-                )
+                # Notificações de RESULTADO_FASE_1 desabilitadas
+                # O resultado da Fase I não deve gerar notificações automáticas para nenhum perfil
+                # O coordenador comunica o resultado por outros meios quando apropriado
 
                 return Response({
                     'message': 'Aprovação completa concluída',

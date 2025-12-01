@@ -196,11 +196,16 @@ export function DashboardCoordenador() {
     return tccs.filter(tcc => tcc.etapa_atual === EtapaTCC.VALIDACAO_FASE_1)
   }, [tccs])
 
+  // TCCs que precisam de análise das avaliações (Fase II)
+  const tccsPendentesValidacaoFase2 = useMemo(() => {
+    return tccs.filter(tcc => tcc.etapa_atual === EtapaTCC.ANALISE_FINAL_COORDENADOR)
+  }, [tccs])
+
   // Consolidar todas as ações pendentes (solicitações + bancas pendentes + validações pendentes)
   const acoesPendentes = useMemo(() => {
     const acoes: Array<{
       id: string
-      tipo: 'solicitacao' | 'banca' | 'validacao'
+      tipo: 'solicitacao' | 'banca' | 'validacao' | 'validacao_fase2'
       titulo: string
       aluno: string
       tccId?: number
@@ -229,7 +234,7 @@ export function DashboardCoordenador() {
       })
     })
 
-    // Adicionar TCCs que precisam de validação das avaliações
+    // Adicionar TCCs que precisam de validação das avaliações - Fase I
     tccsPendentesValidacao.forEach(tcc => {
       acoes.push({
         id: `validacao-${tcc.id}`,
@@ -240,8 +245,19 @@ export function DashboardCoordenador() {
       })
     })
 
+    // Adicionar TCCs que precisam de validação das avaliações - Fase II
+    tccsPendentesValidacaoFase2.forEach(tcc => {
+      acoes.push({
+        id: `validacao-f2-${tcc.id}`,
+        tipo: 'validacao_fase2',
+        titulo: 'Análise das avaliações - Fase II',
+        aluno: tcc.aluno_dados.nome_completo,
+        tccId: tcc.id
+      })
+    })
+
     return acoes
-  }, [solicitacoes, tccsPendentesBanca, tccsPendentesValidacao])
+  }, [solicitacoes, tccsPendentesBanca, tccsPendentesValidacao, tccsPendentesValidacaoFase2])
 
   // Datas importantes do calendário acadêmico
   const datasImportantes = useMemo(() => {
@@ -395,6 +411,9 @@ export function DashboardCoordenador() {
                   } else if (acao.tipo === 'validacao') {
                     bgColor = 'bg-[rgb(var(--cor-destaque))]/10'
                     borderColor = 'border-[rgb(var(--cor-destaque))]/20'
+                  } else if (acao.tipo === 'validacao_fase2') {
+                    bgColor = 'bg-[rgb(var(--cor-sucesso))]/10'
+                    borderColor = 'border-[rgb(var(--cor-sucesso))]/20'
                   }
 
                   return (
@@ -403,7 +422,7 @@ export function DashboardCoordenador() {
                       onClick={() => {
                         if (acao.tipo === 'solicitacao' && acao.solicitacaoId) {
                           handleVerDetalhes(acao.solicitacaoId)
-                        } else if ((acao.tipo === 'banca' || acao.tipo === 'validacao') && acao.tccId) {
+                        } else if ((acao.tipo === 'banca' || acao.tipo === 'validacao' || acao.tipo === 'validacao_fase2') && acao.tccId) {
                           handleFormarBanca(acao.tccId)
                         }
                       }}
@@ -437,7 +456,7 @@ export function DashboardCoordenador() {
                   const primeiraAcao = acoesPendentes[0]
                   if (primeiraAcao.tipo === 'solicitacao' && primeiraAcao.solicitacaoId) {
                     handleVerDetalhes(primeiraAcao.solicitacaoId)
-                  } else if ((primeiraAcao.tipo === 'banca' || primeiraAcao.tipo === 'validacao') && primeiraAcao.tccId) {
+                  } else if ((primeiraAcao.tipo === 'banca' || primeiraAcao.tipo === 'validacao' || primeiraAcao.tipo === 'validacao_fase2') && primeiraAcao.tccId) {
                     handleFormarBanca(primeiraAcao.tccId)
                   }
                 }}

@@ -247,7 +247,7 @@ export function TCCDetalhe() {
 
       {/* Análise das Avaliações da Fase I */}
       {(tcc.etapa_atual === EtapaTCC.AVALIACAO_FASE_1 || tcc.etapa_atual === EtapaTCC.VALIDACAO_FASE_1) && (
-        <AnalisarAvaliacoesFase1 tcc={tcc} />
+        <AnalisarAvaliacoesFase1 tcc={tcc} onAvaliacoesAtualizadas={recarregar} />
       )}
 
       {/* Análise das Avaliações da Fase II */}

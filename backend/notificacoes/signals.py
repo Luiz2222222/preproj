@@ -11,6 +11,7 @@ from tccs.models import (
     AvaliacaoFase1,
     AvaliacaoFase2,
     BancaFase1,
+    MembroBanca,
     TCC
 )
 from tccs.constants import StatusSolicitacao, StatusDocumento, TipoDocumento, EtapaTCC
@@ -327,44 +328,17 @@ def notificar_avaliacao_fase1(sender, instance, created, **kwargs):
 def notificar_avaliacao_fase2(sender, instance, created, **kwargs):
     """
     Notifica quando avaliações da Fase II são recebidas.
+
+    IMPORTANTE: Notas da Fase II são confidenciais e só visíveis ao coordenador.
+    Não notificar aluno, orientador ou avaliadores sobre resultados individuais.
     """
     if not created and instance.status == 'ENVIADO':
         tcc = instance.tcc
 
-        # Notificar aluno
-        criar_notificacao(
-            usuario=tcc.aluno,
-            tipo=TipoNotificacao.AVALIACAO_RECEBIDA,
-            titulo="Avaliação recebida - Fase II",
-            mensagem=f"Avaliação de {instance.avaliador.nome_completo} foi recebida (Nota: {instance.calcular_nota_total()})",
-            action_url="/aluno/meu-tcc",
-            metadata={
-                "tcc_id": tcc.id,
-                "avaliacao_id": instance.id,
-                "avaliador_nome": instance.avaliador.nome_completo,
-                "nota": float(instance.calcular_nota_total()) if instance.calcular_nota_total() else None
-            },
-            tcc_id=tcc.id
-        )
+        # Notificações para aluno e orientador DESABILITADAS
+        # As notas da Fase II são confidenciais e só devem ser visíveis ao coordenador
 
-        # Notificar orientador
-        if tcc.orientador:
-            criar_notificacao(
-                usuario=tcc.orientador,
-                tipo=TipoNotificacao.AVALIACAO_RECEBIDA,
-                titulo="Avaliação recebida - Fase II",
-                mensagem=f"{instance.avaliador.nome_completo} enviou avaliação para {tcc.aluno.nome_completo}",
-                action_url=f"/professor/orientacoes/meus-orientandos/{tcc.id}",
-                metadata={
-                    "tcc_id": tcc.id,
-                    "avaliacao_id": instance.id,
-                    "avaliador_nome": instance.avaliador.nome_completo,
-                    "aluno_nome": tcc.aluno.nome_completo
-                },
-                tcc_id=tcc.id
-            )
-
-        # Verificar se todas as avaliações Fase II foram enviadas → notificar coordenador
+        # Verificar se todas as avaliações Fase II foram enviadas → notificar APENAS coordenador
         total_avaliacoes = AvaliacaoFase2.objects.filter(tcc=tcc).count()
         avaliacoes_enviadas = AvaliacaoFase2.objects.filter(tcc=tcc, status='ENVIADO').count()
 
@@ -430,25 +404,33 @@ def notificar_banca_fase1(sender, instance, created, **kwargs):
                 prioridade=PrioridadeNotificacao.ALTA
             )
 
-        # Notificar membros da banca
-        membros = instance.membros.all()
-        if membros.exists():
-            membros_users = [m.avaliador for m in membros]
-            criar_notificacao_em_massa(
-                usuarios=membros_users,
-                tipo=TipoNotificacao.CONVITE_BANCA,
-                titulo="Convite para participar de banca",
-                mensagem=f"Você foi convidado para avaliar o TCC de {tcc.aluno.nome_completo}",
-                action_url="/avaliador/bancas",
-                metadata={
-                    "tcc_id": tcc.id,
-                    "banca_id": instance.id,
-                    "aluno_nome": tcc.aluno.nome_completo,
-                    "titulo_tcc": tcc.titulo
-                },
-                tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.ALTA
-            )
+        # Nota: membros são notificados via signal post_save de MembroBanca
+
+
+@receiver(post_save, sender=MembroBanca)
+def notificar_membro_banca(sender, instance, created, **kwargs):
+    """
+    Notifica quando um membro é adicionado à banca.
+    Dispara CONVITE_BANCA para o avaliador.
+    """
+    if created:
+        tcc = instance.banca.tcc
+
+        criar_notificacao(
+            usuario=instance.usuario,
+            tipo=TipoNotificacao.CONVITE_BANCA,
+            titulo="Convite para participar de banca",
+            mensagem=f"Você foi convidado para avaliar um TCC na Fase I",
+            action_url="/professor/bancas",
+            metadata={
+                "tcc_id": tcc.id,
+                "banca_id": instance.banca.id,
+                "aluno_nome": tcc.aluno.nome_completo,
+                "titulo_tcc": tcc.titulo
+            },
+            tcc_id=tcc.id,
+            prioridade=PrioridadeNotificacao.ALTA
+        )
 
 
 # ==================== CONTINUIDADE ====================

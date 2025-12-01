@@ -95,10 +95,14 @@ export function BancasProfessor() {
           {tccs.map((tcc) => (
             <div
               key={tcc.id}
-              className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 hover:shadow-md transition-shadow"
+              onClick={() => handleAvaliar(tcc.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && handleAvaliar(tcc.id)}
+              className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 cursor-pointer hover:shadow-md hover:border-[rgb(var(--cor-destaque))]/50 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:ring-offset-2 transition-all"
             >
               {/* Header do card */}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-bold text-[rgb(var(--cor-texto-primario))] text-xl">
@@ -121,7 +125,10 @@ export function BancasProfessor() {
                   {/* Documento anônimo */}
                   <div className="mt-3">
                     <button
-                      onClick={() => handleBaixarDocumento(tcc)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBaixarDocumento(tcc);
+                      }}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white text-sm rounded-lg hover:bg-[rgb(var(--cor-destaque))]/90 transition-colors"
                     >
                       <Download className="h-4 w-4" />
@@ -130,14 +137,11 @@ export function BancasProfessor() {
                   </div>
                 </div>
 
-                {/* Botão avaliar */}
-                <button
-                  onClick={() => handleAvaliar(tcc.id)}
-                  className="ml-4 px-6 py-3 bg-[rgb(var(--cor-info))] text-white rounded-lg hover:bg-[rgb(var(--cor-info))]/90 transition-colors flex items-center gap-2 whitespace-nowrap"
-                >
+                {/* Indicador visual de ação */}
+                <div className="ml-4 flex items-center gap-2 text-[rgb(var(--cor-info))]">
                   <Eye className="h-5 w-5" />
-                  <span>Avaliar</span>
-                </button>
+                  <span className="text-sm font-medium">Avaliar</span>
+                </div>
               </div>
             </div>
           ))}

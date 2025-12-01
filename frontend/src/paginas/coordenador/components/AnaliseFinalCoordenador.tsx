@@ -50,6 +50,12 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
   const mediaFinal = tcc.media_final ? Number(tcc.media_final) : null;
   const resultado = tcc.resultado_final;
 
+  // Formatar número com vírgula como separador decimal (padrão brasileiro)
+  const formatarNota = (valor: number | null, casas: number = 2): string => {
+    if (valor === null) return '-';
+    return valor.toFixed(casas).replace('.', ',');
+  };
+
   const handleAprovarConcluir = async () => {
     try {
       setMensagemSucesso(null);
@@ -178,7 +184,7 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
             <div className="p-4 bg-[rgb(var(--cor-destaque))]/5 rounded-lg border border-[rgb(var(--cor-destaque))]/20">
               <p className="text-xs text-[rgb(var(--cor-destaque))] mb-1">Nota Final Fase I</p>
               <p className="text-3xl font-bold text-[rgb(var(--cor-destaque))]">
-                {nf1 !== null ? nf1.toFixed(2) : '-'}
+                {formatarNota(nf1)}
               </p>
               <p className="text-xs text-[rgb(var(--cor-destaque))]/80 mt-1">Média da Monografia</p>
             </div>
@@ -186,7 +192,7 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
             <div className="p-4 bg-[rgb(var(--cor-info))]/5 rounded-lg border border-[rgb(var(--cor-info))]/20">
               <p className="text-xs text-[rgb(var(--cor-info))] mb-1">Nota Final Fase II</p>
               <p className="text-3xl font-bold text-[rgb(var(--cor-info))]">
-                {nf2 !== null ? nf2.toFixed(2) : '-'}
+                {formatarNota(nf2)}
               </p>
               <p className="text-xs text-[rgb(var(--cor-info))]/80 mt-1">Média da Apresentação</p>
             </div>
@@ -194,7 +200,7 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
             <div className="p-4 bg-[rgb(var(--cor-info))]/10 rounded-lg border border-[rgb(var(--cor-info))]/30">
               <p className="text-xs text-[rgb(var(--cor-info))] mb-1">Média Final (MF)</p>
               <p className="text-3xl font-bold text-[rgb(var(--cor-info))]">
-                {mediaFinal !== null ? mediaFinal.toFixed(2) : '-'}
+                {formatarNota(mediaFinal)}
               </p>
               <p className="text-xs text-[rgb(var(--cor-info))]/80 mt-1">(NF1 + NF2) / 2</p>
             </div>
@@ -269,7 +275,7 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
                       {avaliacao.status === StatusAvaliacaoFase2.BLOQUEADO ? 'Bloqueado' : avaliacao.status}
                     </span>
                     <span className="text-lg font-bold text-[rgb(var(--cor-info))]">
-                      {avaliacao.nota_final !== null ? Number(avaliacao.nota_final).toFixed(2) : '-'} / 10.0
+                      {avaliacao.nota_final !== null ? Number(avaliacao.nota_final).toFixed(2).replace('.', ',') : '-'} / 10,0
                     </span>
                   </div>
                 </div>
@@ -278,23 +284,23 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-2 text-xs">
                   <div className="text-[rgb(var(--cor-texto-secundario))]">
                     <span className="block text-[rgb(var(--cor-texto-secundario))]">Coerência:</span>
-                    <span className="font-medium">{avaliacao.nota_coerencia_conteudo !== null ? Number(avaliacao.nota_coerencia_conteudo).toFixed(1) : '-'}/2.0</span>
+                    <span className="font-medium">{avaliacao.nota_coerencia_conteudo !== null ? Number(avaliacao.nota_coerencia_conteudo).toFixed(1).replace('.', ',') : '-'}/2,0</span>
                   </div>
                   <div className="text-[rgb(var(--cor-texto-secundario))]">
                     <span className="block text-[rgb(var(--cor-texto-secundario))]">Qualidade:</span>
-                    <span className="font-medium">{avaliacao.nota_qualidade_apresentacao !== null ? Number(avaliacao.nota_qualidade_apresentacao).toFixed(1) : '-'}/2.0</span>
+                    <span className="font-medium">{avaliacao.nota_qualidade_apresentacao !== null ? Number(avaliacao.nota_qualidade_apresentacao).toFixed(1).replace('.', ',') : '-'}/2,0</span>
                   </div>
                   <div className="text-[rgb(var(--cor-texto-secundario))]">
                     <span className="block text-[rgb(var(--cor-texto-secundario))]">Domínio:</span>
-                    <span className="font-medium">{avaliacao.nota_dominio_tema !== null ? Number(avaliacao.nota_dominio_tema).toFixed(1) : '-'}/2.5</span>
+                    <span className="font-medium">{avaliacao.nota_dominio_tema !== null ? Number(avaliacao.nota_dominio_tema).toFixed(1).replace('.', ',') : '-'}/2,5</span>
                   </div>
                   <div className="text-[rgb(var(--cor-texto-secundario))]">
                     <span className="block text-[rgb(var(--cor-texto-secundario))]">Clareza:</span>
-                    <span className="font-medium">{avaliacao.nota_clareza_fluencia !== null ? Number(avaliacao.nota_clareza_fluencia).toFixed(1) : '-'}/2.5</span>
+                    <span className="font-medium">{avaliacao.nota_clareza_fluencia !== null ? Number(avaliacao.nota_clareza_fluencia).toFixed(1).replace('.', ',') : '-'}/2,5</span>
                   </div>
                   <div className="text-[rgb(var(--cor-texto-secundario))]">
                     <span className="block text-[rgb(var(--cor-texto-secundario))]">Tempo:</span>
-                    <span className="font-medium">{avaliacao.nota_observancia_tempo !== null ? Number(avaliacao.nota_observancia_tempo).toFixed(1) : '-'}/1.0</span>
+                    <span className="font-medium">{avaliacao.nota_observancia_tempo !== null ? Number(avaliacao.nota_observancia_tempo).toFixed(1).replace('.', ',') : '-'}/1,0</span>
                   </div>
                 </div>
               </div>
@@ -370,7 +376,7 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
         aberto={modalAprovar}
         aoFechar={() => setModalAprovar(false)}
         titulo="Aprovar e Concluir TCC"
-        mensagem={`Confirma a aprovação e conclusão deste TCC?\n\nNF1: ${nf1?.toFixed(2) || '-'}\nNF2: ${nf2?.toFixed(2) || '-'}\nMédia Final: ${mediaFinal?.toFixed(2) || '-'}\nResultado: ${resultado || '-'}\n\nEsta ação mudará o TCC para a etapa CONCLUÍDO.`}
+        mensagem={`Confirma a aprovação e conclusão deste TCC?\n\nNF1: ${formatarNota(nf1)}\nNF2: ${formatarNota(nf2)}\nMédia Final: ${formatarNota(mediaFinal)}\nResultado: ${resultado || '-'}`}
         tipo="confirmacao"
         textoConfirmar="Aprovar e Concluir"
         aoConfirmar={handleAprovarConcluir}

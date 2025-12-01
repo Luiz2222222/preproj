@@ -17,6 +17,8 @@ export enum TipoNotificacao {
   SOLICITACAO_APROVADA = 'solicitacao_aprovada',
   SOLICITACAO_RECUSADA = 'solicitacao_recusada',
   BANCA_DEFINIDA = 'banca_definida',
+  BANCA_FORMADA = 'banca_formada',
+  CONVITE_BANCA = 'convite_banca',
   AVALIACAO_ENVIADA = 'avaliacao_enviada',
   AVALIACAO_APROVADA = 'avaliacao_aprovada',
   RESULTADO_FASE_1 = 'resultado_fase_1',

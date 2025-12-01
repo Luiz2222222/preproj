@@ -16,7 +16,7 @@ import {
   FileText
 } from 'lucide-react';
 import type { TCC } from '../../../types';
-import { useAvaliacoesFase1 } from '../../../hooks';
+import { useAvaliacoesFase1, useCalendarioSemestre } from '../../../hooks';
 import { StatusAvaliacaoFase1 } from '../../../types/enums';
 import { formatarDataCurta } from '../../../utils/datas';
 import { Modal } from '../../../componentes/Modal';
@@ -27,6 +27,7 @@ interface AnalisarAvaliacoesFase1Props {
 }
 
 export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: AnalisarAvaliacoesFase1Props) {
+  const { calendario } = useCalendarioSemestre();
   const {
     avaliacoes,
     carregando,
@@ -40,6 +41,16 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
     tccId: tcc.id,
     autoCarregar: true
   });
+
+  // Pesos do calendário (com fallback para valores padrão e conversão para número)
+  const pesos = {
+    resumo: Number(calendario?.peso_resumo) || 1.0,
+    introducao: Number(calendario?.peso_introducao) || 2.0,
+    revisao: Number(calendario?.peso_revisao) || 2.0,
+    desenvolvimento: Number(calendario?.peso_desenvolvimento) || 3.5,
+    conclusoes: Number(calendario?.peso_conclusoes) || 1.5
+  };
+  const pesoTotal = pesos.resumo + pesos.introducao + pesos.revisao + pesos.desenvolvimento + pesos.conclusoes;
 
   const [avaliadoresSelecionados, setAvaliadoresSelecionados] = useState<number[]>([]);
   const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
@@ -304,19 +315,19 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
                     <div className="text-sm">
                       <span className="text-[rgb(var(--cor-texto-secundario))]">Resumo:</span>
                       <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_resumo != null ? Number(avaliacao.nota_resumo).toFixed(1) : '-'} / 1.0
+                        {avaliacao.nota_resumo != null ? Number(avaliacao.nota_resumo).toFixed(1) : '-'} / {pesos.resumo.toFixed(1)}
                       </span>
                     </div>
                     <div className="text-sm">
                       <span className="text-[rgb(var(--cor-texto-secundario))]">Introdução:</span>
                       <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_introducao != null ? Number(avaliacao.nota_introducao).toFixed(1) : '-'} / 2.0
+                        {avaliacao.nota_introducao != null ? Number(avaliacao.nota_introducao).toFixed(1) : '-'} / {pesos.introducao.toFixed(1)}
                       </span>
                     </div>
                     <div className="text-sm">
                       <span className="text-[rgb(var(--cor-texto-secundario))]">Revisão:</span>
                       <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_revisao != null ? Number(avaliacao.nota_revisao).toFixed(1) : '-'} / 2.0
+                        {avaliacao.nota_revisao != null ? Number(avaliacao.nota_revisao).toFixed(1) : '-'} / {pesos.revisao.toFixed(1)}
                       </span>
                     </div>
                   </div>
@@ -324,19 +335,19 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
                     <div className="text-sm">
                       <span className="text-[rgb(var(--cor-texto-secundario))]">Desenvolvimento:</span>
                       <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_desenvolvimento != null ? Number(avaliacao.nota_desenvolvimento).toFixed(1) : '-'} / 3.5
+                        {avaliacao.nota_desenvolvimento != null ? Number(avaliacao.nota_desenvolvimento).toFixed(1) : '-'} / {pesos.desenvolvimento.toFixed(1)}
                       </span>
                     </div>
                     <div className="text-sm">
                       <span className="text-[rgb(var(--cor-texto-secundario))]">Conclusões:</span>
                       <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_conclusoes != null ? Number(avaliacao.nota_conclusoes).toFixed(1) : '-'} / 1.5
+                        {avaliacao.nota_conclusoes != null ? Number(avaliacao.nota_conclusoes).toFixed(1) : '-'} / {pesos.conclusoes.toFixed(1)}
                       </span>
                     </div>
                     <div className="text-sm">
                       <span className="text-[rgb(var(--cor-texto-secundario))]">Total:</span>
                       <span className="ml-2 font-bold text-[rgb(var(--cor-info))]">
-                        {avaliacao.nota_final != null ? Number(avaliacao.nota_final).toFixed(2) : '-'} / 10.0
+                        {avaliacao.nota_final != null ? Number(avaliacao.nota_final).toFixed(2) : '-'} / {pesoTotal.toFixed(1)}
                       </span>
                     </div>
                   </div>
