@@ -35,7 +35,7 @@ export function MeuTCC() {
   const [showModalCancelar, setShowModalCancelar] = useState(false)
   const [showModalEnviar, setShowModalEnviar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
-  const [modoTimeline, setModoTimeline] = useState<'horizontal' | 'vertical'>('horizontal')
+  const [modoTimeline, setModoTimeline] = useState<'horizontal' | 'vertical'>('vertical')
   const [mostrarRecusa, setMostrarRecusa] = useState(true)
 
   const handleCancelar = async () => {
@@ -319,20 +319,6 @@ export function MeuTCC() {
           {/* Botões de alternância */}
           <div className="flex gap-2 bg-cor-fundo rounded-lg p-1">
             <button
-              onClick={() => setModoTimeline('horizontal')}
-              className={`
-                flex items-center gap-2 px-3 py-1.5 rounded text-pequeno font-medium transition-all
-                ${
-                  modoTimeline === 'horizontal'
-                    ? 'bg-cor-destaque text-white'
-                    : 'text-cor-texto opacity-60 hover:opacity-100'
-                }
-              `}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Horizontal
-            </button>
-            <button
               onClick={() => setModoTimeline('vertical')}
               className={`
                 flex items-center gap-2 px-3 py-1.5 rounded text-pequeno font-medium transition-all
@@ -345,6 +331,20 @@ export function MeuTCC() {
             >
               <LayoutList className="w-4 h-4" />
               Vertical
+            </button>
+            <button
+              onClick={() => setModoTimeline('horizontal')}
+              className={`
+                flex items-center gap-2 px-3 py-1.5 rounded text-pequeno font-medium transition-all
+                ${
+                  modoTimeline === 'horizontal'
+                    ? 'bg-cor-destaque text-white'
+                    : 'text-cor-texto opacity-60 hover:opacity-100'
+                }
+              `}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Horizontal
             </button>
           </div>
         </div>

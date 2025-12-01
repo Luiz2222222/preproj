@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Users, UserPlus, CheckCircle, XCircle, AlertCircle, Loader2, X, Info, Upload } from 'lucide-react';
+import { Users, UserPlus, CheckCircle, XCircle, AlertCircle, Loader2, X, Upload } from 'lucide-react';
 import type { TCC } from '../../../types';
 import { useBancaFase1 } from '../../../hooks';
 import { listarProfessores, type ProfessorListItem } from '../../../servicos/usuarios';
@@ -77,8 +77,8 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
       return 'Apenas arquivos PDF (.pdf) ou Word (.doc, .docx) são permitidos';
     }
 
-    // Validar tamanho (10MB)
-    const limiteMB = 10;
+    // Validar tamanho (30MB)
+    const limiteMB = 30;
     const limiteBytes = limiteMB * 1024 * 1024;
 
     if (arquivo.size > limiteBytes) {
@@ -115,8 +115,8 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
       setErroArquivo(null);
 
       // Validar avaliadores
-      if (avaliadoresSelecionados.length === 0) {
-        setMensagemErro('Selecione pelo menos um avaliador');
+      if (avaliadoresSelecionados.length < 2) {
+        setMensagemErro('Selecione pelo menos 2 avaliadores');
         return;
       }
 
@@ -161,7 +161,6 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
   // Filtrar professores disponíveis (excluir orientador)
   const professoresDisponiveis = professores.filter(p => p.id !== tcc.orientador);
 
-  const orientador = banca?.membros.find(m => m.tipo === TipoMembroBanca.ORIENTADOR);
   const bancaConcluida = banca?.status === 'COMPLETA';
 
   if (carregando || carregandoProfessores) {
@@ -288,155 +287,142 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
               </button>
             </div>
 
-            {/* Conteúdo do modal em duas colunas */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* COLUNA ESQUERDA - Seleção de avaliadores */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))] uppercase tracking-wide">Membros da Banca</h4>
-
-                  {/* Orientador (read-only) */}
-                  {orientador && (
-                    <div>
-                      <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-2">
-                        Orientador (membro nato)
-                      </label>
-                      <div className="p-3 bg-[rgb(var(--cor-destaque))]/5 border border-[rgb(var(--cor-destaque))]/20 rounded-lg">
-                        <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">{orientador.usuario_dados.nome_completo}</p>
-                        <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">{orientador.usuario_dados.email}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Avaliadores */}
+            {/* Conteúdo do modal */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* LINHA 1 - Avaliadores lado a lado */}
+              <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Avaliador 1 */}
                   <div>
-                    <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-2">
-                      Professores Avaliadores * (mínimo 1)
+                    <label className="block text-xs font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">
+                      Avaliador 1
                     </label>
-
-                    {/* Professores selecionados */}
-                    {avaliadoresSelecionados.length > 0 && (
-                      <div className="mb-3 space-y-2">
-                        {professores
-                          .filter(p => avaliadoresSelecionados.includes(p.id))
-                          .map(prof => (
-                            <div
-                              key={prof.id}
-                              className="flex items-center gap-3 p-3 bg-[rgb(var(--cor-info))]/10 border border-[rgb(var(--cor-info))]/30 rounded-lg"
-                            >
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">{prof.nome_completo}</p>
-                                <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">
-                                  {prof.email}
-                                  {prof.departamento && ` • ${prof.departamento}`}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => removerAvaliador(prof.id)}
-                                className="p-1.5 hover:bg-[rgb(var(--cor-info))]/20 rounded-lg transition-colors"
-                                title="Remover avaliador"
-                              >
-                                <X className="h-4 w-4 text-[rgb(var(--cor-info))]" />
-                              </button>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-
-                    {/* Dropdown para adicionar professores */}
-                    <div>
-                      <select
-                        onChange={(e) => {
-                          const profId = Number(e.target.value);
+                    <select
+                      value={avaliadoresSelecionados[0] || ''}
+                      onChange={(e) => {
+                        const profId = Number(e.target.value);
+                        setAvaliadoresSelecionados(prev => {
+                          const newList = [...prev];
                           if (profId) {
-                            adicionarAvaliador(profId);
-                            e.target.value = ''; // Reset select
+                            newList[0] = profId;
+                          } else {
+                            newList.splice(0, 1);
                           }
-                        }}
-                        className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))]"
-                        disabled={professoresDisponiveis.filter(p => !avaliadoresSelecionados.includes(p.id)).length === 0}
-                      >
-                        <option value="">
-                          {avaliadoresSelecionados.length === 0
-                            ? 'Selecione um professor avaliador'
-                            : 'Adicionar outro professor avaliador'}
-                        </option>
-                        {professoresDisponiveis
-                          .filter(p => !avaliadoresSelecionados.includes(p.id))
-                          .map(prof => (
-                            <option key={prof.id} value={prof.id}>
-                              {prof.nome_completo}
-                              {prof.departamento && ` - ${prof.departamento}`}
-                            </option>
-                          ))}
-                      </select>
-                      <p className="mt-1 text-xs text-[rgb(var(--cor-texto-secundario))]">
-                        {avaliadoresSelecionados.length === 0
-                          ? 'Nenhum avaliador selecionado'
-                          : `${avaliadoresSelecionados.length} avaliador${avaliadoresSelecionados.length > 1 ? 'es' : ''} selecionado${avaliadoresSelecionados.length > 1 ? 's' : ''}`}
-                      </p>
-                    </div>
+                          return newList.filter(Boolean);
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))]"
+                    >
+                      <option value="">Selecione o primeiro avaliador</option>
+                      {professoresDisponiveis
+                        .filter(p => p.id !== avaliadoresSelecionados[1])
+                        .map(prof => (
+                          <option key={prof.id} value={prof.id}>
+                            {prof.nome_completo}
+                            {prof.departamento && ` - ${prof.departamento}`}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* Avaliador 2 */}
+                  <div>
+                    <label className="block text-xs font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">
+                      Avaliador 2
+                    </label>
+                    <select
+                      value={avaliadoresSelecionados[1] || ''}
+                      onChange={(e) => {
+                        const profId = Number(e.target.value);
+                        setAvaliadoresSelecionados(prev => {
+                          const newList = [...prev];
+                          if (profId) {
+                            newList[1] = profId;
+                          } else if (newList.length > 1) {
+                            newList.splice(1, 1);
+                          }
+                          return newList.filter(Boolean);
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))]"
+                    >
+                      <option value="">Selecione o segundo avaliador</option>
+                      {professoresDisponiveis
+                        .filter(p => p.id !== avaliadoresSelecionados[0])
+                        .map(prof => (
+                          <option key={prof.id} value={prof.id}>
+                            {prof.nome_completo}
+                            {prof.departamento && ` - ${prof.departamento}`}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                 </div>
+              </div>
 
-                {/* COLUNA DIREITA - Tipo de documento */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))] uppercase tracking-wide">Documento para Avaliação</h4>
-
-                  {/* Opção 1: Enviar versão anônima (padrão, em cima) */}
-                  <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:bg-[rgb(var(--cor-fundo))]/50 ${tipoDocumento === 'ANONIMO' ? 'border-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-destaque))]/5' : 'border-[rgb(var(--cor-borda))]'}`}>
-                    <input
-                      type="radio"
-                      name="tipoDocumento"
-                      value="ANONIMO"
-                      checked={tipoDocumento === 'ANONIMO'}
-                      onChange={(e) => setTipoDocumento(e.target.value as TipoDocumentoAvaliacao)}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Enviar versão anônima (recomendado)</p>
-                      <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-1">
-                        Avaliação duplo-cega: envie uma versão sem identificação do aluno
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Upload condicional */}
-                  {tipoDocumento === 'ANONIMO' && (
-                    <div className="pl-2">
-                      <label className="block">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Upload className="h-4 w-4 text-[rgb(var(--cor-icone))]" />
-                          <span className="text-sm font-medium text-[rgb(var(--cor-texto-secundario))]">
-                            Arquivo anônimo (PDF ou Word) *
-                          </span>
-                        </div>
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx"
-                          onChange={handleArquivoChange}
-                          className="block w-full text-sm text-[rgb(var(--cor-texto-secundario))] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-[rgb(var(--cor-borda))] file:text-sm file:font-medium file:bg-[rgb(var(--cor-fundo))] hover:file:bg-[rgb(var(--cor-fundo))]/70 file:text-[rgb(var(--cor-texto-secundario))] cursor-pointer"
-                        />
-                        <p className="mt-1 text-xs text-[rgb(var(--cor-texto-secundario))]">
-                          Formatos aceitos: PDF, Word (.doc, .docx) • Tamanho máximo: 10MB
+              {/* LINHA 2 - Documento (largura total) */}
+              <div>
+                <h4 className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))] uppercase tracking-wide mb-4">Documento para Avaliação</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                  {/* Opção 1: Enviar versão anônima (com upload dentro do card) */}
+                  <div className={`p-4 border-2 rounded-lg transition-all min-h-[200px] ${tipoDocumento === 'ANONIMO' ? 'border-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-destaque))]/5' : 'border-[rgb(var(--cor-borda))]'}`}>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="tipoDocumento"
+                        value="ANONIMO"
+                        checked={tipoDocumento === 'ANONIMO'}
+                        onChange={(e) => setTipoDocumento(e.target.value as TipoDocumentoAvaliacao)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Enviar versão anônima (recomendado)</p>
+                        <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-1">
+                          Avaliação duplo-cega: envie uma versão sem identificação do aluno
                         </p>
-                        {arquivoAnonimo && (
-                          <p className="mt-2 text-xs text-[rgb(var(--cor-sucesso))] flex items-center gap-1">
-                            <CheckCircle className="h-3 w-3" />
-                            Arquivo selecionado: {arquivoAnonimo.name}
-                          </p>
-                        )}
-                        {erroArquivo && (
-                          <p className="mt-2 text-xs text-[rgb(var(--cor-erro))] flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            {erroArquivo}
-                          </p>
-                        )}
-                      </label>
-                    </div>
-                  )}
+                      </div>
+                    </label>
 
-                  {/* Opção 2: Usar monografia original (embaixo) */}
+                    {/* Upload dentro do card */}
+                    {tipoDocumento === 'ANONIMO' && (
+                      <div className="mt-4 pt-4 border-t border-[rgb(var(--cor-borda))]">
+                        <label className="block">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Upload className="h-4 w-4 text-[rgb(var(--cor-icone))]" />
+                            <span className="text-sm font-medium text-[rgb(var(--cor-texto-secundario))]">
+                              Arquivo anônimo (PDF ou Word)
+                            </span>
+                          </div>
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            onChange={handleArquivoChange}
+                            className="block w-full text-sm text-[rgb(var(--cor-texto-secundario))] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-[rgb(var(--cor-borda))] file:text-sm file:font-medium file:bg-[rgb(var(--cor-fundo))] hover:file:bg-[rgb(var(--cor-fundo))]/70 file:text-[rgb(var(--cor-texto-secundario))] cursor-pointer"
+                          />
+                          <p className="mt-1 text-xs text-[rgb(var(--cor-texto-secundario))]">
+                            Formatos aceitos: PDF, Word (.doc, .docx) • Máx: 30MB
+                          </p>
+                          {arquivoAnonimo && (
+                            <p
+                              className="mt-2 text-xs text-[rgb(var(--cor-sucesso))] flex items-center gap-1 max-w-full"
+                              title={arquivoAnonimo.name}
+                            >
+                              <CheckCircle className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{arquivoAnonimo.name}</span>
+                            </p>
+                          )}
+                          {erroArquivo && (
+                            <p className="mt-2 text-xs text-[rgb(var(--cor-erro))] flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              {erroArquivo}
+                            </p>
+                          )}
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Opção 2: Usar monografia original */}
                   <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:bg-[rgb(var(--cor-fundo))]/50 ${tipoDocumento === 'ORIGINAL' ? 'border-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-destaque))]/5' : 'border-[rgb(var(--cor-borda))]'}`}>
                     <input
                       type="radio"
@@ -457,16 +443,6 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
                       </p>
                     </div>
                   </label>
-
-                  {/* Alerta informativo */}
-                  <div className="p-3 bg-[rgb(var(--cor-destaque))]/5 border border-[rgb(var(--cor-destaque))]/20 rounded-lg">
-                    <div className="flex gap-2">
-                      <Info className="h-4 w-4 text-[rgb(var(--cor-destaque))] flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-[rgb(var(--cor-destaque))]">
-                        A banca será formada automaticamente e os avaliadores receberão o documento selecionado para avaliação.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -482,7 +458,7 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
               </button>
               <button
                 onClick={handleFormarBanca}
-                disabled={avaliadoresSelecionados.length === 0 || processando}
+                disabled={avaliadoresSelecionados.length < 2 || processando}
                 className="flex-1 px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white rounded-lg hover:bg-[rgb(var(--cor-destaque))]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
               >
                 {processando ? (

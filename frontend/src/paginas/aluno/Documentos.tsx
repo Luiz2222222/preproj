@@ -61,6 +61,23 @@ const statusParaBadge: Record<StatusDocumento, BadgeVariant> = {
   [StatusDocumento.REJEITADO]: 'error',
 }
 
+// Tipos de documento válidos para filtro (visíveis para o aluno)
+const tiposDocumentoFiltro: { valor: TipoDocumento; label: string }[] = [
+  { valor: TipoDocumento.MONOGRAFIA, label: 'Monografia' },
+  { valor: TipoDocumento.TERMO_SOLICITACAO_AVALIACAO, label: 'Termo de Solicitação de Avaliação' },
+  { valor: TipoDocumento.TERMO_ACEITE, label: 'Termo de Aceite' },
+  { valor: TipoDocumento.PLANO_DESENVOLVIMENTO, label: 'Plano de Desenvolvimento' },
+  { valor: TipoDocumento.APRESENTACAO, label: 'Apresentação' },
+]
+
+// Status válidos para filtro
+const statusFiltro: { valor: StatusDocumento; label: string }[] = [
+  { valor: StatusDocumento.PENDENTE, label: 'Pendente' },
+  { valor: StatusDocumento.EM_ANALISE, label: 'Em Análise' },
+  { valor: StatusDocumento.APROVADO, label: 'Aprovado' },
+  { valor: StatusDocumento.REJEITADO, label: 'Rejeitado' },
+]
+
 export function Documentos() {
   const { sucesso, erro: toastErro } = useToast()
   const { tcc, carregando: carregandoTCC } = useMeuTCC()
@@ -107,19 +124,34 @@ export function Documentos() {
     }
   }
 
+  // Monta URL correta (absoluta ou com prefixo MEDIA_URL)
+  const montarUrl = (caminhoArquivo: string) => {
+    return caminhoArquivo.startsWith('http://') || caminhoArquivo.startsWith('https://')
+      ? caminhoArquivo
+      : `${MEDIA_URL}/${caminhoArquivo}`
+  }
+
   const visualizarDocumento = (caminhoArquivo: string) => {
-    const url = `${MEDIA_URL}/${caminhoArquivo}`
+    const url = montarUrl(caminhoArquivo)
     window.open(url, '_blank')
   }
 
-  const baixarDocumento = (caminhoArquivo: string, nomeOriginal: string) => {
-    const url = `${MEDIA_URL}/${caminhoArquivo}`
-    const link = document.createElement('a')
-    link.href = url
-    link.download = nomeOriginal
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const baixarDocumento = async (caminhoArquivo: string, nomeOriginal: string) => {
+    try {
+      const url = montarUrl(caminhoArquivo)
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = nomeOriginal
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+    } catch (err) {
+      toastErro('Erro ao baixar documento')
+    }
   }
 
   if (carregandoTCC) {
@@ -153,9 +185,6 @@ export function Documentos() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-cor-texto">Documentos</h1>
-          <p className="text-medio text-cor-texto opacity-75">
-            Gerencie os documentos do seu TCC
-          </p>
         </div>
         {podeEnviarMonografia && (
           <button
@@ -182,7 +211,7 @@ export function Documentos() {
                 className="w-full px-3 py-2 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
               >
                 <option value="TODOS">Todos os tipos</option>
-                {Object.entries(TipoDocumentoLabels).map(([valor, label]) => (
+                {tiposDocumentoFiltro.map(({ valor, label }) => (
                   <option key={valor} value={valor}>
                     {label}
                   </option>
@@ -199,7 +228,7 @@ export function Documentos() {
                 className="w-full px-3 py-2 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
               >
                 <option value="TODOS">Todos os status</option>
-                {Object.entries(StatusDocumentoLabels).map(([valor, label]) => (
+                {statusFiltro.map(({ valor, label }) => (
                   <option key={valor} value={valor}>
                     {label}
                   </option>
@@ -229,8 +258,14 @@ export function Documentos() {
         ) : (
           <div className="divide-y divide-cor-borda">
             {documentosFiltrados.map((documento) => {
-              const Icone = iconesPorTipo[documento.tipo_documento as TipoDocumento]
-              const IconeStatus = iconesStatus[documento.status as StatusDocumento]
+              const Icone = iconesPorTipo[documento.tipo_documento as TipoDocumento] || FileText
+              const IconeStatus = iconesStatus[documento.status as StatusDocumento] || Clock
+              const badgeVariant = statusParaBadge[documento.status as StatusDocumento] || 'neutral'
+
+              // Nome de exibição: para monografia anônima, usar nome_original ou 'Monografia anônima'
+              const isMonografiaAnonima = documento.tipo_documento === TipoDocumento.MONOGRAFIA_AVALIACAO
+              const nomeExibicao = documento.nome_original || (isMonografiaAnonima ? 'Monografia anônima' : TipoDocumentoLabels[documento.tipo_documento as TipoDocumento] || 'Documento')
+              const nomeDownload = documento.nome_original || (isMonografiaAnonima ? 'Monografia_anonima.pdf' : 'Documento.pdf')
 
               return (
                 <div key={documento.id} className="p-6 hover:bg-[rgb(var(--cor-superficie-hover))] transition-colors">
@@ -245,23 +280,30 @@ export function Documentos() {
                     {/* Informações do documento */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-medio font-semibold text-cor-texto truncate">
-                          {documento.nome_original}
+                        <h3 className="text-medio font-semibold text-cor-texto truncate" title={nomeExibicao}>
+                          {nomeExibicao}
                         </h3>
-                        <Badge
-                          variant={statusParaBadge[documento.status as StatusDocumento]}
-                          icon={<IconeStatus className="h-3 w-3" />}
-                        >
-                          {StatusDocumentoLabels[documento.status as StatusDocumento]}
-                        </Badge>
+                        {documento.tipo_documento !== TipoDocumento.MONOGRAFIA_AVALIACAO &&
+                         documento.tipo_documento !== TipoDocumento.TERMO_SOLICITACAO_AVALIACAO && (
+                          <Badge
+                            variant={badgeVariant}
+                            icon={<IconeStatus className="h-3 w-3" />}
+                          >
+                            {StatusDocumentoLabels[documento.status as StatusDocumento]}
+                          </Badge>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-4 text-pequeno text-cor-texto opacity-60 mb-2">
                         <span>
-                          {TipoDocumentoLabels[documento.tipo_documento as TipoDocumento]}
+                          {isMonografiaAnonima ? 'Monografia anônima' : TipoDocumentoLabels[documento.tipo_documento as TipoDocumento]}
                         </span>
-                        <span>•</span>
-                        <span>Versão {documento.versao}</span>
+                        {documento.tipo_documento === TipoDocumento.MONOGRAFIA && (
+                          <>
+                            <span>•</span>
+                            <span>Versão {documento.versao}</span>
+                          </>
+                        )}
                         <span>•</span>
                         <span>
                           {new Date(documento.criado_em).toLocaleDateString('pt-BR', {
@@ -288,19 +330,21 @@ export function Documentos() {
 
                     {/* Ações */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => visualizarDocumento(documento.arquivo)}
-                        className="p-2 border border-cor-borda rounded-lg hover:bg-[rgb(var(--cor-superficie-hover))] transition-colors"
-                        title="Visualizar"
-                      >
-                        <Eye className="h-4 w-4 text-cor-texto" />
-                      </button>
+                      {documento.tipo_documento !== TipoDocumento.MONOGRAFIA && (
+                        <button
+                          onClick={() => visualizarDocumento(documento.arquivo)}
+                          className="p-2 border border-cor-borda rounded-lg hover:bg-[rgb(var(--cor-superficie-hover))] transition-colors"
+                          title="Visualizar"
+                        >
+                          <Eye className="h-4 w-4 text-cor-texto" />
+                        </button>
+                      )}
                       <button
                         onClick={() =>
-                          baixarDocumento(documento.arquivo, documento.nome_original)
+                          baixarDocumento(documento.arquivo, nomeDownload)
                         }
                         className="p-2 border border-cor-borda rounded-lg hover:bg-[rgb(var(--cor-superficie-hover))] transition-colors"
-                        title="Baixar"
+                        title={`Baixar ${nomeExibicao}`}
                       >
                         <Download className="h-4 w-4 text-cor-texto" />
                       </button>

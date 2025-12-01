@@ -415,10 +415,6 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
             <span>Aprovar completo</span>
           </button>
         </div>
-
-        <p className="mt-3 text-xs text-[rgb(var(--cor-texto-secundario))]">
-          Selecione avaliadores para ações específicas. A aprovação completa requer todas as avaliações bloqueadas.
-        </p>
       </div>
 
       {/* Modal de Solicitar Ajustes */}

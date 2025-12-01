@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
-import { Calendar, FileText, Clock, BookOpen, Users, CheckCircle, Briefcase, Download, Loader2 } from 'lucide-react'
+import { Calendar, FileText, Clock, BookOpen, Users, CheckCircle, Briefcase, Download, Loader2, Eye } from 'lucide-react'
 import { useCalendarioSemestre } from '../../hooks'
 import { PainelDatasImportantes } from '../../componentes'
 import { formatarDataCurta, formatarIntervalo } from '../../utils/datas'
@@ -185,11 +185,8 @@ export function Informacoes() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {documentosOrdenados.map((doc) => (
-              <a
+              <div
                 key={doc.id}
-                href={doc.arquivo_url || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="flex items-center justify-between p-4 border border-cor-borda rounded-lg hover:bg-cor-fundo transition-colors group"
               >
                 <div className="flex items-center gap-3">
@@ -207,8 +204,38 @@ export function Informacoes() {
                     )}
                   </div>
                 </div>
-                <Download className="h-5 w-5 text-cor-texto-secundario group-hover:text-cor-destaque transition-colors" />
-              </a>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => window.open(doc.arquivo_url, '_blank')}
+                    className="p-2 text-cor-texto-secundario hover:text-cor-destaque hover:bg-cor-destaque/10 rounded-lg transition-colors"
+                    title="Visualizar"
+                  >
+                    <Eye className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(doc.arquivo_url)
+                        const blob = await response.blob()
+                        const blobUrl = URL.createObjectURL(blob)
+                        const link = document.createElement('a')
+                        link.href = blobUrl
+                        link.download = doc.arquivo_nome || `${nomesDocumentos[doc.tipo] || doc.tipo}.pdf`
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+                        URL.revokeObjectURL(blobUrl)
+                      } catch {
+                        mostrarErro('Erro ao baixar documento')
+                      }
+                    }}
+                    className="p-2 text-cor-texto-secundario hover:text-cor-destaque hover:bg-cor-destaque/10 rounded-lg transition-colors"
+                    title="Baixar"
+                  >
+                    <Download className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}

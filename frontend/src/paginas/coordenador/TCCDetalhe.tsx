@@ -281,34 +281,43 @@ export function TCCDetalhe() {
             </h3>
             {tcc.documentos && tcc.documentos.length > 0 ? (
               <div className="space-y-3">
-                {tcc.documentos.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between p-3 border border-[rgb(var(--cor-borda))] rounded-lg hover:bg-[rgb(var(--cor-fundo))]/50 transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      {getDocumentoIcon(doc.status)}
-                      <div>
-                        <p className="font-medium text-[rgb(var(--cor-texto-primario))] text-sm">
-                          {TipoDocumentoLabels[doc.tipo_documento]}
-                        </p>
-                        <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">
-                          {formatarDataCurta(doc.criado_em)} • v{doc.versao}
-                        </p>
+                {tcc.documentos.map((doc) => {
+                  // Nome para exibição e download
+                  const isMonografiaAnonima = doc.tipo_documento === 'MONOGRAFIA_AVALIACAO'
+                  const nomeExibicao = doc.nome_original || TipoDocumentoLabels[doc.tipo_documento] || 'Documento'
+                  const tipoLabel = isMonografiaAnonima ? 'Monografia anônima' : TipoDocumentoLabels[doc.tipo_documento]
+                  const nomeDownload = doc.nome_original || `${TipoDocumentoLabels[doc.tipo_documento] || 'Documento'}.pdf`
+
+                  return (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-3 border border-[rgb(var(--cor-borda))] rounded-lg hover:bg-[rgb(var(--cor-fundo))]/50 transition"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {getDocumentoIcon(doc.status)}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-[rgb(var(--cor-texto-primario))] text-sm truncate" title={nomeExibicao}>
+                            {nomeExibicao}
+                          </p>
+                          <p className="text-xs text-[rgb(var(--cor-texto-secundario))] truncate">
+                            {tipoLabel} • {formatarDataCurta(doc.criado_em)}{doc.tipo_documento === 'MONOGRAFIA' && ` • v${doc.versao}`}
+                          </p>
+                        </div>
                       </div>
+                      {doc.arquivo && (
+                        <a
+                          href={doc.arquivo}
+                          download={nomeDownload}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1.5 text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/5 rounded-lg transition"
+                          title={`Baixar ${nomeExibicao}`}
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
+                      )}
                     </div>
-                    {doc.arquivo && (
-                      <a
-                        href={doc.arquivo}
-                        download
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/5 rounded-lg transition"
-                      >
-                        <Download className="h-4 w-4" />
-                      </a>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-6">
