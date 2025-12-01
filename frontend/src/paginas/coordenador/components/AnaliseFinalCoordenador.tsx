@@ -10,11 +10,16 @@ import {
   TrendingUp,
   FileCheck,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Unlock,
+  Clock,
+  Presentation
 } from 'lucide-react';
 import type { TCC } from '../../../types';
-import { useAvaliacoesFase2 } from '../../../hooks';
+import { useAvaliacoesFase2, useCalendarioSemestre } from '../../../hooks';
 import { StatusAvaliacaoFase2 } from '../../../types/enums';
+import { formatarDataCurta } from '../../../utils/datas';
 import api from '../../../servicos/api';
 import { Modal } from '../../../componentes/Modal';
 
@@ -24,25 +29,45 @@ interface AnaliseFinalCoordenadorProps {
 }
 
 export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoordenadorProps) {
+  const { calendario } = useCalendarioSemestre();
   const {
     avaliacoes,
     carregando,
-    erro
+    erro,
+    bloquear,
+    desbloquear,
+    processando: processandoHook
   } = useAvaliacoesFase2({
     tccId: tcc.id,
     autoCarregar: true
   });
 
+  // Pesos do calendário (com fallback para valores padrão e conversão para número)
+  const pesos = {
+    coerencia: Number(calendario?.peso_coerencia_conteudo) || 2.0,
+    qualidade: Number(calendario?.peso_qualidade_apresentacao) || 2.0,
+    dominio: Number(calendario?.peso_dominio_tema) || 2.5,
+    clareza: Number(calendario?.peso_clareza_fluencia) || 2.5,
+    tempo: Number(calendario?.peso_observancia_tempo) || 1.0
+  };
+  const pesoTotal = pesos.coerencia + pesos.qualidade + pesos.dominio + pesos.clareza + pesos.tempo;
+
   const [processando, setProcessando] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
   const [modalAprovar, setModalAprovar] = useState(false);
   const [modalSolicitarAjustes, setModalSolicitarAjustes] = useState(false);
+  const [modalBloquear, setModalBloquear] = useState(false);
+  const [modalDesbloquear, setModalDesbloquear] = useState(false);
   const [avaliadoresSelecionados, setAvaliadoresSelecionados] = useState<number[]>([]);
   const [mensagemAjustes, setMensagemAjustes] = useState('');
 
-  // Estatísticas
+  // Estatísticas das avaliações
+  const totalAvaliacoes = avaliacoes.length;
+  const avaliacoesPendentes = avaliacoes.filter(a => a.status === StatusAvaliacaoFase2.PENDENTE).length;
+  const avaliacoesEnviadas = avaliacoes.filter(a => a.status === StatusAvaliacaoFase2.ENVIADO).length;
   const avaliacoesBloqueadas = avaliacoes.filter(a => a.status === StatusAvaliacaoFase2.BLOQUEADO);
-  const todasBloqueadas = avaliacoes.length === 3 && avaliacoesBloqueadas.length === 3;
+  const todasBloqueadas = totalAvaliacoes === 3 && avaliacoesBloqueadas.length === 3;
+  const existemPendentes = avaliacoesPendentes > 0;
 
   // Dados do TCC
   const nf1 = tcc.nf1 ? Number(tcc.nf1) : null;
@@ -135,6 +160,70 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
     return 'Fase I e II';
   };
 
+  // Handler para bloquear avaliações
+  const handleBloquear = async () => {
+    try {
+      setMensagemSucesso(null);
+      setModalBloquear(false);
+      const resultado = await bloquear();
+      setMensagemSucesso(`${resultado.avaliacoes_bloqueadas} avaliação(ões) bloqueada(s) com sucesso!`);
+      if (onConclusao) {
+        onConclusao();
+      }
+    } catch (err) {
+      console.error('Erro ao bloquear avaliações:', err);
+    }
+  };
+
+  // Handler para desbloquear avaliações
+  const handleDesbloquear = async () => {
+    try {
+      setMensagemSucesso(null);
+      setModalDesbloquear(false);
+      const resultado = await desbloquear();
+      setMensagemSucesso(`${resultado.avaliacoes_desbloqueadas} avaliação(ões) desbloqueada(s) com sucesso!`);
+      if (onConclusao) {
+        onConclusao();
+      }
+    } catch (err) {
+      console.error('Erro ao desbloquear avaliações:', err);
+    }
+  };
+
+  // Badge de status da avaliação
+  const getStatusBadge = (status: string) => {
+    const config = {
+      [StatusAvaliacaoFase2.PENDENTE]: {
+        bg: 'bg-[rgb(var(--cor-alerta))]/10',
+        text: 'text-[rgb(var(--cor-alerta))]',
+        icon: Clock,
+        label: 'Pendente'
+      },
+      [StatusAvaliacaoFase2.ENVIADO]: {
+        bg: 'bg-[rgb(var(--cor-destaque))]/10',
+        text: 'text-[rgb(var(--cor-destaque))]',
+        icon: CheckCircle,
+        label: 'Enviado'
+      },
+      [StatusAvaliacaoFase2.BLOQUEADO]: {
+        bg: 'bg-[rgb(var(--cor-fundo))]',
+        text: 'text-[rgb(var(--cor-texto-secundario))]',
+        icon: Lock,
+        label: 'Bloqueado'
+      }
+    };
+
+    const item = config[status as keyof typeof config] || config[StatusAvaliacaoFase2.PENDENTE];
+    const Icon = item.icon;
+
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.bg} ${item.text} flex items-center gap-1`}>
+        <Icon className="h-3 w-3" />
+        {item.label}
+      </span>
+    );
+  };
+
   if (carregando) {
     return (
       <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 mb-6">
@@ -161,20 +250,60 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
     <>
       <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 mb-6">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-6">
-          <Award className="h-6 w-6 text-[rgb(var(--cor-info))]" />
-          <h3 className="text-xl font-bold text-[rgb(var(--cor-texto-primario))]">Análise Final e Conclusão</h3>
+        <div className="flex items-center gap-2 mb-4">
+          <Presentation className="h-6 w-6 text-[rgb(var(--cor-info))]" />
+          <h3 className="text-xl font-bold text-[rgb(var(--cor-texto-primario))]">Análise das Avaliações - Fase II</h3>
         </div>
 
         {/* Mensagem de sucesso */}
         {mensagemSucesso && (
-          <div className="mb-6 p-4 bg-[rgb(var(--cor-sucesso))]/10 border border-[rgb(var(--cor-sucesso))]/20 rounded-lg flex items-center gap-2 text-[rgb(var(--cor-sucesso))]">
+          <div className="mb-4 p-3 bg-[rgb(var(--cor-sucesso))]/10 border border-[rgb(var(--cor-sucesso))]/20 rounded-lg flex items-center gap-2 text-[rgb(var(--cor-sucesso))]">
             <CheckCircle className="h-5 w-5" />
-            <span>{mensagemSucesso}</span>
+            <span className="text-sm">{mensagemSucesso}</span>
           </div>
         )}
 
-        {/* Notas Finais */}
+        {/* Estatísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="p-3 bg-[rgb(var(--cor-fundo))] rounded-lg">
+            <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Total</p>
+            <p className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{totalAvaliacoes}</p>
+          </div>
+          <div className="p-3 bg-[rgb(var(--cor-alerta))]/10 rounded-lg">
+            <p className="text-xs text-[rgb(var(--cor-alerta))] mb-1">Pendentes</p>
+            <p className="text-2xl font-bold text-[rgb(var(--cor-alerta))]">{avaliacoesPendentes}</p>
+          </div>
+          <div className="p-3 bg-[rgb(var(--cor-destaque))]/10 rounded-lg">
+            <p className="text-xs text-[rgb(var(--cor-destaque))] mb-1">Enviadas</p>
+            <p className="text-2xl font-bold text-[rgb(var(--cor-destaque))]">{avaliacoesEnviadas}</p>
+          </div>
+          <div className="p-3 bg-[rgb(var(--cor-fundo))] rounded-lg">
+            <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Bloqueadas</p>
+            <p className="text-2xl font-bold text-[rgb(var(--cor-texto-secundario))]">{avaliacoesBloqueadas.length}</p>
+          </div>
+        </div>
+
+        {/* Alertas de status */}
+        {existemPendentes && !todasBloqueadas && (
+          <div className="mb-4 p-3 bg-[rgb(var(--cor-alerta))]/10 border border-[rgb(var(--cor-alerta))]/20 rounded-lg flex items-center gap-2 text-[rgb(var(--cor-alerta))]">
+            <AlertCircle className="h-5 w-5" />
+            <span className="text-sm">
+              Existem {avaliacoesPendentes} avaliação(ões) pendente(s). Aguarde todos os envios antes de aprovar.
+            </span>
+          </div>
+        )}
+
+        {todasBloqueadas && (
+          <div className="mb-4 p-3 bg-[rgb(var(--cor-destaque))]/10 border border-[rgb(var(--cor-destaque))]/20 rounded-lg flex items-center gap-2 text-[rgb(var(--cor-destaque))]">
+            <Lock className="h-5 w-5" />
+            <span className="text-sm">
+              Todas as avaliações estão bloqueadas para análise.
+            </span>
+          </div>
+        )}
+
+        {/* Notas Finais - só aparecem quando avaliações bloqueadas */}
+        {todasBloqueadas && (
         <div className="mb-6">
           <h4 className="text-sm font-semibold text-[rgb(var(--cor-texto-secundario))] mb-4 flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
@@ -228,6 +357,7 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
             </div>
           </div>
         </div>
+        )}
 
         {/* Lista das avaliações */}
         <div className="mb-6">
@@ -239,9 +369,9 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
             {avaliacoes.map(avaliacao => (
               <div
                 key={avaliacao.id}
-                className="border border-[rgb(var(--cor-borda))] rounded-lg p-4 bg-[rgb(var(--cor-fundo))]"
+                className="border border-[rgb(var(--cor-borda))] rounded-lg p-4 hover:bg-[rgb(var(--cor-fundo))]/50 transition-colors"
               >
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between mb-3">
                   <div className="flex items-start gap-3 flex-1">
                     {/* Checkbox para solicitar ajustes */}
                     {avaliacao.status === StatusAvaliacaoFase2.BLOQUEADO && (
@@ -266,110 +396,191 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao }: AnaliseFinalCoorde
                       <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">{avaliacao.avaliador_dados.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      avaliacao.status === StatusAvaliacaoFase2.BLOQUEADO
-                        ? 'bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-secundario))]'
-                        : 'bg-[rgb(var(--cor-alerta))]/10 text-[rgb(var(--cor-alerta))]'
-                    }`}>
-                      {avaliacao.status === StatusAvaliacaoFase2.BLOQUEADO ? 'Bloqueado' : avaliacao.status}
-                    </span>
-                    <span className="text-lg font-bold text-[rgb(var(--cor-info))]">
-                      {avaliacao.nota_final !== null ? Number(avaliacao.nota_final).toFixed(2).replace('.', ',') : '-'} / 10,0
-                    </span>
-                  </div>
+                  {getStatusBadge(avaliacao.status)}
                 </div>
 
-                {/* Detalhes das notas */}
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-2 text-xs">
-                  <div className="text-[rgb(var(--cor-texto-secundario))]">
-                    <span className="block text-[rgb(var(--cor-texto-secundario))]">Coerência:</span>
-                    <span className="font-medium">{avaliacao.nota_coerencia_conteudo !== null ? Number(avaliacao.nota_coerencia_conteudo).toFixed(1).replace('.', ',') : '-'}/2,0</span>
+                {/* Notas */}
+                {avaliacao.status !== StatusAvaliacaoFase2.PENDENTE && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
+                      <div className="text-sm">
+                        <span className="text-[rgb(var(--cor-texto-secundario))]">Coerência:</span>
+                        <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
+                          {avaliacao.nota_coerencia_conteudo != null ? Number(avaliacao.nota_coerencia_conteudo).toFixed(1).replace('.', ',') : '-'} / {pesos.coerencia.toFixed(1).replace('.', ',')}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-[rgb(var(--cor-texto-secundario))]">Qualidade:</span>
+                        <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
+                          {avaliacao.nota_qualidade_apresentacao != null ? Number(avaliacao.nota_qualidade_apresentacao).toFixed(1).replace('.', ',') : '-'} / {pesos.qualidade.toFixed(1).replace('.', ',')}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-[rgb(var(--cor-texto-secundario))]">Domínio:</span>
+                        <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
+                          {avaliacao.nota_dominio_tema != null ? Number(avaliacao.nota_dominio_tema).toFixed(1).replace('.', ',') : '-'} / {pesos.dominio.toFixed(1).replace('.', ',')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                      <div className="text-sm">
+                        <span className="text-[rgb(var(--cor-texto-secundario))]">Clareza:</span>
+                        <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
+                          {avaliacao.nota_clareza_fluencia != null ? Number(avaliacao.nota_clareza_fluencia).toFixed(1).replace('.', ',') : '-'} / {pesos.clareza.toFixed(1).replace('.', ',')}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-[rgb(var(--cor-texto-secundario))]">Tempo:</span>
+                        <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
+                          {avaliacao.nota_observancia_tempo != null ? Number(avaliacao.nota_observancia_tempo).toFixed(1).replace('.', ',') : '-'} / {pesos.tempo.toFixed(1).replace('.', ',')}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-[rgb(var(--cor-texto-secundario))]">Total:</span>
+                        <span className="ml-2 font-bold text-[rgb(var(--cor-info))]">
+                          {avaliacao.nota_final != null ? Number(avaliacao.nota_final).toFixed(2).replace('.', ',') : '-'} / {pesoTotal.toFixed(1).replace('.', ',')}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Parecer */}
+                {avaliacao.parecer && (
+                  <div className="p-2 bg-[rgb(var(--cor-fundo))] rounded text-sm text-[rgb(var(--cor-texto-secundario))]">
+                    <p className="font-medium text-[rgb(var(--cor-texto-primario))] mb-1">Parecer:</p>
+                    <p>{avaliacao.parecer}</p>
                   </div>
-                  <div className="text-[rgb(var(--cor-texto-secundario))]">
-                    <span className="block text-[rgb(var(--cor-texto-secundario))]">Qualidade:</span>
-                    <span className="font-medium">{avaliacao.nota_qualidade_apresentacao !== null ? Number(avaliacao.nota_qualidade_apresentacao).toFixed(1).replace('.', ',') : '-'}/2,0</span>
-                  </div>
-                  <div className="text-[rgb(var(--cor-texto-secundario))]">
-                    <span className="block text-[rgb(var(--cor-texto-secundario))]">Domínio:</span>
-                    <span className="font-medium">{avaliacao.nota_dominio_tema !== null ? Number(avaliacao.nota_dominio_tema).toFixed(1).replace('.', ',') : '-'}/2,5</span>
-                  </div>
-                  <div className="text-[rgb(var(--cor-texto-secundario))]">
-                    <span className="block text-[rgb(var(--cor-texto-secundario))]">Clareza:</span>
-                    <span className="font-medium">{avaliacao.nota_clareza_fluencia !== null ? Number(avaliacao.nota_clareza_fluencia).toFixed(1).replace('.', ',') : '-'}/2,5</span>
-                  </div>
-                  <div className="text-[rgb(var(--cor-texto-secundario))]">
-                    <span className="block text-[rgb(var(--cor-texto-secundario))]">Tempo:</span>
-                    <span className="font-medium">{avaliacao.nota_observancia_tempo !== null ? Number(avaliacao.nota_observancia_tempo).toFixed(1).replace('.', ',') : '-'}/1,0</span>
-                  </div>
+                )}
+
+                {/* Timestamps */}
+                <div className="mt-2 flex flex-wrap gap-3 text-xs text-[rgb(var(--cor-texto-secundario))]">
+                  <span>Criado em: {formatarDataCurta(avaliacao.criado_em)}</span>
+                  {avaliacao.enviado_em && (
+                    <span>Enviado em: {formatarDataCurta(avaliacao.enviado_em)}</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Alerta se não todas bloqueadas */}
-        {!todasBloqueadas && (
-          <div className="mb-4 p-3 bg-[rgb(var(--cor-alerta))]/10 border border-[rgb(var(--cor-alerta))]/20 rounded-lg flex items-center gap-2 text-[rgb(var(--cor-alerta))]">
-            <AlertCircle className="h-5 w-5" />
-            <span className="text-sm">
-              Todas as 3 avaliações devem estar bloqueadas antes de aprovar e concluir.
-              Use o botão "Fechar para Análise" acima.
-            </span>
-          </div>
-        )}
-
-        {/* Botões de ação */}
-        <div className="space-y-3">
-          {/* Botão Solicitar Ajustes Finais */}
-          {todasBloqueadas && (
+        {/* Ações de bloqueio */}
+        <div className="flex flex-wrap gap-3 mb-6">
+          {/* Botão "Fechar para Análise" */}
+          {!todasBloqueadas && (
             <button
-              onClick={() => setModalSolicitarAjustes(true)}
-              disabled={processando || avaliadoresSelecionados.length === 0}
-              className="w-full px-6 py-3 bg-[rgb(var(--cor-alerta))] text-white rounded-lg hover:bg-[rgb(var(--cor-alerta))]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-semibold"
-              title={avaliadoresSelecionados.length > 0 ? 'Solicitar ajustes finais aos avaliadores selecionados (TCC irá para AGUARDANDO_AJUSTES_FINAIS)' : 'Selecione pelo menos um avaliador'}
+              onClick={() => setModalBloquear(true)}
+              disabled={processandoHook || avaliacoesEnviadas !== 3}
+              className="px-4 py-2 bg-[rgb(var(--cor-info))] text-white rounded-lg hover:bg-[rgb(var(--cor-info))]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              title="Fechar avaliações para análise final - requer todas as 3 avaliações enviadas"
             >
-              {processando ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Processando...</span>
-                </>
+              {processandoHook ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  <AlertCircle className="h-5 w-5" />
-                  <span>Solicitar Ajustes Finais ({avaliadoresSelecionados.length} selecionado{avaliadoresSelecionados.length !== 1 ? 's' : ''})</span>
-                </>
+                <Lock className="h-4 w-4" />
               )}
+              <span>Fechar para Análise</span>
             </button>
           )}
 
+          {/* Botão "Liberar análises" */}
+          {todasBloqueadas && (
+            <button
+              onClick={() => setModalDesbloquear(true)}
+              disabled={processandoHook}
+              className="px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white rounded-lg hover:bg-[rgb(var(--cor-destaque))]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {processandoHook ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Unlock className="h-4 w-4" />
+              )}
+              <span>Liberar análises</span>
+            </button>
+          )}
+        </div>
+
+        {/* Mensagem informativa */}
+        {!todasBloqueadas && (
+          <p className="mb-6 text-xs text-[rgb(var(--cor-texto-secundario))]">
+            {avaliacoesEnviadas === 3
+              ? 'Clique em "Fechar para Análise" para bloquear as 3 avaliações e prosseguir para aprovação final.'
+              : `Aguarde todas as 3 avaliações serem enviadas (${avaliacoesEnviadas}/3 enviadas).`
+            }
+          </p>
+        )}
+
+        {/* Botões de ação final - só aparecem quando avaliações bloqueadas */}
+        {todasBloqueadas && (
+        <div className="space-y-3">
+          {/* Botão Solicitar Ajustes Finais */}
+          <button
+            onClick={() => setModalSolicitarAjustes(true)}
+            disabled={processando || avaliadoresSelecionados.length === 0}
+            className="w-full px-6 py-3 bg-[rgb(var(--cor-alerta))] text-white rounded-lg hover:bg-[rgb(var(--cor-alerta))]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-semibold"
+            title={avaliadoresSelecionados.length > 0 ? 'Solicitar ajustes finais aos avaliadores selecionados (TCC irá para AGUARDANDO_AJUSTES_FINAIS)' : 'Selecione pelo menos um avaliador'}
+          >
+            {processando ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Processando...</span>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-5 w-5" />
+                <span>Solicitar Ajustes Finais ({avaliadoresSelecionados.length} selecionado{avaliadoresSelecionados.length !== 1 ? 's' : ''})</span>
+              </>
+            )}
+          </button>
+
           {/* Botão Aprovar e Concluir */}
           <button
-          onClick={() => setModalAprovar(true)}
-          disabled={processando || !todasBloqueadas}
-          className="w-full px-6 py-3 bg-gradient-to-r from-[rgb(var(--cor-info))] to-[rgb(var(--cor-destaque))] text-white rounded-lg hover:from-[rgb(var(--cor-info))]/90 hover:to-[rgb(var(--cor-destaque))]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 font-semibold"
-          title={todasBloqueadas ? 'Aprovar e concluir o TCC' : 'Bloqueie todas as avaliações primeiro'}
-        >
-          {processando ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Processando...</span>
-            </>
-          ) : (
-            <>
-              <CheckCircle className="h-5 w-5" />
-              <span>Aprovar e Concluir TCC</span>
-            </>
-          )}
-        </button>
+            onClick={() => setModalAprovar(true)}
+            disabled={processando}
+            className="w-full px-6 py-3 bg-gradient-to-r from-[rgb(var(--cor-info))] to-[rgb(var(--cor-destaque))] text-white rounded-lg hover:from-[rgb(var(--cor-info))]/90 hover:to-[rgb(var(--cor-destaque))]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 font-semibold"
+            title="Aprovar e concluir o TCC"
+          >
+            {processando ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Processando...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-5 w-5" />
+                <span>Aprovar e Concluir TCC</span>
+              </>
+            )}
+          </button>
 
-          <p className="text-xs text-center text-[rgb(var(--cor-texto-secundario))]">
-            {todasBloqueadas
-              ? 'Você pode solicitar ajustes finais a avaliadores específicos (muda TCC para AGUARDANDO_AJUSTES_FINAIS) ou aprovar e concluir o TCC.'
-              : 'Esta ação marcará o TCC como CONCLUÍDO. As notas já foram calculadas automaticamente.'}
-          </p>
         </div>
+        )}
       </div>
+
+      {/* Modal de confirmação - Bloquear */}
+      <Modal
+        aberto={modalBloquear}
+        aoFechar={() => setModalBloquear(false)}
+        titulo="Fechar para Análise"
+        mensagem="Deseja fechar as 3 avaliações para análise final? Após esta ação, os avaliadores não poderão mais editar e você poderá aprovar e concluir o TCC."
+        tipo="confirmacao"
+        textoConfirmar="Fechar para Análise"
+        aoConfirmar={handleBloquear}
+        carregando={processandoHook}
+      />
+
+      {/* Modal de confirmação - Desbloquear */}
+      <Modal
+        aberto={modalDesbloquear}
+        aoFechar={() => setModalDesbloquear(false)}
+        titulo="Liberar Avaliações"
+        mensagem="Deseja liberar as avaliações? Os avaliadores poderão editar novamente."
+        tipo="confirmacao"
+        textoConfirmar="Liberar"
+        aoConfirmar={handleDesbloquear}
+        carregando={processandoHook}
+      />
 
       {/* Modal de confirmação - Aprovar e Concluir */}
       <Modal

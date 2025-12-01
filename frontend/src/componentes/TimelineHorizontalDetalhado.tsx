@@ -22,6 +22,7 @@ interface TimelineHorizontalDetalhadoProps {
   tcc: TCC;
   documentos?: DocumentoTCC[];
   className?: string;
+  mostrarNotas?: boolean; // Mostra notas das fases e status final (para visão do aluno)
 }
 
 // Mapear etapa para grupo
@@ -163,8 +164,8 @@ function obterStatusGrupo(grupoId: string, grupoAtual: string, etapaAtual: Etapa
   const indiceAtual = gruposOrdenados.indexOf(grupoAtual);
   const indiceGrupo = gruposOrdenados.indexOf(grupoId);
 
-  // Caso especial: se TCC está CONCLUÍDO e o grupo é FINALIZACAO, marcar como concluído (verde)
-  if (etapaAtual === EtapaTCC.CONCLUIDO && grupoId === 'FINALIZACAO') {
+  // Caso especial: se TCC está CONCLUÍDO, todos os grupos devem aparecer como concluídos
+  if (etapaAtual === EtapaTCC.CONCLUIDO) {
     return 'concluido';
   }
 
@@ -176,6 +177,11 @@ function obterStatusGrupo(grupoId: string, grupoAtual: string, etapaAtual: Etapa
   if (indiceGrupo === indiceAtual) return 'em_andamento';
   if (indiceGrupo < indiceAtual) return 'concluido';
   return 'futuro';
+}
+
+// Verificar se TCC está totalmente finalizado (não deve mostrar status ativo)
+function isTCCFinalizado(etapaAtual: EtapaTCC): boolean {
+  return etapaAtual === EtapaTCC.CONCLUIDO;
 }
 
 // Cores do ponto baseadas no status
@@ -213,10 +219,36 @@ function getTextColor(status: string): string {
 // Removido: função getStatusIcon não é mais necessária
 // Os círculos sempre exibirão o número da etapa
 
+// Helper para formatar nota com vírgula
+const formatarNota = (nota: number | string | null | undefined): string => {
+  if (nota === null || nota === undefined) return '-';
+  const valor = Number(nota);
+  if (Number.isNaN(valor)) return '-';
+  return valor.toFixed(2).replace('.', ',');
+};
+
+// Obter status final
+const getStatusFinal = (etapa: EtapaTCC): { tipo: 'aprovado' | 'reprovado' | 'descontinuado'; label: string } | null => {
+  switch (etapa) {
+    case EtapaTCC.CONCLUIDO:
+      return { tipo: 'aprovado', label: 'Aprovado' };
+    case EtapaTCC.REPROVADO_FASE_1:
+      return { tipo: 'reprovado', label: 'Reprovado' };
+    case EtapaTCC.REPROVADO_FASE_2:
+      return { tipo: 'reprovado', label: 'Reprovado' };
+    case EtapaTCC.DESCONTINUADO:
+      return { tipo: 'descontinuado', label: 'Descontinuado' };
+    default:
+      return null;
+  }
+};
+
 export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoProps) => {
-  const { tcc, documentos = [], className = '' } = props;
+  const { tcc, documentos = [], className = '', mostrarNotas = false } = props;
   const grupoAtual = obterGrupoAtual(tcc.etapa_atual);
   const subEstadoLabel = obterLabelSubEstado(tcc, documentos);
+  const finalizado = isTCCFinalizado(tcc.etapa_atual);
+  const statusFinal = getStatusFinal(tcc.etapa_atual);
 
   // Verificar status da monografia e permissão de continuidade
   const monografias = documentos.filter(d => d.tipo_documento === TipoDocumento.MONOGRAFIA);
@@ -234,6 +266,21 @@ export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoPr
 
   return (
     <div className={`w-full bg-cor-superficie rounded-lg shadow-sm p-6 ${className}`}>
+      {/* Badge de status final no canto superior direito */}
+      {mostrarNotas && statusFinal && (
+        <div className="flex justify-end mb-4">
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${
+            statusFinal.tipo === 'aprovado'
+              ? 'bg-cor-sucesso/10 text-cor-sucesso border border-cor-sucesso/20'
+              : statusFinal.tipo === 'reprovado'
+              ? 'bg-cor-erro/10 text-cor-erro border border-cor-erro/20'
+              : 'bg-cor-borda/20 text-cor-texto border border-cor-borda/40'
+          }`}>
+            {statusFinal.label}
+          </span>
+        </div>
+      )}
+
       {/* Timeline */}
       <div className="relative">
         {/* Linha conectora única - não ultrapassa primeiro e último ponto */}
@@ -249,7 +296,8 @@ export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoPr
         <div className="relative flex justify-between items-start">
           {GRUPOS_TIMELINE.map((grupo) => {
             const status = obterStatusGrupo(grupo.id, grupoAtual, tcc.etapa_atual);
-            const isAtual = grupo.id === grupoAtual;
+            // Se TCC está finalizado, não marcar nenhum grupo como "atual" (ativo)
+            const isAtual = !finalizado && grupo.id === grupoAtual;
             const pointColor = getPointColor(status);
             const textColor = getTextColor(status);
 
@@ -329,6 +377,49 @@ export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoPr
                       Aguardando confirmação de continuidade
                     </span>
                   </div>
+                )}
+
+                {/* Notas - apenas quando mostrarNotas está ativo */}
+                {mostrarNotas && (
+                  <>
+                    {/* Nota Fase I */}
+                    {grupo.id === 'AVALIACAO_FASE1' && tcc.nf1 !== null && (
+                      <div className="mt-2 px-1">
+                        <div className="bg-cor-destaque/10 rounded-md px-2 py-1 text-center">
+                          <p className="text-[10px] text-cor-destaque font-medium">Nota</p>
+                          <p className="text-sm font-bold text-cor-destaque">{formatarNota(tcc.nf1)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Nota Fase II */}
+                    {grupo.id === 'AVALIACAO_FASE2' && tcc.nf2 !== null && (
+                      <div className="mt-2 px-1">
+                        <div className="bg-purple-100 dark:bg-purple-900/30 rounded-md px-2 py-1 text-center">
+                          <p className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Nota</p>
+                          <p className="text-sm font-bold text-purple-600 dark:text-purple-400">{formatarNota(tcc.nf2)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Média Final */}
+                    {grupo.id === 'FINALIZACAO' && tcc.media_final !== null && (
+                      <div className="mt-2 px-1">
+                        <div className={`rounded-md px-2 py-1 text-center ${
+                          Number(tcc.media_final) >= 6
+                            ? 'bg-cor-sucesso/10'
+                            : 'bg-cor-erro/10'
+                        }`}>
+                          <p className={`text-[10px] font-medium ${
+                            Number(tcc.media_final) >= 6 ? 'text-cor-sucesso' : 'text-cor-erro'
+                          }`}>Média Final</p>
+                          <p className={`text-sm font-bold ${
+                            Number(tcc.media_final) >= 6 ? 'text-cor-sucesso' : 'text-cor-erro'
+                          }`}>{formatarNota(tcc.media_final)}</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             );

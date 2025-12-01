@@ -354,6 +354,7 @@ export function MeuTCC() {
           <TimelineHorizontalDetalhado
             tcc={tcc}
             documentos={tcc.documentos as any}
+            mostrarNotas={true}
           />
         ) : (
           <TimelineVerticalDetalhada tcc={tcc} eventos={eventos} carregando={carregandoEventos} />

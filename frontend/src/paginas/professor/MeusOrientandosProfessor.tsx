@@ -3,17 +3,18 @@ import {
   Users,
   FileText,
   CheckCircle,
-  BookOpen,
   Clock,
   Download,
   ArrowRight,
   User,
   Mail,
-  GraduationCap
+  GraduationCap,
+  XCircle,
+  Award
 } from 'lucide-react'
 import { useTCCsProfessor, useSolicitacoesPendentesProfessor } from '../../hooks'
-import { EtapaTCC, EtapaTCCLabels, StatusDocumento, TipoDocumento } from '../../types'
-import { Badge } from '../../componentes/Badge'
+import { EtapaTCC, StatusDocumento, TipoDocumento } from '../../types'
+import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
 import type { TCC } from '../../types'
 
 export function MeusOrientandosProfessor() {
@@ -39,57 +40,6 @@ export function MeusOrientandosProfessor() {
            (monografia.status === StatusDocumento.PENDENTE || monografia.status === StatusDocumento.EM_ANALISE)
   })
 
-  // Calcular estatísticas baseadas nos TCCs reais
-  const totalOrientandos = tccs.length
-  const emDesenvolvimento = tccs.filter(tcc => tcc.etapa_atual === EtapaTCC.DESENVOLVIMENTO).length
-  const formacaoBanca = tccs.filter(tcc =>
-    tcc.etapa_atual === EtapaTCC.FORMACAO_BANCA_FASE_1 ||
-    tcc.etapa_atual === EtapaTCC.AVALIACAO_FASE_1
-  ).length
-  const defesasAgendadas = tccs.filter(tcc =>
-    tcc.etapa_atual === EtapaTCC.AGENDAMENTO_APRESENTACAO ||
-    tcc.etapa_atual === EtapaTCC.APRESENTACAO_FASE_2
-  ).length
-
-  // Cards de estatísticas
-  const statCards = [
-    {
-      title: 'Total de orientandos',
-      value: totalOrientandos.toString(),
-      change: `${totalOrientandos} ${totalOrientandos === 1 ? 'TCC ativo' : 'TCCs ativos'}`,
-      icon: Users,
-      color: 'blue'
-    },
-    {
-      title: 'Em desenvolvimento',
-      value: emDesenvolvimento.toString(),
-      change: `${emDesenvolvimento} na fase de desenvolvimento`,
-      icon: FileText,
-      color: 'yellow'
-    },
-    {
-      title: 'Formação de banca',
-      value: formacaoBanca.toString(),
-      change: `${formacaoBanca} em processo de avaliação`,
-      icon: BookOpen,
-      color: 'purple'
-    },
-    {
-      title: 'Defesas agendadas',
-      value: defesasAgendadas.toString(),
-      change: `${defesasAgendadas} aguardando apresentação`,
-      icon: CheckCircle,
-      color: 'green'
-    }
-  ]
-
-  const iconBgClasses = {
-    blue: 'bg-[rgb(var(--cor-destaque))]',
-    yellow: 'bg-[rgb(var(--cor-alerta))]',
-    purple: 'bg-[rgb(var(--cor-info))]',
-    green: 'bg-[rgb(var(--cor-sucesso))]'
-  }
-
   const handleVerDetalhes = (tccId: number) => {
     navigate(`/professor/orientacoes/meus-orientandos/${tccId}`)
   }
@@ -99,6 +49,22 @@ export function MeusOrientandosProfessor() {
     if (!curso) return 'Não informado'
     const texto = curso.toLowerCase().replace(/_/g, ' ')
     return texto.charAt(0).toUpperCase() + texto.slice(1)
+  }
+
+  // Helper para obter status final do TCC
+  const getStatusFinal = (etapa: EtapaTCC): { tipo: 'aprovado' | 'reprovado' | 'descontinuado' | null; label: string } | null => {
+    switch (etapa) {
+      case EtapaTCC.CONCLUIDO:
+        return { tipo: 'aprovado', label: 'Aprovado' }
+      case EtapaTCC.REPROVADO_FASE_1:
+        return { tipo: 'reprovado', label: 'Reprovado na Fase I' }
+      case EtapaTCC.REPROVADO_FASE_2:
+        return { tipo: 'reprovado', label: 'Reprovado na Fase II' }
+      case EtapaTCC.DESCONTINUADO:
+        return { tipo: 'descontinuado', label: 'Descontinuado' }
+      default:
+        return null
+    }
   }
 
   if (erroTCCs || erroSolicitacoes) {
@@ -118,13 +84,10 @@ export function MeusOrientandosProfessor() {
     <div>
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3">
           <Users className="h-8 w-8 text-[rgb(var(--cor-destaque))]" />
           <h1 className="text-3xl font-bold text-[rgb(var(--cor-texto-primario))]">Meus orientandos</h1>
         </div>
-        <p className="text-[rgb(var(--cor-texto-secundario))] ml-11">
-          Acompanhe o progresso dos alunos que você está orientando
-        </p>
       </div>
 
       {/* Banner de Monografias Pendentes */}
@@ -152,25 +115,6 @@ export function MeusOrientandosProfessor() {
           </div>
         </div>
       )}
-
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {statCards.map((card, index) => (
-          <div
-            key={index}
-            className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`p-3 rounded-xl ${iconBgClasses[card.color as keyof typeof iconBgClasses]}`}>
-                <card.icon className="h-6 w-6 text-white" />
-              </div>
-            </div>
-            <h3 className="text-[rgb(var(--cor-texto-secundario))] text-sm font-medium mb-1">{card.title}</h3>
-            <p className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{card.value}</p>
-            <p className="text-xs text-[rgb(var(--cor-texto-secundario))]/70 mt-1">{card.change}</p>
-          </div>
-        ))}
-      </div>
 
       {/* Convites encaminhados ao coordenador (apenas informativo) */}
       {carregandoSolicitacoes ? (
@@ -302,99 +246,91 @@ export function MeusOrientandosProfessor() {
         </div>
       ) : (
         <div>
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="h-6 w-6 text-[rgb(var(--cor-destaque))]" />
-            <h2 className="text-xl font-bold text-[rgb(var(--cor-texto-primario))]">Meus orientandos ativos</h2>
-          </div>
           <div className="space-y-4">
             {tccs.map((tcc) => (
               <div
                 key={tcc.id}
-                className="bg-[rgb(var(--cor-superficie))] rounded-lg shadow-sm border border-[rgb(var(--cor-borda))] p-6 hover:shadow-md transition-shadow"
+                onClick={() => handleVerDetalhes(tcc.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleVerDetalhes(tcc.id)}
+                className="bg-[rgb(var(--cor-superficie))] rounded-lg shadow-sm border border-[rgb(var(--cor-borda))] p-6 cursor-pointer hover:shadow-md hover:border-[rgb(var(--cor-destaque))]/50 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:ring-offset-2 transition-all"
               >
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-2">
                       {tcc.titulo}
                     </h3>
-                    <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-texto-secundario))] mb-3">
-                      <User className="h-4 w-4" />
-                      <strong>Aluno:</strong> {tcc.aluno_dados.nome_completo}
-                    </div>
-
-                    {/* Badges */}
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <Badge variant="info">
-                        {EtapaTCCLabels[tcc.etapa_atual as EtapaTCC]}
-                      </Badge>
-                      {tcc.flag_continuidade && (
-                        <Badge variant="success">Continuidade aprovada</Badge>
-                      )}
-                      {tcc.flag_liberado_avaliacao && (
-                        <Badge variant="success">Liberado para avaliação</Badge>
-                      )}
-                      {tcc.avaliacao_fase1_bloqueada && (
-                        <Badge variant="warning">Avaliação bloqueada</Badge>
-                      )}
-                    </div>
-
-                    {/* Datas */}
-                    <div className="text-xs text-[rgb(var(--cor-texto-secundario))]/70 mb-3">
-                      <span>Criado em: {new Date(tcc.criado_em).toLocaleDateString('pt-BR')}</span>
-                      <span className="mx-2">•</span>
-                      <span>Atualizado em: {new Date(tcc.atualizado_em).toLocaleDateString('pt-BR')}</span>
-                    </div>
-
-                    {/* Documentos - Apenas Monografias */}
-                    {(() => {
-                      const monografias = tcc.documentos?.filter(doc => doc.tipo_documento === TipoDocumento.MONOGRAFIA) || []
-                      return monografias.length > 0 ? (
-                        <div>
-                          <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-2">Monografias:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {monografias.map((doc) => (
-                              <div
-                                key={doc.id}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-[rgb(var(--cor-fundo))] rounded text-xs"
-                              >
-                                <FileText className="h-3 w-3 text-[rgb(var(--cor-icone))]" />
-                                <span className="text-[rgb(var(--cor-texto-primario))]">{doc.tipo_documento_display}</span>
-                                <span className={`ml-1 ${
-                                  doc.status === StatusDocumento.APROVADO ? 'text-[rgb(var(--cor-sucesso))]' :
-                                  doc.status === StatusDocumento.REJEITADO ? 'text-[rgb(var(--cor-erro))]' :
-                                  'text-[rgb(var(--cor-alerta))]'
-                                }`}>
-                                  ({doc.status})
-                                </span>
-                                {doc.arquivo && (
-                                  <a
-                                    href={doc.arquivo}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[rgb(var(--cor-destaque))] hover:text-[rgb(var(--cor-destaque))]/80 ml-1"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Download className="h-3 w-3" />
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          <p className="text-xs text-[rgb(var(--cor-texto-secundario))]/70 mt-2">
-                            Documentos iniciais disponíveis na página de detalhes
-                          </p>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-[rgb(var(--cor-texto-secundario))]">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <strong>Aluno:</strong> {tcc.aluno_dados.nome_completo}
+                      </div>
+                      {(tcc.coorientador_dados || tcc.coorientador_nome) && (
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          <strong>Co-orientador:</strong> {tcc.coorientador_dados?.nome_completo || tcc.coorientador_nome}
                         </div>
-                      ) : null
-                    })()}
+                      )}
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => handleVerDetalhes(tcc.id)}
-                    className="ml-4 px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white rounded-lg hover:bg-[rgb(var(--cor-destaque))]/90 transition flex items-center gap-2 whitespace-nowrap"
-                  >
-                    Ver detalhes
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
+                  {/* Badge de status final ou seta */}
+                  <div className="ml-4 flex items-center">
+                    {(() => {
+                      const status = getStatusFinal(tcc.etapa_atual)
+                      if (!status) {
+                        return (
+                          <div className="text-[rgb(var(--cor-destaque))]">
+                            <ArrowRight className="h-5 w-5" />
+                          </div>
+                        )
+                      }
+                      const config = {
+                        aprovado: {
+                          bg: 'bg-[rgb(var(--cor-sucesso))]/10',
+                          text: 'text-[rgb(var(--cor-sucesso))]',
+                          border: 'border-[rgb(var(--cor-sucesso))]/20',
+                          Icon: Award
+                        },
+                        reprovado: {
+                          bg: 'bg-[rgb(var(--cor-erro))]/10',
+                          text: 'text-[rgb(var(--cor-erro))]',
+                          border: 'border-[rgb(var(--cor-erro))]/20',
+                          Icon: XCircle
+                        },
+                        descontinuado: {
+                          bg: 'bg-[rgb(var(--cor-texto-secundario))]/10',
+                          text: 'text-[rgb(var(--cor-texto-secundario))]',
+                          border: 'border-[rgb(var(--cor-texto-secundario))]/20',
+                          Icon: XCircle
+                        }
+                      }
+                      const c = config[status.tipo!]
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${c.bg} ${c.text} border ${c.border}`}>
+                          <c.Icon className="h-4 w-4" />
+                          {status.label}
+                        </span>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Timeline horizontal */}
+                <div className="mt-4 -mx-6">
+                  <TimelineHorizontalDetalhado
+                    tcc={tcc}
+                    documentos={tcc.documentos}
+                    className="rounded-none shadow-none border-t border-[rgb(var(--cor-borda))]"
+                  />
+                </div>
+
+                {/* Datas */}
+                <div className="text-xs text-[rgb(var(--cor-texto-secundario))]/70 -mx-6 -mb-6 px-6 py-3 bg-[rgb(var(--cor-fundo))] border-t border-[rgb(var(--cor-borda))] rounded-b-lg">
+                  <span>Criado em: {new Date(tcc.criado_em).toLocaleDateString('pt-BR')}</span>
+                  <span className="mx-2">•</span>
+                  <span>Atualizado em: {new Date(tcc.atualizado_em).toLocaleDateString('pt-BR')}</span>
                 </div>
               </div>
             ))}

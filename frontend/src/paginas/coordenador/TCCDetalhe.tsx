@@ -250,13 +250,13 @@ export function TCCDetalhe() {
         <AnalisarAvaliacoesFase1 tcc={tcc} onAvaliacoesAtualizadas={recarregar} />
       )}
 
-      {/* Análise das Avaliações da Fase II */}
-      {(tcc.etapa_atual === EtapaTCC.APRESENTACAO_FASE_2 || tcc.etapa_atual === EtapaTCC.ANALISE_FINAL_COORDENADOR) && (
+      {/* Análise das Avaliações da Fase II - apenas em APRESENTACAO_FASE_2 */}
+      {tcc.etapa_atual === EtapaTCC.APRESENTACAO_FASE_2 && (
         <AnalisarAvaliacoesFase2 tcc={tcc} onAvaliacoesAtualizadas={recarregar} />
       )}
 
-      {/* Análise Final e Conclusão - só aparece quando todas avaliações bloqueadas */}
-      {tcc.etapa_atual === EtapaTCC.ANALISE_FINAL_COORDENADOR && tcc.avaliacao_fase2_bloqueada && (
+      {/* Análise Final e Conclusão - card único consolidado para ANALISE_FINAL_COORDENADOR */}
+      {tcc.etapa_atual === EtapaTCC.ANALISE_FINAL_COORDENADOR && (
         <AnaliseFinalCoordenador tcc={tcc} onConclusao={recarregar} />
       )}
 

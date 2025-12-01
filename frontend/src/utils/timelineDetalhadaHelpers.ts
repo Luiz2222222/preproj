@@ -288,6 +288,11 @@ export function obterStatusGrupo(
   grupoId: GrupoTimelineDetalhada,
   estadoAtual: EstadoAtualInfo
 ): 'concluido' | 'em_andamento' | 'aguardando' | 'futuro' | 'problema' {
+  // Caso especial: se TCC está concluído, todos os grupos são concluídos
+  if (estadoAtual.statusVisual === 'concluido' && estadoAtual.subEstado === SubEstadoVisual.CONCLUIDO) {
+    return 'concluido'
+  }
+
   const ordemGrupos = [
     GrupoTimelineDetalhada.ORIENTACAO,
     GrupoTimelineDetalhada.DESENVOLVIMENTO,
@@ -316,6 +321,11 @@ export function obterStatusGrupo(
 
   // Grupos futuros
   return 'futuro'
+}
+
+// Verificar se TCC está totalmente finalizado
+export function isTCCFinalizado(estadoAtual: EstadoAtualInfo): boolean {
+  return estadoAtual.statusVisual === 'concluido' && estadoAtual.subEstado === SubEstadoVisual.CONCLUIDO
 }
 
 // Função auxiliar para extrair dados do TCC

@@ -385,6 +385,13 @@ export function DashboardAluno() {
                   </p>
                 )}
               </>
+            ) : tcc.etapa_atual === EtapaTCC.CONCLUIDO || tcc.etapa_atual === EtapaTCC.REPROVADO_FASE_1 || tcc.etapa_atual === EtapaTCC.REPROVADO_FASE_2 ? (
+              <>
+                <p className="text-2xl font-bold text-[rgb(var(--cor-fase2-cabecalho))] mb-1">
+                  Concluído: {tcc.etapa_atual === EtapaTCC.CONCLUIDO ? 'Aprovado' : 'Reprovado'}
+                </p>
+                <p className="text-xl font-bold text-transparent select-none">-</p>
+              </>
             ) : (
               <>
                 <p className="text-2xl font-bold text-[rgb(var(--cor-fase2-cabecalho))] mb-1">
@@ -402,6 +409,7 @@ export function DashboardAluno() {
         <TimelineHorizontalDetalhado
           tcc={tcc}
           documentos={tcc.documentos as any}
+          mostrarNotas={true}
         />
       </div>
 

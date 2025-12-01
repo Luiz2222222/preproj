@@ -21,6 +21,7 @@ import {
   ChevronUp
 } from 'lucide-react'
 import type { TCC, EventoTimeline } from '../types'
+import { EtapaTCC } from '../types/enums'
 import {
   GrupoTimelineDetalhada,
   SubEstadoVisual
@@ -29,7 +30,8 @@ import {
   GRUPOS_TIMELINE,
   determinarEstadoAtual,
   obterStatusGrupo,
-  extrairDadosTCC
+  extrairDadosTCC,
+  isTCCFinalizado
 } from '../utils/timelineDetalhadaHelpers'
 
 interface TimelineVerticalDetalhadaProps {
@@ -44,6 +46,7 @@ export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carrega
   // Determinar estado atual baseado no TCC
   const dadosTCC = useMemo(() => extrairDadosTCC(tcc), [tcc])
   const estadoAtual = useMemo(() => determinarEstadoAtual(dadosTCC), [dadosTCC])
+  const finalizado = useMemo(() => isTCCFinalizado(estadoAtual), [estadoAtual])
 
   // Toggle expansão de grupo
   const toggleGrupo = (grupoId: GrupoTimelineDetalhada) => {
@@ -135,6 +138,9 @@ export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carrega
 
   // Determinar se um sub-estado está completo
   const isSubEstadoCompleto = (grupoId: GrupoTimelineDetalhada, subEstadoId: SubEstadoVisual): boolean => {
+    // Se TCC está finalizado, todos os sub-estados são completos
+    if (finalizado) return true
+
     const ordemGrupos = GRUPOS_TIMELINE.map(g => g.id)
     const indiceGrupoAtual = ordemGrupos.indexOf(estadoAtual.grupo)
     const indiceGrupo = ordemGrupos.indexOf(grupoId)
@@ -159,6 +165,8 @@ export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carrega
 
   // Verificar se é o sub-estado atual
   const isSubEstadoAtual = (grupoId: GrupoTimelineDetalhada, subEstadoId: SubEstadoVisual): boolean => {
+    // Se TCC está finalizado, nenhum sub-estado é "atual"
+    if (finalizado) return false
     return grupoId === estadoAtual.grupo && subEstadoId === estadoAtual.subEstado
   }
 
@@ -170,8 +178,26 @@ export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carrega
     )
   }
 
+  // Verificar status final do TCC
+  const isConcluido = tcc.etapa_atual === EtapaTCC.CONCLUIDO
+  const isReprovado = tcc.etapa_atual === EtapaTCC.REPROVADO_FASE_1 || tcc.etapa_atual === EtapaTCC.REPROVADO_FASE_2
+  const statusFinal = isConcluido ? 'Aprovado' : isReprovado ? 'Reprovado' : null
+
   return (
     <div className="w-full">
+      {/* Badge de status final */}
+      {statusFinal && (
+        <div className="mb-4 flex justify-end">
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${
+            isConcluido
+              ? 'bg-cor-sucesso/10 text-cor-sucesso border border-cor-sucesso/20'
+              : 'bg-cor-erro/10 text-cor-erro border border-cor-erro/20'
+          }`}>
+            {statusFinal}
+          </span>
+        </div>
+      )}
+
       {/* Timeline Vertical */}
       <div className="relative">
         {/* Linha vertical conectora */}
@@ -182,7 +208,8 @@ export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carrega
           {GRUPOS_TIMELINE.map((grupo, index) => {
             const status = obterStatusGrupo(grupo.id, estadoAtual)
             const styles = getStatusStyles(status)
-            const isAtual = grupo.id === estadoAtual.grupo
+            // Se TCC está finalizado, nenhum grupo é "atual"
+            const isAtual = !finalizado && grupo.id === estadoAtual.grupo
             const isExpanded = gruposExpandidos.has(grupo.id) || isAtual
 
             return (
