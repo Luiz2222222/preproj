@@ -69,21 +69,9 @@ export function BancasProfessor() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))] mb-2">Participações em bancas</h1>
-        <p className="text-[rgb(var(--cor-texto-secundario))] mb-3">
+        <p className="text-[rgb(var(--cor-texto-secundario))]">
           TCCs para avaliação anônima – Fase I (Monografia) e Fase II (Apresentação)
         </p>
-        <div className="p-4 bg-[rgb(var(--cor-destaque))]/5 border border-[rgb(var(--cor-destaque))]/20 rounded-lg">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-[rgb(var(--cor-destaque))] flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-[rgb(var(--cor-destaque))]">
-              <p className="font-semibold mb-1">Avaliação em banca:</p>
-              <p>
-                As informações do aluno, orientador e título foram ocultadas para garantir imparcialidade.
-                Você terá acesso apenas ao documento anonimizado da monografia (Fase I) e poderá avaliar a apresentação após a defesa (Fase II).
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Lista de TCCs */}

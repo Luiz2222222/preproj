@@ -64,6 +64,7 @@
     background-color: rgb(var(--cor-fundo));
     color: rgb(var(--cor-texto));
     font-family: var(--fonte-base);
+    font-size: var(--tamanho-fonte-medio);
   }
 
   body {
