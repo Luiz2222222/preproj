@@ -20,3 +20,4 @@ export { useAvaliacoesFase2 } from './useAvaliacoesFase2';
 export { useProfessoresEstatisticas } from './useProfessoresEstatisticas';
 export { useAutoResizeTextarea } from './useAutoResizeTextarea';
 export { usePendingActionsAluno, usePendingActionsProfessor, usePendingActionsCoordenador } from './usePendingActionsCount';
+export { useCoOrientacoes } from './useCoOrientacoes';

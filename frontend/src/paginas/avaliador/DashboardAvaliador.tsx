@@ -1,253 +1,251 @@
-import { Calendar, FileText, CheckCircle, Clock, AlertCircle, TrendingUp } from 'lucide-react';
+import { useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  AlertCircle,
+  Clock,
+  Users,
+  FileText,
+  CheckCircle,
+  BookOpen,
+  BarChart3,
+  Briefcase
+} from 'lucide-react'
+import { useAutenticacao } from '../../autenticacao'
+import { useToast } from '../../contextos/ToastProvider'
+import { useCalendarioSemestre } from '../../hooks'
+import { EtapaTCC } from '../../types'
+import { formatarDataCurta, formatarIntervalo } from '../../utils/datas'
+import { PainelDatasImportantes } from '../../componentes'
 
 export function DashboardAvaliador() {
-  // Mapa de cores PT-BR para classes Tailwind
-  const mapaGradiente = {
-    verde: 'bg-[rgb(var(--cor-sucesso))]',
-    amarelo: 'bg-[rgb(var(--cor-alerta))]',
-    azul: 'bg-[rgb(var(--cor-destaque))]',
-    roxo: 'bg-[rgb(var(--cor-info))]',
-  };
+  const { usuario } = useAutenticacao()
+  const { erro: mostrarErro } = useToast()
+  const navigate = useNavigate()
 
-  // Dados mockados (visual-only)
-  const stats = [
-    { title: 'Defesas Agendadas', value: '3', change: '2 próximas 7 dias', icon: Calendar, cor: 'verde' as const },
-    { title: 'Pareceres Pendentes', value: '2', change: 'Prazos próximos', icon: Clock, cor: 'amarelo' as const },
-    { title: 'Avaliações Concluídas', value: '12', change: 'Este semestre', icon: CheckCircle, cor: 'azul' as const },
-    { title: 'Total Participações', value: '45', change: 'Desde 2020', icon: TrendingUp, cor: 'roxo' as const },
-  ];
+  const { calendario } = useCalendarioSemestre()
 
-  const defesasProximas = [
+  // TODO: Implementar hook para buscar co-orientações do avaliador externo
+  // Por enquanto usando dados mock
+  const coOrientacoes: any[] = []
+  const totalCoOrientandos = coOrientacoes.length
+
+  // Estatísticas baseadas nas co-orientações
+  const emDesenvolvimento = coOrientacoes.filter((c: any) => c.etapa_atual === EtapaTCC.DESENVOLVIMENTO).length
+  const emAvaliacao = coOrientacoes.filter((c: any) =>
+    c.etapa_atual === EtapaTCC.FORMACAO_BANCA_FASE_1 ||
+    c.etapa_atual === EtapaTCC.AVALIACAO_FASE_1
+  ).length
+  const defesasAgendadas = coOrientacoes.filter((c: any) =>
+    c.etapa_atual === EtapaTCC.AGENDAMENTO_APRESENTACAO ||
+    c.etapa_atual === EtapaTCC.APRESENTACAO_FASE_2
+  ).length
+
+  // Cards de estatísticas
+  const statCards = [
     {
-      id: 1,
-      tipo: 'Fase I',
-      aluno: 'Pedro Costa',
-      titulo: 'Otimização de Redes de Distribuição Elétrica',
-      orientador: 'Prof. Dr. José Silva',
-      data: '22/04/2025',
-      hora: '14:00',
-      local: 'Sala 301 - Bloco A',
-      status: 'confirmada',
-      urgencia: 'proxima',
+      title: 'Meus co-orientandos',
+      value: totalCoOrientandos.toString(),
+      change: `${totalCoOrientandos} ${totalCoOrientandos === 1 ? 'TCC ativo' : 'TCCs ativos'}`,
+      icon: Users,
+      color: 'blue'
     },
     {
-      id: 2,
-      tipo: 'Defesa Final',
-      aluno: 'Carla Mendes',
-      titulo: 'Desenvolvimento de Sistema de Monitoramento Industrial',
-      orientador: 'Prof. Dr. Marcos Silva',
-      data: '28/04/2025',
-      hora: '10:00',
-      local: 'Auditório Central',
-      status: 'confirmada',
-      urgencia: 'normal',
+      title: 'Em desenvolvimento',
+      value: emDesenvolvimento.toString(),
+      change: `${emDesenvolvimento} na fase de desenvolvimento`,
+      icon: FileText,
+      color: 'yellow'
     },
     {
-      id: 3,
-      tipo: 'Fase I',
-      aluno: 'Ana Paula Santos',
-      titulo: 'Aplicação de Machine Learning em Manutenção Preditiva',
-      orientador: 'Profa. Dra. Juliana Lima',
-      data: '05/05/2025',
-      hora: '16:00',
-      local: 'Sala 205 - Bloco B',
-      status: 'pendente_confirmacao',
-      urgencia: 'normal',
-    },
-  ];
-
-  const pareceresPendentes = [
-    {
-      id: 1,
-      aluno: 'Ricardo Alves',
-      titulo: 'Inteligência Artificial Aplicada a Diagnósticos Médicos',
-      tipo: 'Fase I',
-      prazo: '15/04/2025',
-      urgente: true,
+      title: 'Em avaliação',
+      value: emAvaliacao.toString(),
+      change: `${emAvaliacao} em processo de avaliação`,
+      icon: BookOpen,
+      color: 'purple'
     },
     {
-      id: 2,
-      aluno: 'Beatriz Santos',
-      titulo: 'Otimização Energética em Edifícios Inteligentes',
-      tipo: 'Defesa Final',
-      prazo: '20/04/2025',
-      urgente: false,
-    },
-  ];
-
-  const documentosRecentes = [
-    { nome: 'Monografia - Pedro Costa.pdf', tipo: 'Monografia', data: '18/04/2025', status: 'novo' },
-    { nome: 'Apresentação - Carla Mendes.pdf', tipo: 'Apresentação', data: '19/04/2025', status: 'novo' },
-    { nome: 'Ata de Defesa - João Silva.pdf', tipo: 'Ata', data: '10/04/2025', status: 'lido' },
-  ];
-
-  const getStatusBadge = (status: string) => {
-    if (status === 'confirmada') {
-      return <span className="px-2 py-1 bg-[rgb(var(--cor-sucesso))]/10 text-[rgb(var(--cor-sucesso))] rounded text-xs font-medium">Confirmada</span>;
+      title: 'Defesas agendadas',
+      value: defesasAgendadas.toString(),
+      change: `${defesasAgendadas} aguardando apresentação`,
+      icon: CheckCircle,
+      color: 'green'
     }
-    if (status === 'pendente_confirmacao') {
-      return <span className="px-2 py-1 bg-[rgb(var(--cor-alerta))]/10 text-[rgb(var(--cor-alerta))] rounded text-xs font-medium">Pendente Confirmação</span>;
-    }
-    return <span className="px-2 py-1 bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-primario))] rounded text-xs font-medium">-</span>;
-  };
+  ]
 
-  const getTipoColor = (tipo: string) => {
-    if (tipo === 'Fase I') return 'text-[rgb(var(--cor-info))] bg-[rgb(var(--cor-info))]/10';
-    if (tipo === 'Defesa Final') return 'text-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-destaque))]/10';
-    return 'text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-fundo))]';
-  };
+  const iconBgClasses = {
+    blue: 'bg-[rgb(var(--cor-destaque))]',
+    yellow: 'bg-[rgb(var(--cor-alerta))]',
+    purple: 'bg-[rgb(var(--cor-info))]',
+    green: 'bg-[rgb(var(--cor-sucesso))]'
+  }
+
+  // Datas importantes do calendário acadêmico
+  const datasImportantes = useMemo(() => {
+    return [
+      {
+        id: 1,
+        titulo: 'Reunião com alunos',
+        descricao: 'Orientações gerais sobre o TCC e Regulamento',
+        data: formatarDataCurta(calendario?.reuniao_alunos),
+        icone: Users,
+        cor: 'blue',
+        temDados: !!calendario?.reuniao_alunos
+      },
+      {
+        id: 2,
+        titulo: 'Envio de documentos',
+        descricao: 'Prazo para envio do plano e termo',
+        data: formatarDataCurta(calendario?.envio_documentos_fim),
+        icone: FileText,
+        cor: 'cyan',
+        temDados: !!calendario?.envio_documentos_fim
+      },
+      {
+        id: 3,
+        titulo: 'Avaliação de continuidade',
+        descricao: 'Prazo para orientador avaliar progresso',
+        data: formatarDataCurta(calendario?.avaliacao_continuidade_fim),
+        icone: Clock,
+        cor: 'yellow',
+        temDados: !!calendario?.avaliacao_continuidade_fim
+      },
+      {
+        id: 4,
+        titulo: 'Submissão de monografia',
+        descricao: 'Entrega da versão final para avaliação',
+        data: formatarDataCurta(calendario?.submissao_monografia_fim),
+        icone: FileText,
+        cor: 'orange',
+        temDados: !!calendario?.submissao_monografia_fim
+      },
+      {
+        id: 5,
+        titulo: 'Preparação das bancas (Fase I)',
+        descricao: 'Período de formação das bancas avaliadoras',
+        data: formatarIntervalo(calendario?.preparacao_bancas_fase1_inicio, calendario?.preparacao_bancas_fase1_fim),
+        icone: Briefcase,
+        cor: 'violet',
+        temDados: !!(calendario?.preparacao_bancas_fase1_inicio || calendario?.preparacao_bancas_fase1_fim)
+      },
+      {
+        id: 6,
+        titulo: 'Avaliação - Fase I',
+        descricao: 'Prazo final para avaliação pela banca',
+        data: formatarDataCurta(calendario?.avaliacao_fase1_fim),
+        icone: BookOpen,
+        cor: 'purple',
+        temDados: !!calendario?.avaliacao_fase1_fim
+      },
+      {
+        id: 7,
+        titulo: 'Preparação das bancas (Fase II)',
+        descricao: 'Formação das bancas para apresentação',
+        data: formatarDataCurta(calendario?.preparacao_bancas_fase2),
+        icone: Briefcase,
+        cor: 'pink',
+        temDados: !!calendario?.preparacao_bancas_fase2
+      },
+      {
+        id: 8,
+        titulo: 'Apresentação dos trabalhos (Fase II)',
+        descricao: 'Prazo final para apresentações orais',
+        data: formatarDataCurta(calendario?.defesas_fim),
+        icone: Users,
+        cor: 'indigo',
+        temDados: !!calendario?.defesas_fim
+      },
+      {
+        id: 9,
+        titulo: 'Ajustes finais',
+        descricao: 'Prazo para correções pós-defesa',
+        data: formatarDataCurta(calendario?.ajustes_finais_fim),
+        icone: CheckCircle,
+        cor: 'green',
+        temDados: !!calendario?.ajustes_finais_fim
+      }
+    ]
+  }, [calendario])
 
   return (
     <div>
+      {/* Header da página */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">Dashboard - Avaliador Externo</h1>
-        <p className="text-[rgb(var(--cor-texto-secundario))]">Acompanhe suas avaliações e participações em bancas</p>
+        <h1 className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">
+          Seja bem-vindo, {usuario?.nome_completo?.split(' ')[0]}!
+        </h1>
       </div>
 
-      {/* Cards de Estatísticas */}
+      {/* Primeira linha: Ações Pendentes e Datas Importantes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Ações Pendentes */}
+        <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 h-full flex flex-col">
+          <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-4 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-[rgb(var(--cor-alerta))]" />
+            Ações pendentes
+          </h2>
+
+          {/* Estado vazio - sem ações pendentes */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="flex justify-center mb-3">
+                <AlertCircle className="h-12 w-12 text-[rgb(var(--cor-borda))]" />
+              </div>
+              <p className="text-base font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
+                Sem ações pendentes
+              </p>
+              <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                Nenhuma ação aguardando sua avaliação
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Datas Importantes */}
+        <PainelDatasImportantes
+          datas={datasImportantes}
+          calendario={calendario}
+        />
+      </div>
+
+      {/* Segunda linha: Cards de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((card, index) => (
-          <div key={index} className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6">
+        {statCards.map((card, index) => (
+          <div
+            key={index}
+            className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 hover:shadow-md transition-shadow"
+          >
             <div className="flex items-start justify-between mb-4">
-              <div className={`p-3 rounded-xl ${mapaGradiente[card.cor]}`}>
+              <div className={`p-3 rounded-xl ${iconBgClasses[card.color as keyof typeof iconBgClasses]}`}>
                 <card.icon className="h-6 w-6 text-white" />
               </div>
-              <span className="text-sm text-[rgb(var(--cor-texto-secundario))]">{card.change}</span>
             </div>
             <h3 className="text-[rgb(var(--cor-texto-secundario))] text-sm font-medium mb-1">{card.title}</h3>
             <p className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{card.value}</p>
+            <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-1">{card.change}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Defesas Próximas */}
-        <div className="lg:col-span-2 bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6">
-          <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-4 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-[rgb(var(--cor-icone))]" />
-            Defesas Próximas
-          </h2>
-          <div className="space-y-3">
-            {defesasProximas.map((defesa) => (
-              <div
-                key={defesa.id}
-                className={`border rounded-lg p-4 ${
-                  defesa.urgencia === 'proxima' ? 'border-[rgb(var(--cor-sucesso))]/30 bg-[rgb(var(--cor-sucesso))]/5' : 'border-[rgb(var(--cor-borda))]'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getTipoColor(defesa.tipo)}`}>
-                        {defesa.tipo}
-                      </span>
-                      {getStatusBadge(defesa.status)}
-                      {defesa.urgencia === 'proxima' && (
-                        <span className="px-2 py-1 bg-[rgb(var(--cor-sucesso))]/10 text-[rgb(var(--cor-sucesso))] rounded text-xs font-medium">
-                          Próxima
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="font-semibold text-[rgb(var(--cor-texto-primario))] text-sm">{defesa.aluno}</h3>
-                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">{defesa.titulo}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-[rgb(var(--cor-texto-secundario))] mt-2">
-                  <div>
-                    <strong>Data:</strong> {defesa.data}
-                  </div>
-                  <div>
-                    <strong>Hora:</strong> {defesa.hora}
-                  </div>
-                  <div className="col-span-2">
-                    <strong>Local:</strong> {defesa.local}
-                  </div>
-                  <div className="col-span-2">
-                    <strong>Orientador:</strong> {defesa.orientador}
-                  </div>
-                </div>
-                <button
-                  disabled
-                  className="w-full mt-3 px-3 py-2 bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-secundario))] rounded-lg cursor-not-allowed text-sm"
-                >
-                  Ver Detalhes
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Pareceres Pendentes */}
-        <div className="lg:col-span-1 bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6">
-          <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-[rgb(var(--cor-alerta))]" />
-            Pareceres Pendentes
-          </h2>
-          <div className="space-y-3">
-            {pareceresPendentes.map((parecer) => (
-              <div
-                key={parecer.id}
-                className={`p-3 rounded-lg border ${
-                  parecer.urgente ? 'bg-[rgb(var(--cor-erro))]/5 border-[rgb(var(--cor-erro))]/20' : 'bg-[rgb(var(--cor-alerta))]/5 border-[rgb(var(--cor-alerta))]/20'
-                }`}
-              >
-                <span className={`px-2 py-1 rounded text-xs font-medium ${getTipoColor(parecer.tipo)}`}>
-                  {parecer.tipo}
-                </span>
-                <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))] mt-2">{parecer.aluno}</p>
-                <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mb-2">{parecer.titulo}</p>
-                <p className={`text-xs ${parecer.urgente ? 'text-[rgb(var(--cor-erro))]' : 'text-[rgb(var(--cor-alerta))]'}`}>
-                  {parecer.urgente ? 'Urgente - ' : 'Prazo: '}
-                  {parecer.prazo}
-                </p>
-                <button
-                  disabled
-                  className="w-full mt-2 px-3 py-2 bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-secundario))] rounded-lg cursor-not-allowed text-xs"
-                >
-                  Preencher Parecer
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Documentos Recentes */}
+      {/* Terceira linha: Co-orientandos por Grupo */}
       <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6">
         <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-4 flex items-center gap-2">
-          <FileText className="h-5 w-5 text-[rgb(var(--cor-icone))]" />
-          Documentos Recentes
+          <BarChart3 className="h-5 w-5 text-[rgb(var(--cor-icone))]" />
+          Co-orientandos por grupo
         </h2>
-        <div className="space-y-2">
-          {documentosRecentes.map((doc, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-3 border border-[rgb(var(--cor-borda))] rounded-lg hover:bg-[rgb(var(--cor-fundo))]/50"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-[rgb(var(--cor-icone))]" />
-                <div>
-                  <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">{doc.nome}</p>
-                  <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">
-                    {doc.tipo} • {doc.data}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {doc.status === 'novo' && (
-                  <span className="px-2 py-1 bg-[rgb(var(--cor-destaque))]/10 text-[rgb(var(--cor-destaque))] rounded text-xs font-medium">Novo</span>
-                )}
-                <button
-                  disabled
-                  className="px-3 py-1 bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-secundario))] rounded cursor-not-allowed text-xs"
-                >
-                  Baixar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+
+        {totalCoOrientandos === 0 ? (
+          <div className="text-center py-8">
+            <Users className="h-12 w-12 text-[rgb(var(--cor-borda))] mx-auto mb-3" />
+            <p className="text-[rgb(var(--cor-texto-secundario))]">
+              Você ainda não possui co-orientações ativas
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Grupos serão exibidos aqui quando houver co-orientações */}
+          </div>
+        )}
       </div>
     </div>
-  );
+  )
 }

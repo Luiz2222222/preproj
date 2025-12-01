@@ -1,42 +1,125 @@
-import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Calendar, FileText, History, Settings, ClipboardCheck } from 'lucide-react';
+import { useMemo } from 'react'
+import { NavLink } from 'react-router-dom'
+import {
+  LayoutDashboard,
+  ClipboardCheck,
+  Calendar,
+  FileText,
+  History,
+  Settings
+} from 'lucide-react'
+import { useNotificacoes } from '../contextos/NotificacoesContext'
+import { TipoNotificacao } from '../types/notificacoes'
 
-interface SidebarAvaliadorProps {
-  isOpen: boolean;
-}
+export function SidebarAvaliador() {
+  const { notificacoes } = useNotificacoes()
 
-export function SidebarAvaliador({ isOpen }: SidebarAvaliadorProps) {
-  const menuItems = [
-    { path: '/avaliador', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/avaliador/cronograma', label: 'Cronograma', icon: Calendar },
-    { path: '/avaliador/parecer', label: 'Parecer', icon: FileText },
-    { path: '/avaliador/bancas', label: 'Participações em bancas', icon: ClipboardCheck },
-    { path: '/avaliador/historico', label: 'Histórico', icon: History },
-    { path: '/avaliador/configuracoes', label: 'Configurações', icon: Settings },
-  ];
-
-  if (!isOpen) return null;
+  // Contar convites de banca não lidos
+  const convitesBancaNaoLidos = useMemo(() => {
+    return notificacoes.filter(
+      n => n.tipo === TipoNotificacao.CONVITE_BANCA && !n.lida
+    ).length
+  }, [notificacoes])
 
   return (
-    <aside className="sticky top-16 h-[calc(100vh-4rem)] w-64 bg-cor-superficie border-r border-cor-borda overflow-y-auto">
+    <aside className="sticky top-16 h-[calc(100vh-4rem)] w-64 bg-cor-superficie border-r border-cor-borda shadow-sm overflow-y-auto">
       <nav className="p-4 space-y-1">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                isActive
-                  ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] font-medium'
-                  : 'text-cor-texto hover:bg-cor-fundo'
-              }`
-            }
-          >
-            <item.icon className="h-5 w-5" />
-            <span className="text-sm">{item.label}</span>
-          </NavLink>
-        ))}
+        {/* Dashboard */}
+        <NavLink
+          to="/avaliador"
+          end
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors relative ${
+              isActive
+                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
+                : 'text-cor-texto hover:bg-cor-fundo'
+            }`
+          }
+        >
+          <LayoutDashboard className="h-5 w-5" />
+          <span>Dashboard</span>
+        </NavLink>
+
+        {/* Participações em bancas */}
+        <NavLink
+          to="/avaliador/bancas"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors relative ${
+              isActive
+                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
+                : 'text-cor-texto hover:bg-cor-fundo'
+            }`
+          }
+        >
+          <ClipboardCheck className="h-5 w-5" />
+          <span>Participações em bancas</span>
+          {convitesBancaNaoLidos > 0 && (
+            <span className="absolute right-2 min-w-[18px] h-[18px] px-1 bg-[rgb(var(--cor-erro))] rounded-full text-[10px] font-bold text-white flex items-center justify-center">
+              {convitesBancaNaoLidos > 9 ? '9+' : convitesBancaNaoLidos}
+            </span>
+          )}
+        </NavLink>
+
+        {/* Cronograma */}
+        <NavLink
+          to="/avaliador/cronograma"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isActive
+                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
+                : 'text-cor-texto hover:bg-cor-fundo'
+            }`
+          }
+        >
+          <Calendar className="h-5 w-5" />
+          <span>Cronograma</span>
+        </NavLink>
+
+        {/* Parecer */}
+        <NavLink
+          to="/avaliador/parecer"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isActive
+                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
+                : 'text-cor-texto hover:bg-cor-fundo'
+            }`
+          }
+        >
+          <FileText className="h-5 w-5" />
+          <span>Parecer</span>
+        </NavLink>
+
+        {/* Histórico */}
+        <NavLink
+          to="/avaliador/historico"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isActive
+                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
+                : 'text-cor-texto hover:bg-cor-fundo'
+            }`
+          }
+        >
+          <History className="h-5 w-5" />
+          <span>Histórico</span>
+        </NavLink>
+
+        {/* Configurações */}
+        <NavLink
+          to="/avaliador/configuracoes"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isActive
+                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
+                : 'text-cor-texto hover:bg-cor-fundo'
+            }`
+          }
+        >
+          <Settings className="h-5 w-5" />
+          <span>Configurações</span>
+        </NavLink>
       </nav>
     </aside>
-  );
+  )
 }

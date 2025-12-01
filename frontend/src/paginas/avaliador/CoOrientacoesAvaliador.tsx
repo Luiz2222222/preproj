@@ -11,7 +11,7 @@ import { EtapaTCC } from '../../types'
 import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
 import type { TCC } from '../../types'
 
-export function CoOrientacoesProfessor() {
+export function CoOrientacoesAvaliador() {
   const navigate = useNavigate()
 
   const { tccs, carregando, erro } = useCoOrientacoes()
@@ -33,7 +33,7 @@ export function CoOrientacoesProfessor() {
   }
 
   const handleVerDetalhes = (tccId: number) => {
-    navigate(`/professor/orientacoes/coorientacoes/${tccId}`)
+    navigate(`/avaliador/bancas/${tccId}`)
   }
 
   if (erro) {

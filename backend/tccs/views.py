@@ -125,10 +125,9 @@ class TCCViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
         elif usuario.tipo_usuario == 'PROFESSOR':
-            # Professor: retorna lista de orientandos
-            tccs = TCC.objects.filter(
-                Q(orientador=usuario) | Q(coorientador=usuario)
-            ).order_by('-criado_em')
+            # Professor: retorna lista de orientandos (APENAS onde é orientador principal)
+            # Co-orientações ficam em endpoint separado /tccs/minhas-coorientacoes/
+            tccs = TCC.objects.filter(orientador=usuario).order_by('-criado_em')
             serializer = self.get_serializer(tccs, many=True)
             return Response(serializer.data)
 
@@ -159,6 +158,20 @@ class TCCViewSet(viewsets.ModelViewSet):
             etapa_atual__in=[EtapaTCC.AVALIACAO_FASE_1, EtapaTCC.APRESENTACAO_FASE_2]
         ).order_by('-criado_em')
 
+        serializer = self.get_serializer(tccs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='minhas-coorientacoes', permission_classes=[IsProfessorOrCoordenador])
+    def minhas_coorientacoes(self, request):
+        """
+        GET /api/tccs/minhas-coorientacoes/
+        Retorna TCCs onde o usuário é co-orientador (não orientador principal).
+        Apenas para PROFESSOR e COORDENADOR.
+        """
+        usuario = request.user
+
+        # Buscar TCCs onde é co-orientador (mas não orientador principal)
+        tccs = TCC.objects.filter(coorientador=usuario).exclude(orientador=usuario).order_by('-criado_em')
         serializer = self.get_serializer(tccs, many=True)
         return Response(serializer.data)
 

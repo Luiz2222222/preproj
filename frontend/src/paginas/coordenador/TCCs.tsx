@@ -24,7 +24,7 @@ import {
   Download
 } from 'lucide-react'
 import { useTCCsCoordenador } from '../../hooks'
-import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors } from '../../types/enums'
+import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, CursoLabels } from '../../types/enums'
 import type { TCC } from '../../types'
 import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
 
@@ -71,7 +71,7 @@ export function TCCs() {
     })
 
     const etapas = [
-      { value: 'todas', label: 'Todas as Etapas', count: tccs.length }
+      { value: 'todas', label: 'Todas as etapas', count: tccs.length }
     ]
 
     // Adicionar apenas etapas que existem nos dados (sem grupos)
@@ -98,10 +98,10 @@ export function TCCs() {
     })
 
     return [
-      { value: 'todos', label: 'Todos os Cursos' },
+      { value: 'todos', label: 'Todos os cursos' },
       ...Array.from(cursosSet).map(curso => ({
         value: curso,
-        label: curso
+        label: CursoLabels[curso] || curso
       }))
     ]
   }, [tccs])
@@ -206,54 +206,26 @@ export function TCCs() {
         <p className="text-[rgb(var(--cor-texto-secundario))]">Acompanhe todos os trabalhos de conclusão de curso</p>
       </div>
 
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-[rgb(var(--cor-superficie))] rounded-lg border border-[rgb(var(--cor-borda))] p-4">
-          <div className="flex items-center justify-between mb-2">
-            <FileText className="h-8 w-8 text-[rgb(var(--cor-destaque))]" />
-            <span className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{estatisticas.total}</span>
-          </div>
-          <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">TCCs Ativos</p>
-          <div className="flex items-center gap-1 mt-1">
-            <TrendingUp className="h-4 w-4 text-[rgb(var(--cor-sucesso))]" />
-            <span className="text-xs text-[rgb(var(--cor-sucesso))]">Período atual</span>
-          </div>
-        </div>
-
-        <div className="bg-[rgb(var(--cor-superficie))] rounded-lg border border-[rgb(var(--cor-borda))] p-4">
-          <div className="flex items-center justify-between mb-2">
-            <Clock className="h-8 w-8 text-[rgb(var(--cor-alerta))]" />
-            <span className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{estatisticas.aguardandoAcao}</span>
-          </div>
-          <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">Aguardando Ação</p>
-          <div className="flex items-center gap-1 mt-1">
-            <AlertCircle className="h-4 w-4 text-[rgb(var(--cor-alerta))]" />
-            <span className="text-xs text-[rgb(var(--cor-alerta))]">Requer atenção</span>
-          </div>
-        </div>
-
-        <div className="bg-[rgb(var(--cor-superficie))] rounded-lg border border-[rgb(var(--cor-borda))] p-4">
-          <div className="flex items-center justify-between mb-2">
-            <CheckCircle className="h-8 w-8 text-[rgb(var(--cor-sucesso))]" />
-            <span className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{estatisticas.concluidos}</span>
-          </div>
-          <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">Concluídos no Período</p>
-          <div className="flex items-center gap-1 mt-1">
-            <BarChart3 className="h-4 w-4 text-[rgb(var(--cor-icone))]" />
-            <span className="text-xs text-[rgb(var(--cor-texto-secundario))]">Taxa de sucesso</span>
-          </div>
-        </div>
-
-        <div className="bg-[rgb(var(--cor-superficie))] rounded-lg border border-[rgb(var(--cor-borda))] p-4">
-          <div className="flex items-center justify-between mb-2">
-            <Users className="h-8 w-8 text-[rgb(var(--cor-destaque))]" />
-            <span className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{estatisticas.comDefesaAgendada}</span>
-          </div>
-          <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">Defesas Agendadas</p>
-          <div className="flex items-center gap-1 mt-1">
-            <Calendar className="h-4 w-4 text-[rgb(var(--cor-destaque))]" />
-            <span className="text-xs text-[rgb(var(--cor-destaque))]">Este mês</span>
-          </div>
+      {/* Distribuição por Etapa */}
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-3">Distribuição por etapa</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {etapasDisponiveis.slice(1).map(etapa => (
+            <div
+              key={etapa.value}
+              className="bg-[rgb(var(--cor-superficie))] rounded-lg border border-[rgb(var(--cor-borda))] p-3 hover:shadow-md hover:bg-[rgb(var(--cor-superficie-hover))] transition-all cursor-pointer"
+              onClick={() => setFiltroEtapa(etapa.value)}
+            >
+              <div className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))] mb-1">{etapa.count}</div>
+              <div className="text-xs text-[rgb(var(--cor-texto-secundario))]">{etapa.label}</div>
+              <div className="mt-2 w-full bg-[rgb(var(--cor-borda-leve))] rounded-full h-1.5">
+                <div
+                  className="bg-[rgb(var(--cor-destaque))] h-1.5 rounded-full"
+                  style={{ width: `${(etapa.count / estatisticas.total) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -296,34 +268,6 @@ export function TCCs() {
               </option>
             ))}
           </select>
-
-          <button className="px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white rounded-lg hover:bg-[rgb(var(--cor-destaque))]/90 transition-colors flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Mais Filtros
-          </button>
-        </div>
-      </div>
-
-      {/* Visualização por Etapas (Cards) */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-3">Distribuição por Etapa</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {etapasDisponiveis.slice(1).map(etapa => (
-            <div
-              key={etapa.value}
-              className="bg-[rgb(var(--cor-superficie))] rounded-lg border border-[rgb(var(--cor-borda))] p-3 hover:shadow-md hover:bg-[rgb(var(--cor-superficie-hover))] transition-all cursor-pointer"
-              onClick={() => setFiltroEtapa(etapa.value)}
-            >
-              <div className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))] mb-1">{etapa.count}</div>
-              <div className="text-xs text-[rgb(var(--cor-texto-secundario))]">{etapa.label}</div>
-              <div className="mt-2 w-full bg-[rgb(var(--cor-borda-leve))] rounded-full h-1.5">
-                <div
-                  className="bg-[rgb(var(--cor-destaque))] h-1.5 rounded-full"
-                  style={{ width: `${(etapa.count / estatisticas.total) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -362,22 +306,12 @@ export function TCCs() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4 text-[rgb(var(--cor-icone))]" />
-                          <span>Semestre: {tcc.semestre}</span>
-                        </div>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getEtapaColor(tcc.etapa_atual)}`}>
                           {EtapaTCCLabels[tcc.etapa_atual]}
-                        </span>
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
-                          {status === 'urgente' && <AlertCircle className="h-3 w-3 mr-1" />}
-                          {status === 'atencao' && <Clock className="h-3 w-3 mr-1" />}
-                          {status === 'normal' && <CheckCircle className="h-3 w-3 mr-1" />}
-                          {status === 'urgente' ? 'Urgente' : status === 'atencao' ? 'Atenção' : 'Normal'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

@@ -287,7 +287,7 @@ export function MeuTCC() {
               <p className="text-medio text-cor-texto">{tcc.coorientador_nome}</p>
               {tcc.coorientador_titulacao && (
                 <p className="text-pequeno text-cor-texto opacity-60">
-                  {tcc.coorientador_titulacao}
+                  {tcc.coorientador_titulacao.charAt(0).toUpperCase() + tcc.coorientador_titulacao.slice(1)}
                   {tcc.coorientador_afiliacao && ` - ${tcc.coorientador_afiliacao}`}
                 </p>
               )}

@@ -19,6 +19,7 @@ import { DashboardProfessor } from './paginas/professor/DashboardProfessor'
 import { MeusOrientandosProfessor } from './paginas/professor/MeusOrientandosProfessor'
 import { DetalheOrientandoProfessor } from './paginas/professor/DetalheOrientandoProfessor'
 import { CoOrientacoesProfessor } from './paginas/professor/CoOrientacoesProfessor'
+import { DetalheCoOrientacao } from './paginas/professor/DetalheCoOrientacao'
 import { BancasProfessor } from './paginas/professor/BancasProfessor'
 import { BancasAvaliacaoDetalhe } from './paginas/professor/BancasAvaliacaoDetalhe'
 import { ConfiguracoesProfessor } from './paginas/professor/ConfiguracoesProfessor'
@@ -156,6 +157,16 @@ export function App() {
             <RotaProtegida tiposPermitidos={['PROFESSOR']}>
               <EstruturaProfessor>
                 <CoOrientacoesProfessor />
+              </EstruturaProfessor>
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/professor/orientacoes/coorientacoes/:id"
+          element={
+            <RotaProtegida tiposPermitidos={['PROFESSOR']}>
+              <EstruturaProfessor>
+                <DetalheCoOrientacao />
               </EstruturaProfessor>
             </RotaProtegida>
           }
@@ -328,6 +339,16 @@ export function App() {
           }
         />
         <Route
+          path="/avaliador/historico"
+          element={
+            <RotaProtegida tiposPermitidos={['AVALIADOR']}>
+              <EstruturaAvaliador>
+                <HistoricoParticipacao />
+              </EstruturaAvaliador>
+            </RotaProtegida>
+          }
+        />
+        <Route
           path="/avaliador/bancas"
           element={
             <RotaProtegida tiposPermitidos={['AVALIADOR']}>
@@ -343,16 +364,6 @@ export function App() {
             <RotaProtegida tiposPermitidos={['AVALIADOR']}>
               <EstruturaAvaliador>
                 <BancasAvaliacaoDetalhe />
-              </EstruturaAvaliador>
-            </RotaProtegida>
-          }
-        />
-        <Route
-          path="/avaliador/historico"
-          element={
-            <RotaProtegida tiposPermitidos={['AVALIADOR']}>
-              <EstruturaAvaliador>
-                <HistoricoParticipacao />
               </EstruturaAvaliador>
             </RotaProtegida>
           }
