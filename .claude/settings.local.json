@@ -16,7 +16,13 @@
       "Bash(nul)",
       "Bash(dir:*)",
       "Bash(git remote set-url:*)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(cat:*)",
+      "Bash(perl -i -0pe:*)",
+      "Bash(npm run build:*)",
+      "Bash(cd:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

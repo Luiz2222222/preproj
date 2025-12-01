@@ -4,7 +4,7 @@
  */
 
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, User, Calendar, FileText, Download, AlertCircle, Eye } from 'lucide-react'
+import { ArrowLeft, User, Calendar, FileText, Download, AlertCircle } from 'lucide-react'
 import { useTCCProfessorDetalhe, useTimelineTCC, useDocumentosTCC } from '../../hooks'
 import { EtapaTCCLabels, EtapaTCC, StatusDocumento, TipoDocumento, CursoLabels } from '../../types'
 import { Badge } from '../../componentes/Badge'
@@ -118,13 +118,7 @@ export function DetalheCoOrientacao() {
           <ArrowLeft className="h-5 w-5 text-cor-texto" />
         </button>
         <div className="flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-cor-texto">{tcc.titulo}</h1>
-            <span className="px-2 py-1 text-xs font-medium rounded bg-[rgb(var(--cor-info))]/10 text-[rgb(var(--cor-info))] border border-[rgb(var(--cor-info))]/20">
-              <Eye className="h-3 w-3 inline mr-1" />
-              Co-orientação (somente leitura)
-            </span>
-          </div>
+          <h1 className="text-2xl font-bold text-cor-texto mb-1">{tcc.titulo}</h1>
           <div className="flex items-center gap-3 mt-2">
             <Badge variant="success">
               {EtapaTCCLabels[tcc.etapa_atual as EtapaTCC]}

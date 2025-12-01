@@ -208,10 +208,10 @@ class TCCSerializer(serializers.ModelSerializer):
         if orientador and orientador.tipo_usuario not in ['PROFESSOR', 'COORDENADOR']:
             raise serializers.ValidationError({'orientador': 'Orientador deve ser PROFESSOR ou COORDENADOR'})
 
-        # Validar que coorientador é PROFESSOR ou COORDENADOR (se fornecido)
+        # Validar que coorientador é PROFESSOR, COORDENADOR ou AVALIADOR (se fornecido)
         coorientador = data.get('coorientador')
-        if coorientador and coorientador.tipo_usuario not in ['PROFESSOR', 'COORDENADOR']:
-            raise serializers.ValidationError({'coorientador': 'Coorientador deve ser PROFESSOR ou COORDENADOR'})
+        if coorientador and coorientador.tipo_usuario not in ['PROFESSOR', 'COORDENADOR', 'AVALIADOR']:
+            raise serializers.ValidationError({'coorientador': 'Coorientador deve ser PROFESSOR, COORDENADOR ou AVALIADOR'})
 
         return data
 
@@ -447,11 +447,27 @@ class CriarTCCSerializer(serializers.Serializer):
     professor = serializers.IntegerField(help_text='ID do professor orientador')
     mensagem = serializers.CharField(required=False, allow_blank=True)
 
-    # Dados do coorientador (opcional)
+    # Co-orientador cadastrado no sistema (opcional)
+    coorientador = serializers.IntegerField(required=False, allow_null=True, help_text='ID do co-orientador cadastrado')
+
+    # Dados do coorientador externo (opcional - quando não é cadastrado)
     coorientador_nome = serializers.CharField(required=False, allow_blank=True, max_length=200)
     coorientador_titulacao = serializers.CharField(required=False, allow_blank=True, max_length=100)
     coorientador_afiliacao = serializers.CharField(required=False, allow_blank=True, max_length=200)
     coorientador_lattes = serializers.URLField(required=False, allow_blank=True)
+
+    def validate_coorientador(self, value):
+        """Validar que co-orientador existe e é do tipo correto."""
+        if value is None:
+            return None
+        from users.models import Usuario
+        try:
+            coorientador = Usuario.objects.get(id=value)
+            if coorientador.tipo_usuario not in ['PROFESSOR', 'COORDENADOR', 'AVALIADOR']:
+                raise serializers.ValidationError('Co-orientador deve ser do tipo PROFESSOR, COORDENADOR ou AVALIADOR')
+            return coorientador
+        except Usuario.DoesNotExist:
+            raise serializers.ValidationError('Co-orientador não encontrado')
 
     def validate_professor(self, value):
         """Validar que professor existe e é do tipo correto."""
@@ -465,12 +481,19 @@ class CriarTCCSerializer(serializers.Serializer):
             raise serializers.ValidationError('Professor não encontrado')
 
     def validate(self, data):
-        """Validar que aluno não tem TCC no mesmo semestre."""
+        """Validar dados do TCC."""
         aluno = self.context['request'].user
         semestre = data.get('semestre')
 
+        # Verificar se aluno já tem TCC no semestre
         if TCC.objects.filter(aluno=aluno, semestre=semestre).exists():
             raise serializers.ValidationError({'semestre': 'Você já possui TCC cadastrado neste semestre'})
+
+        # Verificar se orientador e co-orientador não são a mesma pessoa
+        professor = data.get('professor')
+        coorientador = data.get('coorientador')
+        if coorientador and professor and coorientador.id == professor.id:
+            raise serializers.ValidationError({'coorientador': 'O co-orientador não pode ser a mesma pessoa que o orientador'})
 
         return data
 

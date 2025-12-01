@@ -60,10 +60,10 @@ export function ModalEnviarDocumento({
       }
     }
 
-    // Verificar tamanho (máximo 20MB)
-    const tamanhoMaximo = 20 * 1024 * 1024 // 20MB em bytes
+    // Verificar tamanho (máximo 30MB)
+    const tamanhoMaximo = 30 * 1024 * 1024 // 30MB em bytes
     if (file.size > tamanhoMaximo) {
-      setErroUpload('O arquivo deve ter no máximo 20MB')
+      setErroUpload('O arquivo deve ter no máximo 30MB')
       return
     }
 
@@ -196,7 +196,7 @@ export function ModalEnviarDocumento({
                       ? 'Arraste um arquivo Word aqui ou clique para selecionar'
                       : 'Arraste um arquivo PDF aqui ou clique para selecionar'}
                   </p>
-                  <p className="text-pequeno text-[rgb(var(--cor-texto-terciario))]">Tamanho máximo: 20MB</p>
+                  <p className="text-pequeno text-[rgb(var(--cor-texto-terciario))]">Tamanho máximo: 30MB</p>
                   <input
                     type="file"
                     accept={tipoFixo === TipoDocumento.MONOGRAFIA ? '.doc,.docx' : '.pdf'}

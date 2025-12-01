@@ -4,7 +4,11 @@ import {
   ArrowRight,
   User,
   XCircle,
-  Award
+  Award,
+  Clock,
+  Mail,
+  GraduationCap,
+  Download
 } from 'lucide-react'
 import { useCoOrientacoes } from '../../hooks'
 import { EtapaTCC } from '../../types'
@@ -15,6 +19,17 @@ export function CoOrientacoesProfessor() {
   const navigate = useNavigate()
 
   const { tccs, carregando, erro } = useCoOrientacoes()
+
+  // Separar TCCs pendentes (aguardando coordenador) dos aprovados
+  const tccsPendentes = tccs.filter(tcc => tcc.etapa_atual === EtapaTCC.INICIALIZACAO)
+  const tccsAprovados = tccs.filter(tcc => tcc.etapa_atual !== EtapaTCC.INICIALIZACAO)
+
+  // Helper para formatar nome do curso
+  const formatarCurso = (curso?: string | null) => {
+    if (!curso) return 'Não informado'
+    const texto = curso.toLowerCase().replace(/_/g, ' ')
+    return texto.charAt(0).toUpperCase() + texto.slice(1)
+  }
 
   // Helper para obter status final do TCC
   const getStatusFinal = (etapa: EtapaTCC): { tipo: 'aprovado' | 'reprovado' | 'descontinuado' | null; label: string } | null => {
@@ -60,7 +75,92 @@ export function CoOrientacoesProfessor() {
         </p>
       </div>
 
-      {/* Lista de Co-orientações */}
+      {/* TCCs aguardando aprovação do coordenador (apenas informativo, não clicável) */}
+      {!carregando && tccsPendentes.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Clock className="h-6 w-6 text-[rgb(var(--cor-alerta))]" />
+            <h2 className="text-xl font-bold text-[rgb(var(--cor-texto-primario))]">Aguardando aprovação do coordenador</h2>
+          </div>
+          <div className="space-y-4">
+            {tccsPendentes.map((tcc: TCC) => (
+              <div
+                key={tcc.id}
+                className="border border-[rgb(var(--cor-alerta))]/20 rounded-lg p-6 bg-[rgb(var(--cor-alerta))]/5 shadow-sm"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-3">
+                      {tcc.titulo}
+                    </h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-texto-primario))]">
+                          <User className="h-4 w-4 text-[rgb(var(--cor-icone))]" />
+                          <strong>Aluno:</strong> {tcc.aluno_dados?.nome_completo || 'Não informado'}
+                        </div>
+                        {tcc.aluno_dados?.email && (
+                          <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-texto-primario))]">
+                            <Mail className="h-4 w-4 text-[rgb(var(--cor-icone))]" />
+                            <strong>E-mail:</strong> {tcc.aluno_dados.email}
+                          </div>
+                        )}
+                        {tcc.aluno_dados?.curso && (
+                          <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-texto-primario))]">
+                            <GraduationCap className="h-4 w-4 text-[rgb(var(--cor-icone))]" />
+                            <strong>Curso:</strong> {formatarCurso(tcc.aluno_dados.curso)}
+                          </div>
+                        )}
+                      </div>
+
+                      {tcc.orientador_dados && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-texto-primario))]">
+                            <User className="h-4 w-4 text-[rgb(var(--cor-icone))]" />
+                            <strong>Orientador:</strong> {tcc.orientador_dados.nome_completo}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Documentos */}
+                    {tcc.documentos && tcc.documentos.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-[rgb(var(--cor-texto-primario))] font-medium mb-2 text-sm">Documentos anexados:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {tcc.documentos.map((doc) => (
+                            <a
+                              key={doc.id}
+                              href={doc.arquivo || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-3 py-1.5 bg-[rgb(var(--cor-destaque))]/10 text-[rgb(var(--cor-destaque))] rounded text-xs hover:bg-[rgb(var(--cor-destaque))]/20 transition"
+                            >
+                              <Download className="h-3 w-3" />
+                              {doc.tipo_documento_display || doc.tipo_documento}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Badge de status */}
+                  <div className="ml-4">
+                    <span className="inline-flex items-center gap-2 px-4 py-2 bg-[rgb(var(--cor-alerta))]/10 text-[rgb(var(--cor-alerta))] rounded-lg font-medium text-sm whitespace-nowrap">
+                      <Clock className="h-4 w-4" />
+                      Aguardando coordenador
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lista de Co-orientações aprovadas */}
       {carregando ? (
         <div className="bg-[rgb(var(--cor-superficie))] rounded-lg shadow-sm border border-[rgb(var(--cor-borda))] p-6">
           <div className="flex items-center gap-3">
@@ -68,7 +168,7 @@ export function CoOrientacoesProfessor() {
             <h2 className="text-xl font-bold text-[rgb(var(--cor-texto-primario))]">Carregando co-orientações...</h2>
           </div>
         </div>
-      ) : tccs.length === 0 ? (
+      ) : tccsAprovados.length === 0 && tccsPendentes.length === 0 ? (
         <div className="bg-[rgb(var(--cor-superficie))] rounded-lg shadow-md p-12 text-center">
           <Users className="h-16 w-16 text-[rgb(var(--cor-icone))]/50 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-[rgb(var(--cor-texto-primario))] mb-2">
@@ -78,10 +178,13 @@ export function CoOrientacoesProfessor() {
             Você ainda não possui TCCs como co-orientador.
           </p>
         </div>
+      ) : tccsAprovados.length === 0 ? (
+        // Tem pendentes mas não tem aprovados
+        null
       ) : (
         <div>
           <div className="space-y-4">
-            {tccs.map((tcc: TCC) => (
+            {tccsAprovados.map((tcc: TCC) => (
               <div
                 key={tcc.id}
                 onClick={() => handleVerDetalhes(tcc.id)}

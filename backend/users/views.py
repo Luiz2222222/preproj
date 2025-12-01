@@ -35,6 +35,22 @@ class ListarProfessoresView(APIView):
         return Response(serializer.data)
 
 
+class ListarCoorientadoresView(APIView):
+    """View para listar potenciais co-orientadores (professores + avaliadores externos)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Retorna lista de professores e avaliadores externos."""
+        from django.db.models import Q
+        coorientadores = Usuario.objects.filter(
+            Q(tipo_usuario='PROFESSOR') | Q(tipo_usuario='AVALIADOR')
+        ).order_by('nome_completo')
+
+        serializer = ProfessorListSerializer(coorientadores, many=True)
+        return Response(serializer.data)
+
+
 class RegistroAlunoView(generics.CreateAPIView):
     """View para cadastro de Aluno."""
 

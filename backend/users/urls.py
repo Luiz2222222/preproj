@@ -10,6 +10,7 @@ from .views import (
     TokenRefreshView,  # ✅ Custom: lê refresh token dos cookies
     LogoutView,
     ListarProfessoresView,
+    ListarCoorientadoresView,
     ProfessoresEstatisticasView,
     ChangePasswordView,
 )
@@ -39,6 +40,9 @@ urlpatterns = [
     # Listar professores
     path('professores/', ListarProfessoresView.as_view(), name='listar_professores'),
     path('professores/estatisticas/', ProfessoresEstatisticasView.as_view(), name='professores_estatisticas'),
+
+    # Listar co-orientadores (professores + avaliadores externos)
+    path('coorientadores/', ListarCoorientadoresView.as_view(), name='listar_coorientadores'),
 
     # Gerenciamento de códigos (coordenador)
     path('config/', include(router.urls)),

@@ -225,6 +225,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                 titulo=dados['titulo'],
                 resumo=dados.get('resumo', ''),
                 semestre=dados['semestre'],
+                coorientador=dados.get('coorientador'),  # Co-orientador cadastrado (FK)
                 coorientador_nome=dados.get('coorientador_nome', ''),
                 coorientador_titulacao=dados.get('coorientador_titulacao', ''),
                 coorientador_afiliacao=dados.get('coorientador_afiliacao', ''),

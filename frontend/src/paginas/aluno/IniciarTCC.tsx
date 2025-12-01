@@ -20,6 +20,8 @@ interface FormData {
   professor: number | null
   mensagem: string
   possuiCoorientador: boolean
+  coorientadorCadastrado: boolean  // true = professor cadastrado, false = externo
+  coorientador: number | null      // ID do co-orientador cadastrado
   coorientador_nome: string
   coorientador_titulacao: string
   coorientador_afiliacao: string
@@ -31,7 +33,9 @@ export function IniciarTCC() {
   const { sucesso, erro } = useToast()
   const { calendario } = useCalendarioSemestre()
   const [professores, setProfessores] = useState<Professor[]>([])
+  const [coorientadores, setCoorientadores] = useState<Professor[]>([])
   const [carregandoProfessores, setCarregandoProfessores] = useState(true)
+  const [carregandoCoorientadores, setCarregandoCoorientadores] = useState(true)
   const [perfilAluno, setPerfilAluno] = useState<UsuarioLogado | null>(null)
   const [carregandoPerfil, setCarregandoPerfil] = useState(true)
   const [formData, setFormData] = useState<FormData>({
@@ -39,6 +43,8 @@ export function IniciarTCC() {
     professor: null,
     mensagem: '',
     possuiCoorientador: false,
+    coorientadorCadastrado: true,  // Por padrão, assume que é cadastrado
+    coorientador: null,
     coorientador_nome: '',
     coorientador_titulacao: '',
     coorientador_afiliacao: '',
@@ -58,6 +64,7 @@ export function IniciarTCC() {
 
   useEffect(() => {
     buscarProfessores()
+    buscarCoorientadores()
     buscarPerfilAluno()
   }, [])
 
@@ -69,6 +76,17 @@ export function IniciarTCC() {
       console.error('Erro ao buscar professores:', erro)
     } finally {
       setCarregandoProfessores(false)
+    }
+  }
+
+  const buscarCoorientadores = async () => {
+    try {
+      const resposta = await api.get('/coorientadores/')
+      setCoorientadores(resposta.data)
+    } catch (erro) {
+      console.error('Erro ao buscar coorientadores:', erro)
+    } finally {
+      setCarregandoCoorientadores(false)
     }
   }
 
@@ -115,17 +133,25 @@ export function IniciarTCC() {
     }
 
     if (formData.possuiCoorientador) {
-      if (!formData.coorientador_nome.trim()) {
-        novosErros.coorientador_nome = 'Nome do coorientador é obrigatório'
-      }
-      if (!formData.coorientador_titulacao) {
-        novosErros.coorientador_titulacao = 'Selecione a titulação do coorientador'
-      }
-      if (!formData.coorientador_afiliacao.trim()) {
-        novosErros.coorientador_afiliacao = 'Afiliação do coorientador é obrigatória'
-      }
-      if (!formData.coorientador_lattes.trim()) {
-        novosErros.coorientador_lattes = 'Link do Currículo Lattes é obrigatório'
+      if (formData.coorientadorCadastrado) {
+        // Co-orientador é professor cadastrado
+        if (!formData.coorientador) {
+          novosErros.coorientador = 'Selecione um co-orientador'
+        }
+      } else {
+        // Co-orientador é externo
+        if (!formData.coorientador_nome.trim()) {
+          novosErros.coorientador_nome = 'Nome do coorientador é obrigatório'
+        }
+        if (!formData.coorientador_titulacao) {
+          novosErros.coorientador_titulacao = 'Selecione a titulação do coorientador'
+        }
+        if (!formData.coorientador_afiliacao.trim()) {
+          novosErros.coorientador_afiliacao = 'Afiliação do coorientador é obrigatória'
+        }
+        if (!formData.coorientador_lattes.trim()) {
+          novosErros.coorientador_lattes = 'Link do Currículo Lattes é obrigatório'
+        }
       }
     }
 
@@ -169,13 +195,19 @@ export function IniciarTCC() {
       }
 
       if (formData.possuiCoorientador) {
-        payload.coorientador_nome = formData.coorientador_nome.trim()
-        payload.coorientador_titulacao = formData.coorientador_titulacao.trim()
-        payload.coorientador_afiliacao = formData.coorientador_afiliacao.trim()
-        // Adicionar https:// ao lattes antes de enviar
-        payload.coorientador_lattes = formData.coorientador_lattes.trim()
-          ? `https://${formData.coorientador_lattes.trim()}`
-          : ''
+        if (formData.coorientadorCadastrado && formData.coorientador) {
+          // Co-orientador é professor cadastrado
+          (payload as any).coorientador = formData.coorientador
+        } else {
+          // Co-orientador é externo
+          payload.coorientador_nome = formData.coorientador_nome.trim()
+          payload.coorientador_titulacao = formData.coorientador_titulacao.trim()
+          payload.coorientador_afiliacao = formData.coorientador_afiliacao.trim()
+          // Adicionar https:// ao lattes antes de enviar
+          payload.coorientador_lattes = formData.coorientador_lattes.trim()
+            ? `https://${formData.coorientador_lattes.trim()}`
+            : ''
+        }
       }
 
       const resposta = await api.post('/tccs/criar_com_solicitacao/', payload)
@@ -236,10 +268,20 @@ export function IniciarTCC() {
   }
 
   const professorSelecionado = professores.find((p) => p.id === formData.professor)
+  const coorientadorSelecionado = coorientadores.find((p) => p.id === formData.coorientador)
+
+  // Listas filtradas: orientador e co-orientador não podem ser a mesma pessoa
+  const professoresParaOrientador = useMemo(() => {
+    return professores.filter(p => p.id !== formData.coorientador)
+  }, [professores, formData.coorientador])
+
+  const professoresParaCoorientador = useMemo(() => {
+    return coorientadores.filter(p => p.id !== formData.professor)
+  }, [coorientadores, formData.professor])
 
   const cursoDisplay = perfilAluno?.curso_display || formatarCurso(perfilAluno?.curso)
 
-  const carregandoDados = carregandoProfessores || carregandoPerfil
+  const carregandoDados = carregandoProfessores || carregandoCoorientadores || carregandoPerfil
 
   const formatarTamanhoArquivo = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B'
@@ -334,12 +376,12 @@ export function IniciarTCC() {
               ) : (
                 <select
                   value={formData.professor || ''}
-                  onChange={(e) => setFormData({ ...formData, professor: Number(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, professor: Number(e.target.value) || null })}
                   className="w-full px-4 py-1.5 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
                   required
                 >
                   <option value="">Selecione um professor...</option>
-                  {professores.map((professor) => (
+                  {professoresParaOrientador.map((professor) => (
                     <option key={professor.id} value={professor.id}>
                       {professor.nome_completo}
                     </option>
@@ -383,96 +425,172 @@ export function IniciarTCC() {
             {/* Campos do Co-orientador (condicional) */}
             {formData.possuiCoorientador && (
               <>
+                {/* Pergunta: O co-orientador é cadastrado? */}
                 <div className="mb-6">
                   <label className="block text-cor-texto font-semibold mb-2">
-                    Co-orientador (nome completo) <span className="text-[rgb(var(--cor-erro))]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-1.5 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
-                    value={formData.coorientador_nome}
-                    onChange={(e) => setFormData({ ...formData, coorientador_nome: e.target.value })}
-                    placeholder="Digite o nome completo do co-orientador"
-                    required={formData.possuiCoorientador}
-                  />
-                  {erros.coorientador_nome && (
-                    <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador_nome}</p>
-                  )}
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-cor-texto font-semibold mb-2">
-                    Link do currículo Lattes do co-orientador <span className="text-[rgb(var(--cor-erro))]">*</span>
-                  </label>
-                  <div className="relative flex items-center">
-                    <span className="absolute left-4 text-cor-texto/50 pointer-events-none select-none">
-                      https://
-                    </span>
-                    <input
-                      type="text"
-                      className="w-full pl-20 pr-4 py-1.5 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
-                      value={formData.coorientador_lattes}
-                      onChange={(e) => handleLattesChange(e.target.value)}
-                      placeholder="lattes.cnpq.br/1234567890123456"
-                      required={formData.possuiCoorientador}
-                    />
-                  </div>
-                  {erros.coorientador_lattes && (
-                    <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador_lattes}</p>
-                  )}
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-cor-texto font-semibold mb-2">
-                    Titulação do co-orientador <span className="text-[rgb(var(--cor-erro))]">*</span>
+                    O co-orientador é cadastrado no sistema?
                   </label>
                   <div className="flex gap-4">
                     <label className="flex items-center">
                       <input
                         type="radio"
-                        name="titulacao"
-                        value="mestre"
-                        checked={formData.coorientador_titulacao === 'mestre'}
-                        onChange={(e) => setFormData({ ...formData, coorientador_titulacao: e.target.value })}
+                        name="coorientadorCadastrado"
+                        value="sim"
+                        checked={formData.coorientadorCadastrado}
+                        onChange={() => setFormData({
+                          ...formData,
+                          coorientadorCadastrado: true,
+                          coorientador_nome: '',
+                          coorientador_titulacao: '',
+                          coorientador_afiliacao: '',
+                          coorientador_lattes: ''
+                        })}
                         className="mr-2"
-                        required={formData.possuiCoorientador}
                       />
-                      Mestre
+                      Sim
                     </label>
                     <label className="flex items-center">
                       <input
                         type="radio"
-                        name="titulacao"
-                        value="doutor"
-                        checked={formData.coorientador_titulacao === 'doutor'}
-                        onChange={(e) => setFormData({ ...formData, coorientador_titulacao: e.target.value })}
+                        name="coorientadorCadastrado"
+                        value="nao"
+                        checked={!formData.coorientadorCadastrado}
+                        onChange={() => setFormData({
+                          ...formData,
+                          coorientadorCadastrado: false,
+                          coorientador: null
+                        })}
                         className="mr-2"
-                        required={formData.possuiCoorientador}
                       />
-                      Doutor
+                      Não
                     </label>
                   </div>
-                  {erros.coorientador_titulacao && (
-                    <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador_titulacao}</p>
-                  )}
                 </div>
 
-                <div className="mb-6">
-                  <label className="block text-cor-texto font-semibold mb-2">
-                    Afiliação do co-orientador <span className="text-[rgb(var(--cor-erro))]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-1.5 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
-                    value={formData.coorientador_afiliacao}
-                    onChange={(e) => setFormData({ ...formData, coorientador_afiliacao: e.target.value })}
-                    placeholder="Ex: UFPE, ONS, etc."
-                    required={formData.possuiCoorientador}
-                  />
-                  {erros.coorientador_afiliacao && (
-                    <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador_afiliacao}</p>
-                  )}
-                </div>
+                {/* Se co-orientador é cadastrado: mostrar select de co-orientadores */}
+                {formData.coorientadorCadastrado ? (
+                  <div className="mb-6">
+                    <label className="block text-cor-texto font-semibold mb-2">
+                      Co-orientador <span className="text-[rgb(var(--cor-erro))]">*</span>
+                    </label>
+                    {carregandoCoorientadores ? (
+                      <div className="p-4 border border-cor-borda rounded-lg">
+                        <SkeletonList count={3} />
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.coorientador || ''}
+                        onChange={(e) => setFormData({ ...formData, coorientador: Number(e.target.value) || null })}
+                        className="w-full px-4 py-1.5 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
+                        required={formData.possuiCoorientador && formData.coorientadorCadastrado}
+                      >
+                        <option value="">Selecione um co-orientador...</option>
+                        {professoresParaCoorientador.map((professor) => (
+                          <option key={professor.id} value={professor.id}>
+                            {professor.nome_completo}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {erros.coorientador && (
+                      <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador}</p>
+                    )}
+                  </div>
+                ) : (
+                  /* Se co-orientador é externo: mostrar campos de texto */
+                  <>
+                    <div className="mb-6">
+                      <label className="block text-cor-texto font-semibold mb-2">
+                        Co-orientador (nome completo) <span className="text-[rgb(var(--cor-erro))]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-1.5 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
+                        value={formData.coorientador_nome}
+                        onChange={(e) => setFormData({ ...formData, coorientador_nome: e.target.value })}
+                        placeholder="Digite o nome completo do co-orientador"
+                        required={formData.possuiCoorientador && !formData.coorientadorCadastrado}
+                      />
+                      {erros.coorientador_nome && (
+                        <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador_nome}</p>
+                      )}
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-cor-texto font-semibold mb-2">
+                        Link do currículo Lattes do co-orientador <span className="text-[rgb(var(--cor-erro))]">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-4 text-cor-texto/50 pointer-events-none select-none">
+                          https://
+                        </span>
+                        <input
+                          type="text"
+                          className="w-full pl-20 pr-4 py-1.5 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
+                          value={formData.coorientador_lattes}
+                          onChange={(e) => handleLattesChange(e.target.value)}
+                          placeholder="lattes.cnpq.br/1234567890123456"
+                          required={formData.possuiCoorientador && !formData.coorientadorCadastrado}
+                        />
+                      </div>
+                      {erros.coorientador_lattes && (
+                        <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador_lattes}</p>
+                      )}
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-cor-texto font-semibold mb-2">
+                        Titulação do co-orientador <span className="text-[rgb(var(--cor-erro))]">*</span>
+                      </label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="titulacao"
+                            value="mestre"
+                            checked={formData.coorientador_titulacao === 'mestre'}
+                            onChange={(e) => setFormData({ ...formData, coorientador_titulacao: e.target.value })}
+                            className="mr-2"
+                            required={formData.possuiCoorientador && !formData.coorientadorCadastrado}
+                          />
+                          Mestre
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="titulacao"
+                            value="doutor"
+                            checked={formData.coorientador_titulacao === 'doutor'}
+                            onChange={(e) => setFormData({ ...formData, coorientador_titulacao: e.target.value })}
+                            className="mr-2"
+                            required={formData.possuiCoorientador && !formData.coorientadorCadastrado}
+                          />
+                          Doutor
+                        </label>
+                      </div>
+                      {erros.coorientador_titulacao && (
+                        <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador_titulacao}</p>
+                      )}
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-cor-texto font-semibold mb-2">
+                        Afiliação do co-orientador <span className="text-[rgb(var(--cor-erro))]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-1.5 border border-cor-borda rounded-lg focus:outline-none focus:ring-2 focus:ring-cor-destaque"
+                        value={formData.coorientador_afiliacao}
+                        onChange={(e) => setFormData({ ...formData, coorientador_afiliacao: e.target.value })}
+                        placeholder="Ex: UFPE, ONS, etc."
+                        required={formData.possuiCoorientador && !formData.coorientadorCadastrado}
+                      />
+                      {erros.coorientador_afiliacao && (
+                        <p className="text-[rgb(var(--cor-erro))] text-sm mt-1">{erros.coorientador_afiliacao}</p>
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -661,11 +779,22 @@ export function IniciarTCC() {
                 </div>
               )}
 
-              {formData.possuiCoorientador && formData.coorientador_nome && (
-                <div>
-                  <p className="text-cor-texto/70 text-sm">Coorientador</p>
-                  <p className="font-medium text-cor-texto">{formData.coorientador_nome}</p>
-                </div>
+              {formData.possuiCoorientador && (
+                formData.coorientadorCadastrado ? (
+                  coorientadorSelecionado && (
+                    <div>
+                      <p className="text-cor-texto/70 text-sm">Co-orientador (cadastrado)</p>
+                      <p className="font-medium text-cor-texto">{coorientadorSelecionado.nome_completo}</p>
+                    </div>
+                  )
+                ) : (
+                  formData.coorientador_nome && (
+                    <div>
+                      <p className="text-cor-texto/70 text-sm">Co-orientador (externo)</p>
+                      <p className="font-medium text-cor-texto">{formData.coorientador_nome}</p>
+                    </div>
+                  )
+                )
               )}
 
               {planoDesenvolvimento && (
