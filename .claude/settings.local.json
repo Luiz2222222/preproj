@@ -22,7 +22,10 @@
       "Bash(npm run build:*)",
       "Bash(cd:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(timeout:*)",
+      "Bash(start /B python manage.py runserver:*)"
     ],
     "deny": [],
     "ask": []
