@@ -62,7 +62,7 @@ class TCCViewSet(viewsets.ModelViewSet):
             # Aluno vê apenas seus TCCs
             return TCC.objects.filter(aluno=usuario)
 
-        elif usuario.tipo_usuario in ['PROFESSOR', 'COORDENADOR']:
+        elif usuario.tipo_usuario == 'PROFESSOR':
             # Professor vê TCCs onde é orientador, coorientador OU avaliador na banca
             from .models import MembroBanca, BancaFase1
 
@@ -72,6 +72,28 @@ class TCCViewSet(viewsets.ModelViewSet):
             )
 
             # TCCs onde é membro de banca (avaliador)
+            bancas_ids = MembroBanca.objects.filter(
+                usuario=usuario,
+                tipo='AVALIADOR'
+            ).values_list('banca_id', flat=True)
+
+            tccs_banca_ids = BancaFase1.objects.filter(
+                id__in=bancas_ids
+            ).values_list('tcc_id', flat=True)
+
+            # Combinar os querysets
+            queryset = queryset | TCC.objects.filter(id__in=tccs_banca_ids)
+
+            return queryset.distinct()
+
+        elif usuario.tipo_usuario == 'AVALIADOR':
+            # Avaliador externo vê TCCs onde é coorientador OU membro de banca
+            from .models import MembroBanca, BancaFase1
+
+            # TCCs onde é coorientador
+            queryset = TCC.objects.filter(coorientador=usuario)
+
+            # TCCs onde é membro de banca
             bancas_ids = MembroBanca.objects.filter(
                 usuario=usuario,
                 tipo='AVALIADOR'
@@ -161,12 +183,12 @@ class TCCViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(tccs, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'], url_path='minhas-coorientacoes', permission_classes=[IsProfessorOrCoordenador])
+    @action(detail=False, methods=['get'], url_path='minhas-coorientacoes', permission_classes=[IsProfessorCoordenadorOuAvaliador])
     def minhas_coorientacoes(self, request):
         """
         GET /api/tccs/minhas-coorientacoes/
         Retorna TCCs onde o usuário é co-orientador (não orientador principal).
-        Apenas para PROFESSOR e COORDENADOR.
+        Para PROFESSOR, COORDENADOR e AVALIADOR.
         """
         usuario = request.user
 

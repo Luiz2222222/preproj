@@ -2,11 +2,9 @@ import { useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
-  ClipboardCheck,
-  Calendar,
-  FileText,
-  History,
-  Settings
+  Users,
+  Settings,
+  ClipboardCheck
 } from 'lucide-react'
 import { useNotificacoes } from '../contextos/NotificacoesContext'
 import { TipoNotificacao } from '../types/notificacoes'
@@ -29,7 +27,7 @@ export function SidebarAvaliador() {
           to="/avaliador"
           end
           className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors relative ${
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
               isActive
                 ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
                 : 'text-cor-texto hover:bg-cor-fundo'
@@ -60,9 +58,9 @@ export function SidebarAvaliador() {
           )}
         </NavLink>
 
-        {/* Cronograma */}
+        {/* Co-orientações */}
         <NavLink
-          to="/avaliador/cronograma"
+          to="/avaliador/coorientacoes"
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
               isActive
@@ -71,38 +69,8 @@ export function SidebarAvaliador() {
             }`
           }
         >
-          <Calendar className="h-5 w-5" />
-          <span>Cronograma</span>
-        </NavLink>
-
-        {/* Parecer */}
-        <NavLink
-          to="/avaliador/parecer"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-              isActive
-                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
-                : 'text-cor-texto hover:bg-cor-fundo'
-            }`
-          }
-        >
-          <FileText className="h-5 w-5" />
-          <span>Parecer</span>
-        </NavLink>
-
-        {/* Histórico */}
-        <NavLink
-          to="/avaliador/historico"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-              isActive
-                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
-                : 'text-cor-texto hover:bg-cor-fundo'
-            }`
-          }
-        >
-          <History className="h-5 w-5" />
-          <span>Histórico</span>
+          <Users className="h-5 w-5" />
+          <span>Co-orientações</span>
         </NavLink>
 
         {/* Configurações */}

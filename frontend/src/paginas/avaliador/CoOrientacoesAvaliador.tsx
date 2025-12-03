@@ -13,7 +13,7 @@ import {
 import { useCoOrientacoes } from '../../hooks'
 import { EtapaTCC } from '../../types'
 import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
-import type { TCC } from '../../types'
+import type { TCC, DocumentoTCC } from '../../types'
 
 export function CoOrientacoesAvaliador() {
   const navigate = useNavigate()
@@ -48,7 +48,7 @@ export function CoOrientacoesAvaliador() {
   }
 
   const handleVerDetalhes = (tccId: number) => {
-    navigate(`/avaliador/bancas/${tccId}`)
+    navigate(`/avaliador/coorientacoes/${tccId}`)
   }
 
   if (erro) {
@@ -258,7 +258,7 @@ export function CoOrientacoesAvaliador() {
                 <div className="mt-4 -mx-6">
                   <TimelineHorizontalDetalhado
                     tcc={tcc}
-                    documentos={tcc.documentos}
+                    documentos={tcc.documentos as DocumentoTCC[] | undefined}
                     className="rounded-none shadow-none border-t border-[rgb(var(--cor-borda))]"
                   />
                 </div>

@@ -24,9 +24,7 @@ import { BancasProfessor } from './paginas/professor/BancasProfessor'
 import { BancasAvaliacaoDetalhe } from './paginas/professor/BancasAvaliacaoDetalhe'
 import { ConfiguracoesProfessor } from './paginas/professor/ConfiguracoesProfessor'
 import { DashboardAvaliador } from './paginas/avaliador/DashboardAvaliador'
-import { CronogramaAvaliacoes } from './paginas/avaliador/Cronograma'
-import { FormularioParecer } from './paginas/avaliador/Parecer'
-import { HistoricoParticipacao } from './paginas/avaliador/Historico'
+import { CoOrientacoesAvaliador } from './paginas/avaliador/CoOrientacoesAvaliador'
 import { ConfiguracoesAvaliador } from './paginas/avaliador/Configuracoes'
 import { RotaProtegida } from './componentes/RotaProtegida'
 import { EstruturaAluno } from './estrutura/EstruturaAluno'
@@ -307,43 +305,13 @@ export function App() {
           }
         />
 
-        {/* Rotas do Avaliador (com layout) */}
+        {/* Rotas do Avaliador Externo (com layout) */}
         <Route
           path="/avaliador"
           element={
             <RotaProtegida tiposPermitidos={['AVALIADOR']}>
               <EstruturaAvaliador>
                 <DashboardAvaliador />
-              </EstruturaAvaliador>
-            </RotaProtegida>
-          }
-        />
-        <Route
-          path="/avaliador/cronograma"
-          element={
-            <RotaProtegida tiposPermitidos={['AVALIADOR']}>
-              <EstruturaAvaliador>
-                <CronogramaAvaliacoes />
-              </EstruturaAvaliador>
-            </RotaProtegida>
-          }
-        />
-        <Route
-          path="/avaliador/parecer"
-          element={
-            <RotaProtegida tiposPermitidos={['AVALIADOR']}>
-              <EstruturaAvaliador>
-                <FormularioParecer />
-              </EstruturaAvaliador>
-            </RotaProtegida>
-          }
-        />
-        <Route
-          path="/avaliador/historico"
-          element={
-            <RotaProtegida tiposPermitidos={['AVALIADOR']}>
-              <EstruturaAvaliador>
-                <HistoricoParticipacao />
               </EstruturaAvaliador>
             </RotaProtegida>
           }
@@ -364,6 +332,26 @@ export function App() {
             <RotaProtegida tiposPermitidos={['AVALIADOR']}>
               <EstruturaAvaliador>
                 <BancasAvaliacaoDetalhe />
+              </EstruturaAvaliador>
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/avaliador/coorientacoes"
+          element={
+            <RotaProtegida tiposPermitidos={['AVALIADOR']}>
+              <EstruturaAvaliador>
+                <CoOrientacoesAvaliador />
+              </EstruturaAvaliador>
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/avaliador/coorientacoes/:id"
+          element={
+            <RotaProtegida tiposPermitidos={['AVALIADOR']}>
+              <EstruturaAvaliador>
+                <DetalheCoOrientacao />
               </EstruturaAvaliador>
             </RotaProtegida>
           }

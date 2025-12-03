@@ -15,7 +15,7 @@ import {
 import { useTCCsProfessor, useSolicitacoesPendentesProfessor } from '../../hooks'
 import { EtapaTCC, StatusDocumento, TipoDocumento } from '../../types'
 import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
-import type { TCC } from '../../types'
+import type { TCC, DocumentoTCC } from '../../types'
 
 export function MeusOrientandosProfessor() {
   const navigate = useNavigate()
@@ -321,7 +321,7 @@ export function MeusOrientandosProfessor() {
                 <div className="mt-4 -mx-6">
                   <TimelineHorizontalDetalhado
                     tcc={tcc}
-                    documentos={tcc.documentos}
+                    documentos={tcc.documentos as DocumentoTCC[] | undefined}
                     className="rounded-none shadow-none border-t border-[rgb(var(--cor-borda))]"
                   />
                 </div>

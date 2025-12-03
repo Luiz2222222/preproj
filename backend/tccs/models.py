@@ -69,7 +69,7 @@ class TCC(models.Model):
         null=True,
         blank=True,
         related_name='tccs_como_coorientador',
-        limit_choices_to={'tipo_usuario__in': ['PROFESSOR', 'COORDENADOR']},
+        limit_choices_to={'tipo_usuario__in': ['PROFESSOR', 'COORDENADOR', 'AVALIADOR']},
         verbose_name='Coorientador'
     )
 
@@ -229,9 +229,9 @@ class TCC(models.Model):
         if self.orientador and self.orientador.tipo_usuario not in ['PROFESSOR', 'COORDENADOR']:
             raise ValidationError({'orientador': 'Orientador deve ser PROFESSOR ou COORDENADOR'})
 
-        # Validar que coorientador é PROFESSOR ou COORDENADOR
-        if self.coorientador and self.coorientador.tipo_usuario not in ['PROFESSOR', 'COORDENADOR']:
-            raise ValidationError({'coorientador': 'Coorientador deve ser PROFESSOR ou COORDENADOR'})
+        # Validar que coorientador é PROFESSOR, COORDENADOR ou AVALIADOR
+        if self.coorientador and self.coorientador.tipo_usuario not in ['PROFESSOR', 'COORDENADOR', 'AVALIADOR']:
+            raise ValidationError({'coorientador': 'Coorientador deve ser PROFESSOR, COORDENADOR ou AVALIADOR'})
 
     def save(self, *args, **kwargs):
         self.full_clean()

@@ -32,7 +32,16 @@ class IsTCCOwnerOrRelated(permissions.BasePermission):
         if usuario.tipo_usuario in ['PROFESSOR', 'COORDENADOR']:
             return obj.orientador == usuario or obj.coorientador == usuario
 
-        # Avaliador não tem acesso por enquanto (será adicionado na fase de bancas)
+        # Avaliador vê TCCs onde é coorientador ou membro de banca
+        if usuario.tipo_usuario == 'AVALIADOR':
+            # Verifica se é coorientador
+            if obj.coorientador == usuario:
+                return True
+            # Verifica se é membro de banca (para avaliação)
+            if hasattr(obj, 'banca_fase1') and obj.banca_fase1:
+                return obj.banca_fase1.membros.filter(usuario=usuario).exists()
+            return False
+
         return False
 
 

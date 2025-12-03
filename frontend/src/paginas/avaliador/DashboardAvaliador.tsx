@@ -1,5 +1,4 @@
-import { useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState, type MouseEvent } from 'react'
 import {
   AlertCircle,
   Clock,
@@ -7,26 +6,22 @@ import {
   FileText,
   CheckCircle,
   BookOpen,
-  BarChart3,
-  Briefcase
+  Briefcase,
+  Loader2,
+  BarChart3
 } from 'lucide-react'
 import { useAutenticacao } from '../../autenticacao'
-import { useToast } from '../../contextos/ToastProvider'
-import { useCalendarioSemestre } from '../../hooks'
+import { useCalendarioSemestre, useCoOrientacoes } from '../../hooks'
 import { EtapaTCC } from '../../types'
 import { formatarDataCurta, formatarIntervalo } from '../../utils/datas'
 import { PainelDatasImportantes } from '../../componentes'
 
 export function DashboardAvaliador() {
   const { usuario } = useAutenticacao()
-  const { erro: mostrarErro } = useToast()
-  const navigate = useNavigate()
 
   const { calendario } = useCalendarioSemestre()
+  const { tccs: coOrientacoes, carregando } = useCoOrientacoes()
 
-  // TODO: Implementar hook para buscar co-orientações do avaliador externo
-  // Por enquanto usando dados mock
-  const coOrientacoes: any[] = []
   const totalCoOrientandos = coOrientacoes.length
 
   // Estatísticas baseadas nas co-orientações
@@ -39,6 +34,74 @@ export function DashboardAvaliador() {
     c.etapa_atual === EtapaTCC.AGENDAMENTO_APRESENTACAO ||
     c.etapa_atual === EtapaTCC.APRESENTACAO_FASE_2
   ).length
+
+  // Estado do tooltip customizado
+  const [tooltip, setTooltip] = useState<{ texto: string; x: number; y: number; visivel: boolean }>({
+    texto: '',
+    x: 0,
+    y: 0,
+    visivel: false
+  })
+
+  // Funções para controlar o tooltip
+  const mostrarTooltip = (evento: MouseEvent<HTMLDivElement>, texto: string) => {
+    const { clientX, clientY } = evento
+    setTooltip({ texto, x: clientX, y: clientY, visivel: true })
+  }
+
+  const esconderTooltip = () => {
+    setTooltip(prev => ({ ...prev, visivel: false }))
+  }
+
+  // Pré-computar grupos com useMemo
+  const grupos = useMemo(() => {
+    const definicoes = [
+      {
+        nome: 'Inicialização',
+        etapas: [EtapaTCC.INICIALIZACAO] as EtapaTCC[],
+        cor: 'blue'
+      },
+      {
+        nome: 'Desenvolvimento',
+        etapas: [EtapaTCC.DESENVOLVIMENTO] as EtapaTCC[],
+        cor: 'yellow'
+      },
+      {
+        nome: 'Fase 1',
+        etapas: [EtapaTCC.FORMACAO_BANCA_FASE_1, EtapaTCC.AVALIACAO_FASE_1, EtapaTCC.VALIDACAO_FASE_1] as EtapaTCC[],
+        cor: 'purple'
+      },
+      {
+        nome: 'Fase 2',
+        etapas: [EtapaTCC.AGENDAMENTO_APRESENTACAO, EtapaTCC.APRESENTACAO_FASE_2] as EtapaTCC[],
+        cor: 'orange'
+      },
+      {
+        nome: 'Finalização',
+        etapas: [EtapaTCC.ANALISE_FINAL_COORDENADOR, EtapaTCC.AGUARDANDO_AJUSTES_FINAIS, EtapaTCC.CONCLUIDO] as EtapaTCC[],
+        cor: 'green'
+      }
+    ] as const
+
+    return definicoes.map((grupo) => {
+      const tccsDoGrupo = coOrientacoes.filter((tcc: any) => grupo.etapas.includes(tcc.etapa_atual as EtapaTCC))
+      const count = tccsDoGrupo.length
+      const percentual = totalCoOrientandos > 0 ? (count / totalCoOrientandos) * 100 : 0
+      const widthPercentual = totalCoOrientandos > 0 && count > 0 ? Math.max(percentual, 8) : percentual
+
+      // Montar tooltip text com <br/>
+      const nomesAlunos = tccsDoGrupo.map((tcc: any) => tcc.aluno_dados?.nome_completo || 'Aluno')
+      const tooltipHtml = count > 0 ? nomesAlunos.join('<br/>') : 'Nenhum aluno'
+
+      return {
+        ...grupo,
+        count,
+        percentual,
+        widthPercentual,
+        tooltipHtml
+      }
+    })
+  }, [coOrientacoes, totalCoOrientandos])
 
   // Cards de estatísticas
   const statCards = [
@@ -166,6 +229,14 @@ export function DashboardAvaliador() {
     ]
   }, [calendario])
 
+  if (carregando) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 text-[rgb(var(--cor-destaque))] animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div>
       {/* Header da página */}
@@ -242,10 +313,63 @@ export function DashboardAvaliador() {
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Grupos serão exibidos aqui quando houver co-orientações */}
+            {grupos.map((grupo, index) => {
+              const barColors: Record<string, string> = {
+                blue: 'bg-[rgb(var(--cor-destaque))]',
+                yellow: 'bg-[rgb(var(--cor-alerta))]',
+                purple: 'bg-[rgb(var(--cor-info))]',
+                orange: 'bg-[rgb(var(--cor-alerta))]',
+                green: 'bg-[rgb(var(--cor-sucesso))]'
+              }
+
+              return (
+                <div key={index}>
+                  <div className="mb-1">
+                    <span className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                      {grupo.nome}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-[rgb(var(--cor-fundo))] rounded-full h-6 relative overflow-hidden">
+                      {grupo.count > 0 ? (
+                        <div
+                          className={`${barColors[grupo.cor]} h-6 rounded-full flex items-center justify-center cursor-pointer`}
+                          style={{ width: `${grupo.widthPercentual}%` }}
+                          onMouseEnter={(e) => mostrarTooltip(e, grupo.tooltipHtml)}
+                          onMouseMove={(e) => mostrarTooltip(e, grupo.tooltipHtml)}
+                          onMouseLeave={esconderTooltip}
+                        >
+                          <span className="text-xs text-white font-semibold">{grupo.count}</span>
+                        </div>
+                      ) : (
+                        <div className="h-6 flex items-center justify-center">
+                          {/* Vazio - sem contar quando 0 */}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-[rgb(var(--cor-texto-secundario))] w-12 text-right">
+                      {grupo.percentual.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
+
+      {/* Tooltip customizado */}
+      {tooltip.visivel && (
+        <div
+          className="fixed z-50 px-3 py-2 bg-black text-white text-xs rounded shadow-lg pointer-events-none"
+          style={{
+            left: tooltip.x + 10,
+            top: tooltip.y + 10
+          }}
+          dangerouslySetInnerHTML={{ __html: tooltip.texto }}
+        />
+      )}
+
     </div>
   )
 }
