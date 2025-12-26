@@ -157,18 +157,15 @@ export function EstruturaAluno({ children }: PropsWithChildren) {
 
             {/* Ações do Header */}
             <div className="flex items-center gap-3">
-              {/* Botão Reset (apenas em desenvolvimento) */}
+              {/* Botão Reset (apenas em desenvolvimento) - transparente para gravação */}
               {import.meta.env.DEV && (
                 <button
                   onClick={handleReset}
                   disabled={resetando}
-                  className="p-2 rounded-lg bg-[rgb(var(--cor-alerta))]/10 hover:bg-[rgb(var(--cor-alerta))]/20 transition-colors group relative"
+                  className="p-2 rounded-lg opacity-0 hover:opacity-100 transition-opacity"
                   title="Resetar dados para teste"
                 >
                   <RotateCcw className={`h-5 w-5 text-[rgb(var(--cor-alerta))] ${resetando ? 'animate-spin' : ''}`} />
-                  <span className="absolute -bottom-8 right-0 bg-[rgb(var(--cor-texto-primario))] text-[rgb(var(--cor-texto-sobre-destaque))] text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Reset DEV
-                  </span>
                 </button>
               )}
 

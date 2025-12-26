@@ -409,7 +409,7 @@ export function DashboardAluno() {
         <TimelineHorizontalDetalhado
           tcc={tcc}
           documentos={tcc.documentos as any}
-          mostrarNotas={true}
+          mostrarNotas={tcc.etapa_atual === 'CONCLUIDO'}
         />
       </div>
 

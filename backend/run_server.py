@@ -15,6 +15,6 @@ if __name__ == "__main__":
             "forget to activate a virtual environment?"
         ) from exc
 
-    # Força a porta 8111
-    sys.argv = ['manage.py', 'runserver', '0.0.0.0:8111']
+    # Força a porta 8500
+    sys.argv = ['manage.py', 'runserver', '0.0.0.0:8500']
     execute_from_command_line(sys.argv)

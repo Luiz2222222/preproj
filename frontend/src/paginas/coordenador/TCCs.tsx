@@ -345,6 +345,7 @@ export function TCCs() {
                   <TimelineHorizontalDetalhado
                     tcc={tcc}
                     documentos={(tcc.documentos || []) as any}
+                    mostrarNotas={true}
                   />
                 </div>
               </div>
