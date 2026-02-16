@@ -2510,6 +2510,64 @@ class TCCViewSet(viewsets.ModelViewSet):
             'etapa_display': tcc.get_etapa_atual_display()
         }, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='avaliacao-fase1/editar-coordenador', permission_classes=[IsCoordenador])
+    def editar_avaliacao_fase1_coordenador(self, request, pk=None):
+        """
+        POST /api/tccs/{id}/avaliacao-fase1/editar-coordenador/
+        Coordenador edita diretamente a avaliação de um avaliador na Fase I.
+        Body: { avaliador_id, nota_resumo, nota_introducao, nota_revisao, nota_desenvolvimento, nota_conclusoes, parecer, status }
+        """
+        from .serializers import AvaliacaoFase1Serializer, AvaliacaoFase1EscritaSerializer
+
+        tcc = self.get_object()
+        avaliador_id = request.data.get('avaliador_id')
+
+        if not avaliador_id:
+            return Response({'detail': 'avaliador_id é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            avaliacao = AvaliacaoFase1.objects.get(tcc=tcc, avaliador_id=avaliador_id)
+        except AvaliacaoFase1.DoesNotExist:
+            return Response({'detail': 'Avaliação não encontrada para este avaliador'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Filtrar apenas os campos de nota do request.data (excluir avaliador_id)
+        dados = {k: v for k, v in request.data.items() if k != 'avaliador_id'}
+
+        serializer = AvaliacaoFase1EscritaSerializer(avaliacao, data=dados, partial=True, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        avaliacao_atualizada = serializer.save()
+
+        return Response(AvaliacaoFase1Serializer(avaliacao_atualizada, context={'request': request}).data)
+
+    @action(detail=True, methods=['post'], url_path='avaliacao-fase2/editar-coordenador', permission_classes=[IsCoordenador])
+    def editar_avaliacao_fase2_coordenador(self, request, pk=None):
+        """
+        POST /api/tccs/{id}/avaliacao-fase2/editar-coordenador/
+        Coordenador edita diretamente a avaliação de um avaliador na Fase II.
+        Body: { avaliador_id, nota_coerencia_conteudo, nota_qualidade_apresentacao, nota_dominio_tema, nota_clareza_fluencia, nota_observancia_tempo, parecer, status }
+        """
+        from .models import AvaliacaoFase2
+        from .serializers import AvaliacaoFase2Serializer, AvaliacaoFase2EscritaSerializer
+
+        tcc = self.get_object()
+        avaliador_id = request.data.get('avaliador_id')
+
+        if not avaliador_id:
+            return Response({'detail': 'avaliador_id é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            avaliacao = AvaliacaoFase2.objects.get(tcc=tcc, avaliador_id=avaliador_id)
+        except AvaliacaoFase2.DoesNotExist:
+            return Response({'detail': 'Avaliação não encontrada para este avaliador'}, status=status.HTTP_404_NOT_FOUND)
+
+        dados = {k: v for k, v in request.data.items() if k != 'avaliador_id'}
+
+        serializer = AvaliacaoFase2EscritaSerializer(avaliacao, data=dados, partial=True, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        avaliacao_atualizada = serializer.save()
+
+        return Response(AvaliacaoFase2Serializer(avaliacao_atualizada, context={'request': request}).data)
+
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsCoordenador])
     def exportar_dados(self, request):
         """

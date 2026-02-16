@@ -3,7 +3,7 @@
  * Exibe dados em formato de planilha com abas
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   FileSpreadsheet,
   Loader2,
@@ -13,6 +13,7 @@ import {
   Search,
   ChevronDown
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { useTCCsCoordenador } from '../../hooks'
 import { obterBancaFase1, obterAvaliacoesFase1 } from '../../servicos/fase1'
 import { obterAvaliacoesFase2 } from '../../servicos/fase2'
@@ -258,6 +259,245 @@ export function Relatorios() {
     ? tccsFiltradosApuracao
     : tccsFiltradosApuracao
 
+  // Helper para formatar nota como número (para o Excel)
+  const notaNum = (valor: number | string | null | undefined): number | null => {
+    if (valor === null || valor === undefined) return null
+    const numero = typeof valor === 'number' ? valor : parseFloat(String(valor))
+    return Number.isNaN(numero) ? null : Math.round(numero * 100) / 100
+  }
+
+  const exportarParaExcel = useCallback(() => {
+    const wb = XLSX.utils.book_new()
+
+    // === ABA 1: Dados Gerais ===
+    const dadosGeraisRows = tccs.map((tcc) => {
+      const coorientadorNome = tcc.coorientador_dados?.nome_completo || tcc.coorientador_nome || ''
+      const coorientadorTratamento = tcc.coorientador_dados?.tratamento || tcc.coorientador_titulacao || ''
+      const coorientadorAfiliacao = tcc.coorientador_dados?.afiliacao || tcc.coorientador_afiliacao || ''
+      const banca = bancasMap.get(tcc.id)
+      const avaliadores = banca?.membros
+        .filter(m => m.tipo === 'AVALIADOR')
+        .sort((a, b) => a.ordem - b.ordem) || []
+
+      return {
+        'ID': tcc.id,
+        'Curso': tcc.aluno_dados?.curso || '',
+        'Título': tcc.titulo,
+        'Aluno': tcc.aluno_dados?.nome_completo || '',
+        'Orientador': tcc.orientador_dados?.nome_completo || '',
+        'Orientador - Tratamento': tcc.orientador_dados?.tratamento || '',
+        'Orientador - Afiliação': tcc.orientador_dados?.afiliacao || '',
+        'Coorientador': coorientadorNome,
+        'Coorientador - Tratamento': coorientadorTratamento,
+        'Coorientador - Afiliação': coorientadorAfiliacao,
+        'Avaliador 1 (Fase I)': avaliadores[0]?.usuario_dados?.nome_completo || '',
+        'Avaliador 2 (Fase I)': avaliadores[1]?.usuario_dados?.nome_completo || '',
+        'Avaliador 1 (Fase II)': tcc.orientador_dados?.nome_completo || '',
+        'Avaliador 2 (Fase II)': avaliadores[0]?.usuario_dados?.nome_completo || '',
+        'Avaliador 3 (Fase II)': avaliadores[1]?.usuario_dados?.nome_completo || '',
+        'Data Defesa': tcc.data_defesa ? new Date(tcc.data_defesa).toLocaleDateString('pt-BR') : '',
+        'Semestre': tcc.semestre,
+      }
+    })
+    const ws1 = XLSX.utils.json_to_sheet(dadosGeraisRows)
+    XLSX.utils.book_append_sheet(wb, ws1, 'Dados Gerais')
+
+    // === ABA 2: Avaliações Fase I ===
+    const fase1Rows: Record<string, any>[] = []
+    tccs.forEach((tcc) => {
+      const banca = bancasMap.get(tcc.id)
+      const avaliadores = banca?.membros
+        .filter(m => m.tipo === 'AVALIADOR')
+        .sort((a, b) => a.ordem - b.ordem) || []
+      const avaliacoes = avaliacoesFase1Map.get(tcc.id) || []
+
+      // Uma linha por avaliador
+      const avalsOrdenadas = avaliadores.map(av => {
+        const aval = avaliacoes.find(a => a.avaliador === av.usuario)
+        return { nome: av.usuario_dados?.nome_completo || '', aval }
+      })
+
+      // Se não houver avaliadores, pelo menos uma linha com dados básicos
+      if (avalsOrdenadas.length === 0) {
+        fase1Rows.push({
+          'ID': tcc.id,
+          'Título': tcc.titulo,
+          'Aluno': tcc.aluno_dados?.nome_completo || '',
+          'Orientador': tcc.orientador_dados?.nome_completo || '',
+          'Avaliador': '',
+          'Q1 - Resumo': null,
+          'Q2 - Introdução': null,
+          'Q3 - Revisão': null,
+          'Q4 - Desenvolvimento': null,
+          'Q5 - Conclusões': null,
+          'Nota Total': null,
+        })
+      } else {
+        avalsOrdenadas.forEach(({ nome, aval }) => {
+          fase1Rows.push({
+            'ID': tcc.id,
+            'Título': tcc.titulo,
+            'Aluno': tcc.aluno_dados?.nome_completo || '',
+            'Orientador': tcc.orientador_dados?.nome_completo || '',
+            'Avaliador': nome,
+            'Q1 - Resumo': notaNum(aval?.nota_resumo),
+            'Q2 - Introdução': notaNum(aval?.nota_introducao),
+            'Q3 - Revisão': notaNum(aval?.nota_revisao),
+            'Q4 - Desenvolvimento': notaNum(aval?.nota_desenvolvimento),
+            'Q5 - Conclusões': notaNum(aval?.nota_conclusoes),
+            'Nota Total': notaNum(aval?.nota_final),
+          })
+        })
+      }
+    })
+    const ws2 = XLSX.utils.json_to_sheet(fase1Rows)
+    XLSX.utils.book_append_sheet(wb, ws2, 'Avaliações Fase I')
+
+    // === ABA 3: Avaliações Fase II ===
+    const fase2Rows: Record<string, any>[] = []
+    tccs.forEach((tcc) => {
+      const banca = bancasMap.get(tcc.id)
+      const avaliadoresFase1 = banca?.membros
+        .filter(m => m.tipo === 'AVALIADOR')
+        .sort((a, b) => a.ordem - b.ordem) || []
+      const avaliacoes = avaliacoesFase2Map.get(tcc.id) || []
+
+      // Montar avaliadores esperados: orientador + 2 da fase I
+      let aval1 = avaliacoes.find(av => av.avaliador === tcc.orientador)
+      if (!aval1 && tcc.coorientador) {
+        aval1 = avaliacoes.find(av => av.avaliador === tcc.coorientador)
+      }
+      const aval2 = avaliacoes.find(av => av.avaliador === avaliadoresFase1[0]?.usuario)
+      const aval3 = avaliacoes.find(av => av.avaliador === avaliadoresFase1[1]?.usuario)
+
+      const listaAvals = [
+        { nome: aval1?.avaliador_dados?.nome_completo || tcc.orientador_dados?.nome_completo || '', aval: aval1 },
+        { nome: aval2?.avaliador_dados?.nome_completo || avaliadoresFase1[0]?.usuario_dados?.nome_completo || '', aval: aval2 },
+        { nome: aval3?.avaliador_dados?.nome_completo || avaliadoresFase1[1]?.usuario_dados?.nome_completo || '', aval: aval3 },
+      ]
+
+      listaAvals.forEach(({ nome, aval }) => {
+        fase2Rows.push({
+          'ID': tcc.id,
+          'Título': tcc.titulo,
+          'Aluno': tcc.aluno_dados?.nome_completo || '',
+          'Orientador': tcc.orientador_dados?.nome_completo || '',
+          'Avaliador': nome,
+          'Q1 - Coerência': notaNum(aval?.nota_coerencia_conteudo),
+          'Q2 - Qualidade': notaNum(aval?.nota_qualidade_apresentacao),
+          'Q3 - Domínio': notaNum(aval?.nota_dominio_tema),
+          'Q4 - Clareza': notaNum(aval?.nota_clareza_fluencia),
+          'Q5 - Tempo': notaNum(aval?.nota_observancia_tempo),
+          'Nota Total': notaNum(aval?.nota_final),
+        })
+      })
+    })
+    const ws3 = XLSX.utils.json_to_sheet(fase2Rows)
+    XLSX.utils.book_append_sheet(wb, ws3, 'Avaliações Fase II')
+
+    // === ABA 4: Apuração Final ===
+    const apuracaoRows = tccs.map((tcc) => {
+      const avalsFase1 = avaliacoesFase1Map.get(tcc.id) || []
+      const n1f1 = notaNum(avalsFase1[0]?.nota_final)
+      const n2f1 = notaNum(avalsFase1[1]?.nota_final)
+      const mediaF1 = (n1f1 !== null && n2f1 !== null) ? Math.round(((n1f1 + n2f1) / 2) * 100) / 100 : null
+      const pesoF1 = mediaF1 !== null ? Math.round((mediaF1 * 0.6) * 100) / 100 : null
+
+      const avalsFase2 = avaliacoesFase2Map.get(tcc.id) || []
+      const notaOrientF2 = notaNum(avalsFase2.find(a => a.avaliador === tcc.orientador)?.nota_final)
+      const outrosFase2 = avalsFase2.filter(a => a.avaliador !== tcc.orientador).sort((a, b) => a.id - b.id)
+      const n1f2 = notaNum(outrosFase2[0]?.nota_final)
+      const n2f2 = notaNum(outrosFase2[1]?.nota_final)
+      const mediaF2 = (notaOrientF2 !== null && n1f2 !== null && n2f2 !== null)
+        ? Math.round(((notaOrientF2 + n1f2 + n2f2) / 3) * 100) / 100
+        : null
+      const pesoF2 = mediaF2 !== null ? Math.round((mediaF2 * 0.4) * 100) / 100 : null
+      const notaFinal = (pesoF1 !== null && pesoF2 !== null)
+        ? Math.round((pesoF1 + pesoF2) * 100) / 100
+        : null
+
+      return {
+        'ID': tcc.id,
+        'Título': tcc.titulo,
+        'Aluno': tcc.aluno_dados?.nome_completo || '',
+        'Orientador': tcc.orientador_dados?.nome_completo || '',
+        'Fase I - Nota 1': n1f1,
+        'Fase I - Nota 2': n2f1,
+        'Fase I - Média': mediaF1,
+        'Fase I - Nota com peso (60%)': pesoF1,
+        'Fase II - Nota 1': notaOrientF2,
+        'Fase II - Nota 2': n1f2,
+        'Fase II - Nota 3': n2f2,
+        'Fase II - Média': mediaF2,
+        'Fase II - Nota com peso (40%)': pesoF2,
+        'Nota Final': notaFinal,
+      }
+    })
+    const ws4 = XLSX.utils.json_to_sheet(apuracaoRows)
+    XLSX.utils.book_append_sheet(wb, ws4, 'Apuração Final')
+
+    // === ABA 5: Relatório de Avaliação ===
+    const relatorioRows: Record<string, any>[] = []
+    tccs.forEach((tcc) => {
+      const banca = bancasMap.get(tcc.id)
+      const avaliadoresBanca = banca?.membros
+        .filter(m => m.tipo === 'AVALIADOR')
+        .sort((a, b) => a.ordem - b.ordem) || []
+      const avaliacoesFase1 = avaliacoesFase1Map.get(tcc.id) || []
+      const avaliacoesFase2List = avaliacoesFase2Map.get(tcc.id) || []
+
+      const aval1F1 = avaliacoesFase1.find(av => av.avaliador === avaliadoresBanca[0]?.usuario)
+      const aval2F1 = avaliacoesFase1.find(av => av.avaliador === avaliadoresBanca[1]?.usuario)
+
+      let aval1F2 = avaliacoesFase2List.find(av => av.avaliador === tcc.orientador)
+      if (!aval1F2 && tcc.coorientador) {
+        aval1F2 = avaliacoesFase2List.find(av => av.avaliador === tcc.coorientador)
+      }
+      const aval2F2 = avaliacoesFase2List.find(av => av.avaliador === avaliadoresBanca[0]?.usuario)
+      const aval3F2 = avaliacoesFase2List.find(av => av.avaliador === avaliadoresBanca[1]?.usuario)
+
+      relatorioRows.push({
+        'ID': tcc.id,
+        'Título': tcc.titulo,
+        'Aluno': tcc.aluno_dados?.nome_completo || '',
+        'Data Defesa': tcc.data_defesa ? new Date(tcc.data_defesa).toLocaleDateString('pt-BR') : '',
+        'Avaliador 1 (Fase I)': aval1F1?.avaliador_dados?.nome_completo || avaliadoresBanca[0]?.usuario_dados?.nome_completo || '',
+        'Parecer Avaliador 1 (Fase I)': aval1F1?.parecer || '',
+        'Avaliador 2 (Fase I)': aval2F1?.avaliador_dados?.nome_completo || avaliadoresBanca[1]?.usuario_dados?.nome_completo || '',
+        'Parecer Avaliador 2 (Fase I)': aval2F1?.parecer || '',
+        'Avaliador 1 (Fase II)': aval1F2?.avaliador_dados?.nome_completo || tcc.orientador_dados?.nome_completo || '',
+        'Parecer Avaliador 1 (Fase II)': aval1F2?.parecer || '',
+        'Avaliador 2 (Fase II)': aval2F2?.avaliador_dados?.nome_completo || avaliadoresBanca[0]?.usuario_dados?.nome_completo || '',
+        'Parecer Avaliador 2 (Fase II)': aval2F2?.parecer || '',
+        'Avaliador 3 (Fase II)': aval3F2?.avaliador_dados?.nome_completo || avaliadoresBanca[1]?.usuario_dados?.nome_completo || '',
+        'Parecer Avaliador 3 (Fase II)': aval3F2?.parecer || '',
+      })
+    })
+    const ws5 = XLSX.utils.json_to_sheet(relatorioRows)
+    XLSX.utils.book_append_sheet(wb, ws5, 'Relatório de Avaliação')
+
+    // Ajustar largura das colunas em todas as sheets
+    wb.SheetNames.forEach(name => {
+      const ws = wb.Sheets[name]
+      const data = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 })
+      if (data.length > 0) {
+        ws['!cols'] = data[0].map((_: any, colIdx: number) => {
+          let maxLen = 10
+          data.forEach((row: any[]) => {
+            const cell = row[colIdx]
+            if (cell) {
+              const len = String(cell).length
+              if (len > maxLen) maxLen = Math.min(len, 60)
+            }
+          })
+          return { wch: maxLen + 2 }
+        })
+      }
+    })
+
+    XLSX.writeFile(wb, `Relatorio_TCCs_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }, [tccs, bancasMap, avaliacoesFase1Map, avaliacoesFase2Map])
+
   if (carregando) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -311,8 +551,9 @@ export function Relatorios() {
             Atualizar
           </button>
           <button
+            onClick={exportarParaExcel}
             className="flex items-center gap-2 px-4 py-2 bg-cor-destaque text-white rounded-lg hover:bg-cor-destaque/90 transition-colors"
-            title="Exportar para Excel (em breve)"
+            title="Exportar para Excel"
           >
             <Download className="w-4 h-4" />
             Exportar

@@ -93,6 +93,27 @@ export async function enviarAvaliacaoFase2(
 }
 
 /**
+ * Coordenador edita diretamente a avaliação de um avaliador na Fase II
+ * POST /tccs/{id}/avaliacao-fase2/editar-coordenador/
+ */
+export async function editarAvaliacaoFase2Coordenador(
+  tccId: number,
+  avaliadorId: number,
+  dados: Partial<EnviarAvaliacaoFase2DTO>
+): Promise<AvaliacaoFase2> {
+  try {
+    const resposta = await api.post<AvaliacaoFase2>(
+      `/tccs/${tccId}/avaliacao-fase2/editar-coordenador/`,
+      { avaliador_id: avaliadorId, ...dados }
+    );
+    return resposta.data;
+  } catch (erro) {
+    const mensagem = extrairMensagemErro(erro);
+    throw new Error(mensagem);
+  }
+}
+
+/**
  * Bloquear avaliações da Fase II (coordenador)
  * POST /tccs/{id}/avaliacao-fase2/bloquear/
  */

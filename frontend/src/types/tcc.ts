@@ -34,6 +34,14 @@ export interface TCC {
   flag_liberado_avaliacao: boolean;
   avaliacao_fase1_bloqueada: boolean;
   avaliacao_fase2_bloqueada: boolean;
+  // Flags de liberação de prazo
+  liberar_envio_documentos?: boolean;
+  liberar_desenvolvimento?: boolean;
+  liberar_continuidade?: boolean;
+  liberar_fase1?: boolean;
+  liberar_defesas?: boolean;
+  liberar_fase2?: boolean;
+  liberar_ajustes_finais?: boolean;
   // Notas finais e resultado
   nf1: number | null;
   nf2: number | null;

@@ -194,6 +194,27 @@ export async function solicitarAjustesFase1(
 }
 
 /**
+ * Coordenador edita diretamente a avaliação de um avaliador na Fase I
+ * POST /tccs/{id}/avaliacao-fase1/editar-coordenador/
+ */
+export async function editarAvaliacaoFase1Coordenador(
+  tccId: number,
+  avaliadorId: number,
+  dados: Partial<EnviarAvaliacaoFase1DTO>
+): Promise<AvaliacaoFase1> {
+  try {
+    const resposta = await api.post<AvaliacaoFase1>(
+      `/tccs/${tccId}/avaliacao-fase1/editar-coordenador/`,
+      { avaliador_id: avaliadorId, ...dados }
+    );
+    return resposta.data;
+  } catch (erro) {
+    const mensagem = extrairMensagemErro(erro);
+    throw new Error(mensagem);
+  }
+}
+
+/**
  * Obter TCCs para avaliar (onde o professor é membro da banca)
  * GET /tccs/avaliar/
  */

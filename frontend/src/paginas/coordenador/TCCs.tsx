@@ -27,6 +27,7 @@ import { useTCCsCoordenador } from '../../hooks'
 import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, CursoLabels } from '../../types/enums'
 import type { TCC } from '../../types'
 import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
+import { ModalEditarTCC } from '../../componentes/ModalEditarTCC'
 
 export function TCCs() {
   const navigate = useNavigate()
@@ -36,6 +37,7 @@ export function TCCs() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filtroEtapa, setFiltroEtapa] = useState<string>('todas')
   const [filtroCurso, setFiltroCurso] = useState<string>('todos')
+  const [tccEditando, setTccEditando] = useState<TCC | null>(null)
 
   // Aplicar filtro inicial do state (quando vem do dashboard)
   useEffect(() => {
@@ -319,7 +321,7 @@ export function TCCs() {
                           className="px-3 py-1.5 text-xs text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/10 rounded-lg transition-colors flex items-center gap-1"
                           onClick={(e) => {
                             e.stopPropagation()
-                            // Ação de editar
+                            setTccEditando(tcc)
                           }}
                         >
                           <Edit className="h-3 w-3" />
@@ -371,6 +373,18 @@ export function TCCs() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal de Edição */}
+      {tccEditando && (
+        <ModalEditarTCC
+          tcc={tccEditando}
+          onClose={() => setTccEditando(null)}
+          onSalvo={() => {
+            setTccEditando(null)
+            recarregar()
+          }}
+        />
       )}
     </div>
   )
