@@ -424,7 +424,7 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
                     )}
                   </div>
 
-                  {/* Opção 2: Usar monografia original */}
+                  {/* Opção 2: Remover 2 primeiras páginas e enviar */}
                   <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:bg-[rgb(var(--cor-fundo))]/50 ${tipoDocumento === 'ORIGINAL' ? 'border-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-destaque))]/5' : 'border-[rgb(var(--cor-borda))]'}`}>
                     <input
                       type="radio"
@@ -439,9 +439,9 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
                       className="mt-0.5"
                     />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Usar monografia original do aluno</p>
+                      <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Excluir as duas primeiras páginas e enviar</p>
                       <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-1">
-                        Os avaliadores terão acesso à monografia enviada pelo aluno
+                        Remove automaticamente as páginas de capa e identificação da monografia do aluno
                       </p>
                     </div>
                   </label>

@@ -45,7 +45,9 @@
       "WebSearch",
       "Bash(git fetch:*)",
       "Bash(copy:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(npm install:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

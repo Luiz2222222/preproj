@@ -885,31 +885,30 @@ class TCCViewSet(viewsets.ModelViewSet):
                     'detail': f'Orientador e coorientador não podem ser avaliadores. Membros inválidos: {", ".join(membros_fixos)}'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Garantir que orientador está na banca
-            if tcc.orientador:
-                MembroBanca.objects.get_or_create(
-                    banca=banca,
-                    usuario=tcc.orientador,
-                    tipo='ORIENTADOR',
-                    defaults={
-                        'indicado_por': 'ORIENTADOR',
-                        'ordem': 0
-                    }
-                )
+            with transaction.atomic():
+                # Limpar TODOS os membros existentes (avaliadores e orientador) para reconstruir
+                MembroBanca.objects.filter(banca=banca).delete()
 
-            # Limpar membros avaliadores existentes
-            MembroBanca.objects.filter(banca=banca, tipo='AVALIADOR').delete()
+                # Recriar orientador
+                if tcc.orientador:
+                    MembroBanca.objects.create(
+                        banca=banca,
+                        usuario=tcc.orientador,
+                        tipo='ORIENTADOR',
+                        indicado_por='ORIENTADOR',
+                        ordem=0
+                    )
 
-            # Adicionar novos avaliadores
-            for idx, avaliador_id in enumerate(serializer.validated_data['avaliadores'], start=1):
-                avaliador = Usuario.objects.get(id=avaliador_id)
-                MembroBanca.objects.create(
-                    banca=banca,
-                    usuario=avaliador,
-                    tipo='AVALIADOR',
-                    indicado_por='COORDENADOR',
-                    ordem=idx
-                )
+                # Adicionar novos avaliadores
+                for idx, avaliador_id in enumerate(serializer.validated_data['avaliadores'], start=1):
+                    avaliador = Usuario.objects.get(id=avaliador_id)
+                    MembroBanca.objects.create(
+                        banca=banca,
+                        usuario=avaliador,
+                        tipo='AVALIADOR',
+                        indicado_por='COORDENADOR',
+                        ordem=idx
+                    )
 
             # Retornar banca atualizada
             serializer_response = BancaFase1Serializer(banca, context={'request': request})
@@ -960,20 +959,18 @@ class TCCViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Processar documento de avaliação (se fornecido)
+        # Processar documento de avaliação
         arquivo_avaliacao = request.FILES.get('documento_avaliacao')
 
         # Usar transação atômica
         with transaction.atomic():
             documento_avaliacao = None
 
-            # Se foi enviado arquivo de avaliação, criar DocumentoTCC
             if arquivo_avaliacao:
-                # Validar usando o serializer para garantir formato correto
+                # Coordenador enviou arquivo anônimo manualmente
                 from .serializers import AtualizarBancaFase1Serializer
                 serializer = AtualizarBancaFase1Serializer(data={'documento_avaliacao': arquivo_avaliacao}, partial=True)
                 if serializer.is_valid():
-                    # Criar documento do tipo MONOGRAFIA_AVALIACAO
                     documento_avaliacao = DocumentoTCC.objects.create(
                         tcc=tcc,
                         tipo_documento=TipoDocumento.MONOGRAFIA_AVALIACAO,
@@ -984,14 +981,103 @@ class TCCViewSet(viewsets.ModelViewSet):
                         status=StatusDocumento.APROVADO
                     )
                 else:
-                    # Se validação falhar, retornar erro
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # Gerar versão sem as 2 primeiras páginas a partir da monografia do aluno
+                monografia = DocumentoTCC.objects.filter(
+                    tcc=tcc,
+                    tipo_documento=TipoDocumento.MONOGRAFIA
+                ).order_by('-versao').first()
+
+                if not monografia or not monografia.arquivo:
+                    return Response(
+                        {'detail': 'Nenhuma monografia encontrada para este TCC. Envie uma versão anônima manualmente.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                try:
+                    from django.core.files.base import ContentFile
+                    from PyPDF2 import PdfReader, PdfWriter
+                    import io
+                    import tempfile
+                    import os
+
+                    nome_arquivo = (monografia.nome_original or '').lower()
+                    eh_word = nome_arquivo.endswith('.doc') or nome_arquivo.endswith('.docx')
+
+                    monografia.arquivo.open('rb')
+                    conteudo_original = monografia.arquivo.read()
+                    monografia.arquivo.close()
+
+                    if eh_word:
+                        # Word: converter para PDF primeiro usando docx2pdf
+                        from docx2pdf import convert
+
+                        # Salvar Word em arquivo temporário
+                        sufixo = '.docx' if nome_arquivo.endswith('.docx') else '.doc'
+                        with tempfile.NamedTemporaryFile(suffix=sufixo, delete=False) as tmp_word:
+                            tmp_word.write(conteudo_original)
+                            tmp_word_path = tmp_word.name
+
+                        tmp_pdf_path = tmp_word_path.rsplit('.', 1)[0] + '.pdf'
+
+                        try:
+                            convert(tmp_word_path, tmp_pdf_path)
+                            with open(tmp_pdf_path, 'rb') as f:
+                                pdf_bytes = f.read()
+                        finally:
+                            # Limpar arquivos temporários
+                            if os.path.exists(tmp_word_path):
+                                os.unlink(tmp_word_path)
+                            if os.path.exists(tmp_pdf_path):
+                                os.unlink(tmp_pdf_path)
+
+                        pdf_stream = io.BytesIO(pdf_bytes)
+                    else:
+                        # Já é PDF
+                        pdf_stream = io.BytesIO(conteudo_original)
+
+                    # Remover as 2 primeiras páginas do PDF
+                    reader = PdfReader(pdf_stream)
+                    writer = PdfWriter()
+
+                    if len(reader.pages) <= 2:
+                        return Response(
+                            {'detail': 'A monografia tem 2 páginas ou menos.'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    for i in range(2, len(reader.pages)):
+                        writer.add_page(reader.pages[i])
+
+                    buffer = io.BytesIO()
+                    writer.write(buffer)
+                    tamanho = buffer.tell()
+                    buffer.seek(0)
+
+                    nome_anonimo = f"avaliacao_{tcc.id}.pdf"
+                    conteudo_file = ContentFile(buffer.read(), name=nome_anonimo)
+
+                    documento_avaliacao = DocumentoTCC.objects.create(
+                        tcc=tcc,
+                        tipo_documento=TipoDocumento.MONOGRAFIA_AVALIACAO,
+                        arquivo=conteudo_file,
+                        nome_original=nome_anonimo,
+                        tamanho=tamanho,
+                        enviado_por=request.user,
+                        status=StatusDocumento.APROVADO
+                    )
+                except Exception as e:
+                    return Response(
+                        {'detail': f'Erro ao processar monografia: {str(e)}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
             # Atualizar banca
             banca.status = 'COMPLETA'
             banca.data_formacao = timezone.now()
             banca.formada_por = request.user
-            banca.documento_avaliacao = documento_avaliacao  # Vincular documento anônimo (ou None se usar original)
+            banca.documento_avaliacao = documento_avaliacao
             banca.save()
 
             # Criar avaliações para cada avaliador
