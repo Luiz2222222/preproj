@@ -22,6 +22,7 @@ import { CoOrientacoesProfessor } from './paginas/professor/CoOrientacoesProfess
 import { DetalheCoOrientacao } from './paginas/professor/DetalheCoOrientacao'
 import { BancasProfessor } from './paginas/professor/BancasProfessor'
 import { BancasAvaliacaoDetalhe } from './paginas/professor/BancasAvaliacaoDetalhe'
+
 import { ConfiguracoesProfessor } from './paginas/professor/ConfiguracoesProfessor'
 import { DashboardAvaliador } from './paginas/avaliador/DashboardAvaliador'
 import { CoOrientacoesAvaliador } from './paginas/avaliador/CoOrientacoesAvaliador'

@@ -388,36 +388,31 @@ export function FormularioAvaliacaoFase2({
         <div className="space-y-4">
           {/* 1. Coerência */}
           <div className="bg-[rgb(var(--cor-fundo))] rounded-lg p-4 border border-[rgb(var(--cor-borda))]">
-            <div className="mb-3">
-              <h4 className="text-base font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">{CRITERIOS_FASE2.coerencia.titulo}</h4>
-              <p className="text-xs text-[rgb(var(--cor-texto-secundario))] italic">{CRITERIOS_FASE2.coerencia.descricao}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Comentários <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(facultativo)</span>
-                </label>
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[rgb(var(--cor-fase2-cabecalho))] text-white text-sm font-bold flex items-center justify-center mt-0.5">1</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))]">{CRITERIOS_FASE2.coerencia.titulo} <span className="font-normal text-xs text-[rgb(var(--cor-texto-secundario))] italic">({CRITERIOS_FASE2.coerencia.descricao})</span></p>
+                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={notaCoerencia}
+                      onChange={(e) => setNotaCoerencia(clampScore(e.target.value, pesos?.peso_coerencia_conteudo ?? 2.0, notaCoerencia))}
+                      disabled={!podeEditar || processando}
+                      placeholder="–"
+                      className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
+                    />
+                    <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">/ {(pesos?.peso_coerencia_conteudo ?? 2.0).toFixed(1).replace('.', ',')}</span>
+                  </div>
+                </div>
                 <TextareaAutoResize
                   value={comentarioCoerencia}
                   onChange={(e) => setComentarioCoerencia(e.target.value)}
                   disabled={!podeEditar || processando}
-                  rows={3}
+                  rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Nota * <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(0,0 a {(pesos?.peso_coerencia_conteudo ?? 2.0).toFixed(1).replace('.', ',')})</span>
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={notaCoerencia}
-                  onChange={(e) => setNotaCoerencia(clampScore(e.target.value, pesos?.peso_coerencia_conteudo ?? 2.0, notaCoerencia))}
-                  disabled={!podeEditar || processando}
-                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                  placeholder="0,0"
                 />
               </div>
             </div>
@@ -425,36 +420,31 @@ export function FormularioAvaliacaoFase2({
 
           {/* 2. Qualidade */}
           <div className="bg-[rgb(var(--cor-fundo))] rounded-lg p-4 border border-[rgb(var(--cor-borda))]">
-            <div className="mb-3">
-              <h4 className="text-base font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">{CRITERIOS_FASE2.qualidade.titulo}</h4>
-              <p className="text-xs text-[rgb(var(--cor-texto-secundario))] italic">{CRITERIOS_FASE2.qualidade.descricao}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Comentários <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(facultativo)</span>
-                </label>
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[rgb(var(--cor-fase2-cabecalho))] text-white text-sm font-bold flex items-center justify-center mt-0.5">2</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))]">{CRITERIOS_FASE2.qualidade.titulo} <span className="font-normal text-xs text-[rgb(var(--cor-texto-secundario))] italic">({CRITERIOS_FASE2.qualidade.descricao})</span></p>
+                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={notaQualidade}
+                      onChange={(e) => setNotaQualidade(clampScore(e.target.value, pesos?.peso_qualidade_apresentacao ?? 2.0, notaQualidade))}
+                      disabled={!podeEditar || processando}
+                      placeholder="–"
+                      className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
+                    />
+                    <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">/ {(pesos?.peso_qualidade_apresentacao ?? 2.0).toFixed(1).replace('.', ',')}</span>
+                  </div>
+                </div>
                 <TextareaAutoResize
                   value={comentarioQualidade}
                   onChange={(e) => setComentarioQualidade(e.target.value)}
                   disabled={!podeEditar || processando}
-                  rows={3}
+                  rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Nota * <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(0,0 a {(pesos?.peso_qualidade_apresentacao ?? 2.0).toFixed(1).replace('.', ',')})</span>
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={notaQualidade}
-                  onChange={(e) => setNotaQualidade(clampScore(e.target.value, pesos?.peso_qualidade_apresentacao ?? 2.0, notaQualidade))}
-                  disabled={!podeEditar || processando}
-                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                  placeholder="0,0"
                 />
               </div>
             </div>
@@ -462,36 +452,31 @@ export function FormularioAvaliacaoFase2({
 
           {/* 3. Domínio */}
           <div className="bg-[rgb(var(--cor-fundo))] rounded-lg p-4 border border-[rgb(var(--cor-borda))]">
-            <div className="mb-3">
-              <h4 className="text-base font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">{CRITERIOS_FASE2.dominio.titulo}</h4>
-              <p className="text-xs text-[rgb(var(--cor-texto-secundario))] italic">{CRITERIOS_FASE2.dominio.descricao}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Comentários <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(facultativo)</span>
-                </label>
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[rgb(var(--cor-fase2-cabecalho))] text-white text-sm font-bold flex items-center justify-center mt-0.5">3</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))]">{CRITERIOS_FASE2.dominio.titulo} <span className="font-normal text-xs text-[rgb(var(--cor-texto-secundario))] italic">({CRITERIOS_FASE2.dominio.descricao})</span></p>
+                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={notaDominio}
+                      onChange={(e) => setNotaDominio(clampScore(e.target.value, pesos?.peso_dominio_tema ?? 2.5, notaDominio))}
+                      disabled={!podeEditar || processando}
+                      placeholder="–"
+                      className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
+                    />
+                    <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">/ {(pesos?.peso_dominio_tema ?? 2.5).toFixed(1).replace('.', ',')}</span>
+                  </div>
+                </div>
                 <TextareaAutoResize
                   value={comentarioDominio}
                   onChange={(e) => setComentarioDominio(e.target.value)}
                   disabled={!podeEditar || processando}
-                  rows={3}
+                  rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Nota * <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(0,0 a {(pesos?.peso_dominio_tema ?? 2.5).toFixed(1).replace('.', ',')})</span>
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={notaDominio}
-                  onChange={(e) => setNotaDominio(clampScore(e.target.value, pesos?.peso_dominio_tema ?? 2.5, notaDominio))}
-                  disabled={!podeEditar || processando}
-                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                  placeholder="0,0"
                 />
               </div>
             </div>
@@ -499,36 +484,31 @@ export function FormularioAvaliacaoFase2({
 
           {/* 4. Clareza */}
           <div className="bg-[rgb(var(--cor-fundo))] rounded-lg p-4 border border-[rgb(var(--cor-borda))]">
-            <div className="mb-3">
-              <h4 className="text-base font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">{CRITERIOS_FASE2.clareza.titulo}</h4>
-              <p className="text-xs text-[rgb(var(--cor-texto-secundario))] italic">{CRITERIOS_FASE2.clareza.descricao}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Comentários <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(facultativo)</span>
-                </label>
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[rgb(var(--cor-fase2-cabecalho))] text-white text-sm font-bold flex items-center justify-center mt-0.5">4</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))]">{CRITERIOS_FASE2.clareza.titulo} <span className="font-normal text-xs text-[rgb(var(--cor-texto-secundario))] italic">({CRITERIOS_FASE2.clareza.descricao})</span></p>
+                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={notaClareza}
+                      onChange={(e) => setNotaClareza(clampScore(e.target.value, pesos?.peso_clareza_fluencia ?? 2.5, notaClareza))}
+                      disabled={!podeEditar || processando}
+                      placeholder="–"
+                      className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
+                    />
+                    <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">/ {(pesos?.peso_clareza_fluencia ?? 2.5).toFixed(1).replace('.', ',')}</span>
+                  </div>
+                </div>
                 <TextareaAutoResize
                   value={comentarioClareza}
                   onChange={(e) => setComentarioClareza(e.target.value)}
                   disabled={!podeEditar || processando}
-                  rows={3}
+                  rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Nota * <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(0,0 a {(pesos?.peso_clareza_fluencia ?? 2.5).toFixed(1).replace('.', ',')})</span>
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={notaClareza}
-                  onChange={(e) => setNotaClareza(clampScore(e.target.value, pesos?.peso_clareza_fluencia ?? 2.5, notaClareza))}
-                  disabled={!podeEditar || processando}
-                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                  placeholder="0,0"
                 />
               </div>
             </div>
@@ -536,36 +516,31 @@ export function FormularioAvaliacaoFase2({
 
           {/* 5. Tempo */}
           <div className="bg-[rgb(var(--cor-fundo))] rounded-lg p-4 border border-[rgb(var(--cor-borda))]">
-            <div className="mb-3">
-              <h4 className="text-base font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">{CRITERIOS_FASE2.tempo.titulo}</h4>
-              <p className="text-xs text-[rgb(var(--cor-texto-secundario))] italic">{CRITERIOS_FASE2.tempo.descricao}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Comentários <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(facultativo)</span>
-                </label>
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[rgb(var(--cor-fase2-cabecalho))] text-white text-sm font-bold flex items-center justify-center mt-0.5">5</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))]">{CRITERIOS_FASE2.tempo.titulo} <span className="font-normal text-xs text-[rgb(var(--cor-texto-secundario))] italic">({CRITERIOS_FASE2.tempo.descricao})</span></p>
+                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={notaTempo}
+                      onChange={(e) => setNotaTempo(clampScore(e.target.value, pesos?.peso_observancia_tempo ?? 1.0, notaTempo))}
+                      disabled={!podeEditar || processando}
+                      placeholder="–"
+                      className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
+                    />
+                    <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">/ {(pesos?.peso_observancia_tempo ?? 1.0).toFixed(1).replace('.', ',')}</span>
+                  </div>
+                </div>
                 <TextareaAutoResize
                   value={comentarioTempo}
                   onChange={(e) => setComentarioTempo(e.target.value)}
                   disabled={!podeEditar || processando}
-                  rows={3}
+                  rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1">
-                  Nota * <span className="text-xs text-[rgb(var(--cor-texto-terciario))]">(0,0 a {(pesos?.peso_observancia_tempo ?? 1.0).toFixed(1).replace('.', ',')})</span>
-                </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={notaTempo}
-                  onChange={(e) => setNotaTempo(clampScore(e.target.value, pesos?.peso_observancia_tempo ?? 1.0, notaTempo))}
-                  disabled={!podeEditar || processando}
-                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
-                  placeholder="0,0"
                 />
               </div>
             </div>
