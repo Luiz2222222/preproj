@@ -1,8 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { GraduationCap, User, Lock, ChevronRight, Loader2 } from 'lucide-react'
+import { User, Lock, ChevronRight, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Alerta, ModalCadastro } from '../componentes'
 import { useAutenticacao } from '../autenticacao'
+import { useTema } from '../tema'
 
 interface ErroLogin {
   mensagem: string
@@ -12,6 +13,8 @@ interface ErroLogin {
 export function PaginaLogin() {
   const navigate = useNavigate()
   const { login: loginAuth, estaAutenticado, usuario } = useAutenticacao()
+  const { temaAtual } = useTema()
+  const logoSrc = temaAtual === 'black' || temaAtual === 'dark' ? '/logo-ufpe-dark.png' : '/logo-ufpe.png'
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -72,9 +75,7 @@ export function PaginaLogin() {
     <div className="min-h-screen bg-cor-fundo text-cor-texto flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-6">
-          <div className="bg-cor-destaque p-3 rounded-2xl shadow-lg">
-            <GraduationCap className="h-12 w-12 text-[rgb(var(--cor-texto-sobre-destaque))]" />
-          </div>
+          <img src={logoSrc} alt="UFPE" className="h-24 w-auto" />
         </div>
         <h2 className="text-center text-3xl font-extrabold text-cor-texto">
           Portal TCC

@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Users, UserPlus, CheckCircle, XCircle, AlertCircle, Loader2, X, Upload } from 'lucide-react';
 import type { TCC } from '../../../types';
 import { useBancaFase1 } from '../../../hooks';
-import { listarProfessores, type ProfessorListItem } from '../../../servicos/usuarios';
+import { listarAvaliadores, type ProfessorListItem } from '../../../servicos/usuarios';
 import { TipoMembroBanca } from '../../../types/enums';
 
 interface FormacaoBancaFase1Props {
@@ -37,23 +37,23 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
   const [arquivoAnonimo, setArquivoAnonimo] = useState<File | null>(null);
   const [erroArquivo, setErroArquivo] = useState<string | null>(null);
 
-  // Carregar lista de professores
+  // Carregar lista de avaliadores (professores + avaliadores externos)
   useEffect(() => {
-    const carregarProfessores = async () => {
+    const carregarAvaliadores = async () => {
       try {
         setCarregandoProfessores(true);
         setErroProfessores(null);
-        const lista = await listarProfessores();
+        const lista = await listarAvaliadores();
         setProfessores(lista);
       } catch (err) {
-        setErroProfessores('Erro ao carregar lista de professores');
+        setErroProfessores('Erro ao carregar lista de avaliadores');
         console.error(err);
       } finally {
         setCarregandoProfessores(false);
       }
     };
 
-    carregarProfessores();
+    carregarAvaliadores();
   }, []);
 
   // Inicializar seleções com membros existentes
@@ -158,8 +158,10 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
   };
 
 
-  // Filtrar professores disponíveis (excluir orientador)
-  const professoresDisponiveis = professores.filter(p => p.id !== tcc.orientador);
+  // Filtrar professores disponíveis (excluir orientador e co-orientador)
+  const professoresDisponiveis = professores.filter(p =>
+    p.id !== tcc.orientador && p.id !== tcc.coorientador
+  );
 
   const bancaConcluida = banca?.status === 'COMPLETA';
 

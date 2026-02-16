@@ -6,12 +6,13 @@
 import { useState, useRef, useEffect, type PropsWithChildren } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAutenticacao } from '../autenticacao'
-import { LogOut, Home, FileText, FolderOpen, Info, RotateCcw, User, GraduationCap, ChevronDown, Bell, Settings } from 'lucide-react'
+import { LogOut, Home, FileText, FolderOpen, Info, RotateCcw, User, ChevronDown, Bell, Settings } from 'lucide-react'
 import { useToast } from '../contextos/ToastProvider'
 import { useNotificacoes } from '../contextos/NotificacoesContext'
 import { usePendingActionsAluno } from '../hooks'
 import PainelNotificacoes from '../componentes/PainelNotificacoes'
 import api, { extrairMensagemErro } from '../servicos/api'
+import { useTema } from '../tema'
 
 const menuItems = [
   { path: '/aluno', label: 'Dashboard', icon: Home },
@@ -25,6 +26,8 @@ export function EstruturaAluno({ children }: PropsWithChildren) {
   const location = useLocation()
   const navigate = useNavigate()
   const { usuario, logout } = useAutenticacao()
+  const { temaAtual } = useTema()
+  const logoSrc = temaAtual === 'black' || temaAtual === 'dark' ? '/logo-ufpe-dark.png' : '/logo-ufpe.png'
   const { sucesso, erro } = useToast()
   const { countNaoLidas, marcarTodasComoLidas } = useNotificacoes()
   const pendingActionsCount = usePendingActionsAluno()
@@ -142,12 +145,7 @@ export function EstruturaAluno({ children }: PropsWithChildren) {
             {/* Logo e Nome do Sistema */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl text-[rgb(var(--cor-texto-sobre-destaque))] shadow-lg"
-                  style={{ background: 'linear-gradient(135deg,var(--cor-brand-gradient-inicio) 0%,var(--cor-brand-gradient-fim) 100%)' }}
-                >
-                  <GraduationCap className="h-6 w-6" strokeWidth={1.8} />
-                </div>
+                <img src={logoSrc} alt="UFPE" className="h-10 w-auto" />
                 <div>
                   <h1 className="text-lg font-bold text-cor-texto">Portal TCC</h1>
                   <p className="text-xs text-cor-texto opacity-60">DEE/UFPE</p>

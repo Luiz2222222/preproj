@@ -1,11 +1,11 @@
 import type { PropsWithChildren } from 'react'
 import { Link } from 'react-router-dom'
 import { useTema } from '../tema'
-import { GraduationCap } from 'lucide-react'
 
 export function EstruturaApp({ children }: PropsWithChildren) {
   const { temaAtual } = useTema()
   const isWhiteTheme = temaAtual === 'white'
+  const logoSrc = temaAtual === 'black' || temaAtual === 'dark' ? '/logo-ufpe-dark.png' : '/logo-ufpe.png'
 
   const renderWhiteHeader = () => (
     <header className="h-16 bg-[rgb(var(--cor-superficie))] border-b border-[rgb(var(--cor-borda))] shadow-sm sticky top-0 z-40">
@@ -13,12 +13,7 @@ export function EstruturaApp({ children }: PropsWithChildren) {
         <div className="flex items-center justify-between h-full">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-2xl text-[rgb(var(--cor-texto-sobre-destaque))] shadow-[0_12px_32px_-16px_rgba(14,165,233,0.9)]"
-                style={{ background: 'linear-gradient(135deg,var(--cor-brand-gradient-inicio) 0%,var(--cor-brand-gradient-fim) 100%)' }}
-              >
-                <GraduationCap className="h-6 w-6" strokeWidth={1.8} />
-              </div>
+              <img src={logoSrc} alt="UFPE" className="h-10 w-auto" />
               <div>
                 <h1 className="text-lg font-bold text-[rgb(var(--cor-texto-primario))]">Portal TCC</h1>
                 <p className="text-xs text-[rgb(var(--cor-texto-terciario))]">DEE/UFPE</p>

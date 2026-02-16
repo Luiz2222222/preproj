@@ -174,7 +174,7 @@ class TCCSerializer(serializers.ModelSerializer):
             'id': doc.id,
             'tipo_documento': doc.tipo_documento,
             'tipo_documento_display': doc.get_tipo_documento_display(),
-            'arquivo': request.build_absolute_uri(doc.arquivo.url) if request and doc.arquivo else None,
+            'arquivo': request.build_absolute_uri(f'/api/documentos/{doc.id}/download/') if request and doc.arquivo else None,
             'nome_original': doc.nome_original,
             'tamanho': doc.tamanho,
             'versao': doc.versao,
@@ -289,7 +289,7 @@ class SolicitacaoOrientacaoSerializer(serializers.ModelSerializer):
                 'tipo_display': doc.get_tipo_documento_display(),
                 'nome_original': doc.nome_original,
                 'versao': doc.versao,
-                'url': request.build_absolute_uri(doc.arquivo.url) if request and doc.arquivo else None,
+                'url': request.build_absolute_uri(f'/api/documentos/{doc.id}/download/') if request and doc.arquivo else None,
                 'criado_em': doc.criado_em
             } for doc in documentos]
         return []

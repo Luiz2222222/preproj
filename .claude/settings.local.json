@@ -43,7 +43,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:github.com)",
       "WebSearch",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(copy:*)",
+      "Bash(where:*)"
     ],
     "deny": [],
     "ask": []

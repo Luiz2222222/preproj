@@ -215,22 +215,44 @@ export function SolicitacoesPendentes() {
                 }}
                 className="bg-[rgb(var(--cor-superficie))] rounded-lg shadow-sm border border-[rgb(var(--cor-borda))] p-6"
               >
-                {/* Header com botões */}
-                <div className="flex items-start justify-end gap-2 mb-4">
-                  <button
-                    onClick={() => handleAbrirModalAprovar(solicitacao)}
-                    className="px-4 py-2 bg-[rgb(var(--cor-sucesso))] text-white rounded hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors font-medium flex items-center gap-2 text-sm"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Aceitar
-                  </button>
-                  <button
-                    onClick={() => handleAbrirModalRecusar(solicitacao)}
-                    className="px-4 py-2 bg-[rgb(var(--cor-erro))] text-white rounded hover:bg-[rgb(var(--cor-erro))]/90 transition-colors font-medium flex items-center gap-2 text-sm"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Rejeitar
-                  </button>
+                {/* Header com data, documentos e botões */}
+                <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <span className="text-sm">
+                      <span className="font-semibold text-[rgb(var(--cor-texto-primario))]">Data da solicitação:</span>{' '}
+                      <span className="text-[rgb(var(--cor-texto-medio))]">{formatarData(solicitacao.criado_em)}</span>
+                    </span>
+                    {solicitacao.documentos && solicitacao.documentos.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        {solicitacao.documentos.map((doc) => (
+                          <button
+                            key={doc.id}
+                            onClick={() => doc.url && handleVisualizarDocumento(doc.url)}
+                            className="flex items-center px-3 py-1 bg-[rgb(var(--cor-destaque))]/10 text-[rgb(var(--cor-destaque))] rounded text-sm hover:bg-[rgb(var(--cor-destaque))]/20 transition-colors"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            <span>{doc.tipo_display}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleAbrirModalAprovar(solicitacao)}
+                      className="px-4 py-2 bg-[rgb(var(--cor-sucesso))] text-white rounded hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors font-medium flex items-center gap-2 text-sm"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Aceitar
+                    </button>
+                    <button
+                      onClick={() => handleAbrirModalRecusar(solicitacao)}
+                      className="px-4 py-2 bg-[rgb(var(--cor-erro))] text-white rounded hover:bg-[rgb(var(--cor-erro))]/90 transition-colors font-medium flex items-center gap-2 text-sm"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Rejeitar
+                    </button>
+                  </div>
                 </div>
 
                 {/* Informações completas */}
@@ -339,32 +361,7 @@ export function SolicitacoesPendentes() {
                       </p>
                     </div>
                   )}
-
-                  {/* Data da solicitação */}
-                  <div>
-                    <span className="font-semibold text-[rgb(var(--cor-texto-primario))]">Data da solicitação:</span>{' '}
-                    <span className="text-[rgb(var(--cor-texto-medio))]">{formatarData(solicitacao.criado_em)}</span>
-                  </div>
                 </div>
-
-                {/* Documentos anexados */}
-                {solicitacao.documentos && solicitacao.documentos.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-2">Documentos anexados:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {solicitacao.documentos.map((doc) => (
-                        <button
-                          key={doc.id}
-                          onClick={() => doc.url && handleVisualizarDocumento(doc.url)}
-                          className="flex items-center px-3 py-1 bg-[rgb(var(--cor-destaque))]/10 text-[rgb(var(--cor-destaque))] rounded text-sm hover:bg-[rgb(var(--cor-destaque))]/20 transition-colors"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          <span>{doc.tipo_display}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )
           })}

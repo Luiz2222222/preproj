@@ -630,7 +630,6 @@ export function IniciarTCC() {
             {/* Upload de Documentos */}
             <div className="mb-6">
               <h3 className="text-cor-texto font-semibold mb-4">Documentos <span className="text-[rgb(var(--cor-erro))]">*</span></h3>
-              <p className="text-sm text-cor-texto/70 mb-4">Ambos os documentos são obrigatórios</p>
 
               <div className="grid grid-cols-2 gap-4">
                 {/* Plano de Desenvolvimento */}

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Alerta } from './Alerta'
 
-const API_BASE_URL = 'http://localhost:8111/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8500/api'
 
 interface ModalCadastroProps {
   onClose: () => void

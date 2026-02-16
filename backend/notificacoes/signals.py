@@ -37,7 +37,7 @@ def notificar_solicitacao_orientacao(sender, instance, created, **kwargs):
                 tipo=TipoNotificacao.SOLICITACAO_RECEBIDA,
                 titulo="Nova solicitação de orientação",
                 mensagem=f"{instance.tcc.aluno.nome_completo} solicitou orientação para '{instance.tcc.titulo}'",
-                action_url="/coordenador/solicitacoes",
+                action_url="/solicitacoes",
                 metadata={
                     "solicitacao_id": instance.id,
                     "aluno_id": instance.tcc.aluno.id,
@@ -87,7 +87,7 @@ def notificar_solicitacao_orientacao(sender, instance, created, **kwargs):
             tipo=TipoNotificacao.SOLICITACAO_REJEITADA,
             titulo="Solicitação de orientação rejeitada",
             mensagem=f"Sua solicitação para '{instance.tcc.titulo}' foi rejeitada. Motivo: {instance.resposta_professor or 'Não informado'}",
-            action_url="/aluno/solicitacoes",
+            action_url="/aluno",
             metadata={
                 "solicitacao_id": instance.id,
                 "motivo": instance.resposta_professor or ""
@@ -139,7 +139,7 @@ def notificar_documento(sender, instance, created, **kwargs):
                         tipo=TipoNotificacao.DOCUMENTO_ENVIADO,
                         titulo="Termo de solicitação de avaliação enviado",
                         mensagem=f"{tcc.aluno.nome_completo} enviou termo de solicitação de avaliação",
-                        action_url=f"/coordenador/tccs/{tcc.id}",
+                        action_url=f"/tccs/{tcc.id}",
                         metadata={
                             "tcc_id": tcc.id,
                             "documento_id": instance.id,
@@ -192,7 +192,7 @@ def notificar_documento(sender, instance, created, **kwargs):
                     tipo=TipoNotificacao.DOCUMENTO_ENVIADO,
                     titulo="Nova monografia enviada",
                     mensagem=f"{tcc.aluno.nome_completo} enviou monografia",
-                    action_url=f"/coordenador/tccs/{tcc.id}",
+                    action_url=f"/tccs/{tcc.id}",
                     metadata={
                         "tcc_id": tcc.id,
                         "documento_id": instance.id,
@@ -229,7 +229,7 @@ def notificar_documento(sender, instance, created, **kwargs):
                 tipo=TipoNotificacao.DOCUMENTO_APROVADO,
                 titulo=f"Documento aprovado - {tcc.aluno.nome_completo}",
                 mensagem=f"Documento {instance.tipo_documento} foi aprovado pelo orientador",
-                action_url=f"/coordenador/tccs/{tcc.id}",
+                action_url=f"/tccs/{tcc.id}",
                 metadata={
                     "tcc_id": tcc.id,
                     "documento_id": instance.id,
@@ -285,7 +285,7 @@ def notificar_avaliacao_fase1(sender, instance, created, **kwargs):
                     tipo=TipoNotificacao.AVALIACAO_FASE1_COMPLETA,
                     titulo=f"Todas avaliações Fase I recebidas - {tcc.aluno.nome_completo}",
                     mensagem=f"Todas as {total_avaliacoes} avaliações da Fase I foram enviadas. Pronto para aprovação.",
-                    action_url=f"/coordenador/tccs/{tcc.id}",
+                    action_url=f"/tccs/{tcc.id}",
                     metadata={
                         "tcc_id": tcc.id,
                         "aluno_nome": tcc.aluno.nome_completo,
@@ -351,7 +351,7 @@ def notificar_avaliacao_fase2(sender, instance, created, **kwargs):
                     tipo=TipoNotificacao.AVALIACAO_FASE2_COMPLETA,
                     titulo=f"Todas avaliações Fase II recebidas - {tcc.aluno.nome_completo}",
                     mensagem=f"Todas as {total_avaliacoes} avaliações da Fase II foram enviadas. Pronto para aprovação.",
-                    action_url=f"/coordenador/tccs/{tcc.id}",
+                    action_url=f"/tccs/{tcc.id}",
                     metadata={
                         "tcc_id": tcc.id,
                         "aluno_nome": tcc.aluno.nome_completo,
@@ -496,7 +496,7 @@ def notificar_continuidade(sender, instance, created, **kwargs):
                 tipo=TipoNotificacao.CONTINUIDADE_APROVADA,
                 titulo=f"Continuidade aprovada - {instance.aluno.nome_completo}",
                 mensagem=f"Orientador aprovou a continuidade para '{instance.titulo}'",
-                action_url=f"/coordenador/tccs/{instance.id}",
+                action_url=f"/tccs/{instance.id}",
                 metadata={
                     "tcc_id": instance.id,
                     "aluno_nome": instance.aluno.nome_completo,
@@ -544,7 +544,7 @@ def notificar_continuidade(sender, instance, created, **kwargs):
                 tipo=TipoNotificacao.CONTINUIDADE_REJEITADA,
                 titulo=f"Continuidade rejeitada - {instance.aluno.nome_completo}",
                 mensagem=f"Orientador rejeitou a continuidade para '{instance.titulo}'",
-                action_url=f"/coordenador/tccs/{instance.id}",
+                action_url=f"/tccs/{instance.id}",
                 metadata={
                     "tcc_id": instance.id,
                     "aluno_nome": instance.aluno.nome_completo,

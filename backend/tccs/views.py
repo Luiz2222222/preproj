@@ -263,15 +263,38 @@ class TCCViewSet(viewsets.ModelViewSet):
                 visibilidade=Visibilidade.TODOS
             )
 
+            # Preparar dados do co-orientador para a solicitação
+            coorientador_interno = dados.get('coorientador')
+            if coorientador_interno:
+                # Co-orientador interno: pegar dados do usuário
+                coorientador_nome = coorientador_interno.nome_completo
+                # Se tratamento for "Outro", usar o valor customizado
+                if coorientador_interno.tratamento == 'Outro' and coorientador_interno.tratamento_customizado:
+                    coorientador_titulacao = coorientador_interno.tratamento_customizado
+                else:
+                    coorientador_titulacao = coorientador_interno.tratamento or ''
+                # Se afiliacao for "Outro", usar o valor customizado
+                if coorientador_interno.afiliacao == 'Outro' and coorientador_interno.afiliacao_customizada:
+                    coorientador_afiliacao = coorientador_interno.afiliacao_customizada
+                else:
+                    coorientador_afiliacao = coorientador_interno.departamento or coorientador_interno.afiliacao or ''
+                coorientador_lattes = ''
+            else:
+                # Co-orientador externo: usar dados informados
+                coorientador_nome = dados.get('coorientador_nome', '')
+                coorientador_titulacao = dados.get('coorientador_titulacao', '')
+                coorientador_afiliacao = dados.get('coorientador_afiliacao', '')
+                coorientador_lattes = dados.get('coorientador_lattes', '')
+
             # Criar solicitação de orientação
             solicitacao = SolicitacaoOrientacao.objects.create(
                 tcc=tcc,
                 professor=professor,
                 mensagem=dados.get('mensagem', ''),
-                coorientador_nome=dados.get('coorientador_nome', ''),
-                coorientador_titulacao=dados.get('coorientador_titulacao', ''),
-                coorientador_afiliacao=dados.get('coorientador_afiliacao', ''),
-                coorientador_lattes=dados.get('coorientador_lattes', '')
+                coorientador_nome=coorientador_nome,
+                coorientador_titulacao=coorientador_titulacao,
+                coorientador_afiliacao=coorientador_afiliacao,
+                coorientador_lattes=coorientador_lattes
             )
 
             # Criar evento de solicitação
@@ -570,7 +593,7 @@ class TCCViewSet(viewsets.ModelViewSet):
             titulo='Continuidade Aprovada',
             mensagem=f'Sua continuidade foi aprovada por {usuario.nome_completo}. Agora você pode prosseguir para a avaliação.',
             campo_preferencia='aluno_continuidade_aprovada',
-            action_url=f'/tcc/{tcc.id}',
+            action_url=f'/tccs/{tcc.id}',
             tcc_id=tcc.id,
             prioridade=PrioridadeNotificacao.ALTA
         )
@@ -582,7 +605,7 @@ class TCCViewSet(viewsets.ModelViewSet):
             titulo='Continuidade Confirmada',
             mensagem=f'Você aprovou a continuidade do TCC "{tcc.titulo}".',
             campo_preferencia='prof_continuidade_aprovada',
-            action_url=f'/tcc/{tcc.id}',
+            action_url=f'/tccs/{tcc.id}',
             tcc_id=tcc.id,
             prioridade=PrioridadeNotificacao.NORMAL
         )
@@ -596,7 +619,7 @@ class TCCViewSet(viewsets.ModelViewSet):
             titulo='Continuidade Aprovada',
             mensagem=f'Continuidade do TCC "{tcc.titulo}" foi aprovada por {usuario.nome_completo}.',
             campo_preferencia='coord_continuidade_aprovada',
-            action_url=f'/tcc/{tcc.id}',
+            action_url=f'/tccs/{tcc.id}',
             tcc_id=tcc.id,
             prioridade=PrioridadeNotificacao.NORMAL
         )
@@ -671,7 +694,7 @@ class TCCViewSet(viewsets.ModelViewSet):
             titulo='Continuidade Rejeitada',
             mensagem=f'Sua continuidade foi rejeitada por {usuario.nome_completo}. O TCC foi descontinuado.',
             campo_preferencia='aluno_continuidade_rejeitada',
-            action_url=f'/tcc/{tcc.id}',
+            action_url=f'/tccs/{tcc.id}',
             tcc_id=tcc.id,
             prioridade=PrioridadeNotificacao.ALTA
         )
@@ -685,7 +708,7 @@ class TCCViewSet(viewsets.ModelViewSet):
             titulo='Continuidade Rejeitada',
             mensagem=f'Continuidade do TCC "{tcc.titulo}" foi rejeitada por {usuario.nome_completo}. TCC descontinuado.',
             campo_preferencia='coord_continuidade_rejeitada',
-            action_url=f'/tcc/{tcc.id}',
+            action_url=f'/tccs/{tcc.id}',
             tcc_id=tcc.id,
             prioridade=PrioridadeNotificacao.NORMAL
         )
@@ -1362,7 +1385,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                     titulo='Ajustes Solicitados na Avaliação - Fase I',
                     mensagem=notif_mensagem,
                     campo_preferencia='prof_resultado_fase_1',  # Reutilizar preferência de Fase I
-                    action_url=f'/tcc/{tcc.id}',
+                    action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.ALTA
                 )
@@ -1445,7 +1468,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                         tipo=TipoNotificacao.AVALIACAO_APROVADA,
                         titulo='Avaliação Fase I Aprovada',
                         mensagem=f'Sua avaliação do TCC "{tcc.titulo}" foi aprovada pelo coordenador.',
-                        action_url=f'/tcc/{tcc.id}',
+                        action_url=f'/tccs/{tcc.id}',
                         tcc_id=tcc.id,
                         prioridade=PrioridadeNotificacao.NORMAL
                     )
@@ -1716,7 +1739,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                     titulo='Defesa Agendada',
                     mensagem=f'Sua defesa foi agendada para {data_formatada} às {hora_formatada}. Local: {agendamento.local}',
                     campo_preferencia='aluno_agendamento_defesa',
-                    action_url=f'/tcc/{tcc.id}',
+                    action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.ALTA
                 )
@@ -1730,7 +1753,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                     titulo='Defesa Agendada',
                     mensagem=f'Defesa do TCC "{tcc.titulo}" foi agendada para {data_formatada} às {hora_formatada}.',
                     campo_preferencia='coord_defesa_agendada',
-                    action_url=f'/tcc/{tcc.id}',
+                    action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.NORMAL
                 )
@@ -2060,7 +2083,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                     titulo='Ajustes Solicitados na Avaliação - Fase II',
                     mensagem=notif_mensagem,
                     campo_preferencia='prof_resultado_fase_1',  # Reutilizar preferência (não há específica para Fase II)
-                    action_url=f'/tcc/{tcc.id}',
+                    action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.ALTA
                 )
@@ -2211,7 +2234,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                     titulo='Ajustes Finais Solicitados',
                     mensagem=notif_mensagem,
                     campo_preferencia='prof_resultado_fase_1',  # Reutilizar preferência
-                    action_url=f'/tcc/{tcc.id}',
+                    action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.URGENTE
                 )
@@ -2294,7 +2317,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                 titulo='TCC Concluído!',
                 mensagem=f'Parabéns! Seu TCC "{tcc.titulo}" foi concluído com sucesso!',
                 campo_preferencia='aluno_finalizacao_tcc',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.URGENTE
             )
@@ -2310,7 +2333,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                 titulo='TCC Concluído',
                 mensagem=f'O TCC "{tcc.titulo}" foi aprovado e concluído.',
                 campo_preferencia='prof_finalizacao_tcc',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.ALTA
             )
@@ -2445,7 +2468,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                 tipo=TipoNotificacao.RESULTADO_FINAL,
                 titulo=f'Resultado Final: {resultado}',
                 mensagem=f'Seu TCC foi {resultado.lower()} com nota final {nf2_arredondado}.',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.URGENTE
             )
@@ -2460,7 +2483,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                 tipo=TipoNotificacao.RESULTADO_FINAL,
                 titulo=f'Resultado Final: {resultado}',
                 mensagem=f'TCC "{tcc.titulo}" foi {resultado.lower()} com nota final {nf2_arredondado}.',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.ALTA
             )
@@ -2472,7 +2495,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                 tipo=TipoNotificacao.RESULTADO_FINAL,
                 titulo=f'Resultado Final: {resultado}',
                 mensagem=f'TCC "{tcc.titulo}" foi {resultado.lower()} com nota final {nf2_arredondado}.',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.NORMAL
             )
@@ -2887,7 +2910,7 @@ class SolicitacaoOrientacaoViewSet(viewsets.ModelViewSet):
                 titulo='Solicitação de Orientação Aprovada',
                 mensagem=f'Sua solicitação de orientação foi aprovada! Orientador: {solicitacao.professor.nome_completo}. Agora você pode iniciar o desenvolvimento do seu TCC.',
                 campo_preferencia='aluno_aceitar_convite_orientador',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.ALTA
             )
@@ -2902,7 +2925,7 @@ class SolicitacaoOrientacaoViewSet(viewsets.ModelViewSet):
                 titulo='Nova Solicitação de Orientação Aprovada',
                 mensagem=f'Aluno {tcc.aluno.nome_completo} teve sua solicitação aprovada com orientador {solicitacao.professor.nome_completo}.',
                 campo_preferencia='coord_convite_aluno',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.NORMAL
             )
@@ -2933,13 +2956,8 @@ class SolicitacaoOrientacaoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validar parecer obrigatório
+        # Parecer opcional
         parecer = request.data.get('parecer', '').strip()
-        if not parecer:
-            return Response(
-                {'detail': 'O parecer é obrigatório para recusar uma solicitação', 'field': 'parecer'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
         # Capturar dados antes de deletar
         tcc = solicitacao.tcc
@@ -3132,7 +3150,7 @@ class DocumentoTCCViewSet(viewsets.ModelViewSet):
                 titulo='Nova Monografia Recebida',
                 mensagem=f'Aluno {usuario.nome_completo} enviou uma nova versão da monografia (v{documento.versao}).',
                 campo_preferencia='prof_receber_monografia',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.ALTA
             )
@@ -3147,7 +3165,7 @@ class DocumentoTCCViewSet(viewsets.ModelViewSet):
                 titulo='Termo de Solicitação Enviado',
                 mensagem=f'Aluno {usuario.nome_completo} enviou o termo de solicitação de avaliação do TCC "{tcc.titulo}".',
                 campo_preferencia='coord_termo_enviado',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.NORMAL
             )
@@ -3194,7 +3212,7 @@ class DocumentoTCCViewSet(viewsets.ModelViewSet):
                 titulo='Documento Aprovado',
                 mensagem=f'Seu documento "{tipo_display}" (v{documento.versao}) foi aprovado.',
                 campo_preferencia='aluno_ajuste_monografia',  # Usar mesma preferência de ajustes
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.ALTA
             )
@@ -3208,7 +3226,7 @@ class DocumentoTCCViewSet(viewsets.ModelViewSet):
                     titulo='Monografia Aprovada',
                     mensagem=f'Monografia do TCC "{tcc.titulo}" (aluno: {tcc.aluno.nome_completo}) foi aprovada pelo orientador.',
                     campo_preferencia='coord_monografia_aprovada',
-                    action_url=f'/tcc/{tcc.id}',
+                    action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.NORMAL
                 )
@@ -3244,10 +3262,40 @@ class DocumentoTCCViewSet(viewsets.ModelViewSet):
                 titulo='Documento Rejeitado - Ajustes Necessários',
                 mensagem=mensagem,
                 campo_preferencia='aluno_ajuste_monografia',
-                action_url=f'/tcc/{tcc.id}',
+                action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
                 prioridade=PrioridadeNotificacao.ALTA
             )
+
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        """
+        GET /api/documentos/{id}/download/
+        Retorna o arquivo com o nome original no header Content-Disposition.
+        """
+        from django.http import FileResponse
+        from urllib.parse import quote
+
+        documento = self.get_object()
+
+        if not documento.arquivo:
+            return Response(
+                {'detail': 'Arquivo não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Codificar nome do arquivo para suportar caracteres especiais
+        nome_arquivo = documento.nome_original or os.path.basename(documento.arquivo.name)
+        nome_codificado = quote(nome_arquivo)
+
+        response = FileResponse(
+            documento.arquivo.open('rb'),
+            content_type='application/pdf'
+        )
+        # Header para exibir no navegador (inline) com nome correto
+        response['Content-Disposition'] = f"inline; filename*=UTF-8''{nome_codificado}"
+
+        return response
 
 
 class EventoTimelineViewSet(viewsets.ReadOnlyModelViewSet):

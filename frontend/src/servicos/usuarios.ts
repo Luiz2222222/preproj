@@ -27,6 +27,20 @@ export async function listarProfessores(): Promise<ProfessorListItem[]> {
   }
 }
 
+/**
+ * Listar professores e avaliadores externos (para formação de banca)
+ * GET /coorientadores/
+ */
+export async function listarAvaliadores(): Promise<ProfessorListItem[]> {
+  try {
+    const resposta = await api.get<ProfessorListItem[]>('/coorientadores/');
+    return resposta.data;
+  } catch (erro) {
+    const mensagem = extrairMensagemErro(erro);
+    throw new Error(mensagem);
+  }
+}
+
 export interface AlterarSenhaData {
   senha_atual: string;
   nova_senha: string;

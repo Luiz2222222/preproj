@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
-  GraduationCap,
   Bell,
   User,
   LogOut,
@@ -10,6 +9,7 @@ import {
   X
 } from 'lucide-react'
 import { useAutenticacao } from '../autenticacao'
+import { useTema } from '../tema'
 import { useToast } from '../contextos/ToastProvider'
 import { useNotificacoes } from '../contextos/NotificacoesContext'
 import PainelNotificacoes from '../componentes/PainelNotificacoes'
@@ -17,6 +17,8 @@ import PainelNotificacoes from '../componentes/PainelNotificacoes'
 export function HeaderAvaliador() {
   const navigate = useNavigate()
   const { usuario, logout } = useAutenticacao()
+  const { temaAtual } = useTema()
+  const logoSrc = temaAtual === 'black' || temaAtual === 'dark' ? '/logo-ufpe-dark.png' : '/logo-ufpe.png'
   const { sucesso, erro } = useToast()
   const { countNaoLidas, marcarTodasComoLidas } = useNotificacoes()
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -72,12 +74,7 @@ export function HeaderAvaliador() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div
-                className="p-2 rounded-xl shadow-md flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg,var(--cor-brand-gradient-inicio) 0%,var(--cor-brand-gradient-fim) 100%)' }}
-              >
-                <GraduationCap className="h-6 w-6 text-[rgb(var(--cor-texto-sobre-destaque))]" />
-              </div>
+              <img src={logoSrc} alt="UFPE" className="h-10 w-auto" />
               <div>
                 <h1 className="text-lg font-bold text-cor-texto">Portal TCC</h1>
                 <p className="text-xs text-cor-texto opacity-60">DEE/UFPE</p>

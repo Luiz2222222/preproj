@@ -102,7 +102,7 @@ def verificar_transicao_fase2(sender, instance, created, **kwargs):
                     titulo='Avaliações Fase II Completas',
                     mensagem=f'Todas as avaliações da Fase II do TCC "{tcc.titulo}" foram concluídas. NF2: {nf2:.2f}, Resultado: {resultado}',
                     campo_preferencia='coord_avaliacoes_fase2_completas',
-                    action_url=f'/tcc/{tcc.id}',
+                    action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.ALTA
                 )
