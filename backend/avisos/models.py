@@ -10,6 +10,7 @@ class Aviso(models.Model):
         verbose_name='Destinatários',
         help_text='Lista de tipos de usuário: ALUNO, PROFESSOR, AVALIADOR, COORDENADOR'
     )
+    cor = models.CharField(max_length=20, default='', blank=True, verbose_name='Cor do card')
     fixado = models.BooleanField(default=False, verbose_name='Fixado no topo')
     criado_por = models.ForeignKey(
         Usuario,
@@ -28,3 +29,28 @@ class Aviso(models.Model):
 
     def __str__(self):
         return f'{self.titulo} ({", ".join(self.destinatarios)})'
+
+
+class ComentarioAviso(models.Model):
+    aviso = models.ForeignKey(
+        Aviso,
+        on_delete=models.CASCADE,
+        related_name='comentarios',
+        verbose_name='Aviso'
+    )
+    autor = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name='comentarios_avisos',
+        verbose_name='Autor'
+    )
+    texto = models.TextField(verbose_name='Texto')
+    criado_em = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+
+    class Meta:
+        verbose_name = 'Comentário'
+        verbose_name_plural = 'Comentários'
+        ordering = ['criado_em']
+
+    def __str__(self):
+        return f'{self.autor.nome_completo} em "{self.aviso.titulo}"'

@@ -94,7 +94,6 @@ export function SidebarCoord() {
     { label: 'TCCs', icon: FileText, path: '/tccs' },
     { label: 'Relatórios', icon: FileSpreadsheet, path: '/relatorios' },
     { label: 'Solicitações', icon: ClipboardList, path: '/solicitacoes' },
-    { label: 'Mural de avisos', icon: Megaphone, path: '/avisos' },
     {
       label: 'Usuários',
       icon: Users,
@@ -104,6 +103,7 @@ export function SidebarCoord() {
         { label: 'Membros Externos', icon: Building2, path: '/usuarios/externos' }
       ]
     },
+    { label: 'Mural de avisos', icon: Megaphone, path: '/avisos' },
     { label: 'Planejamento', icon: Calendar, path: '/planejamento' },
     { label: 'Configurações', icon: Settings, path: '/configuracoes' }
   ]

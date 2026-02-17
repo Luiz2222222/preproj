@@ -1,8 +1,9 @@
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import Aviso
-from .serializers import AvisoSerializer
+from .models import Aviso, ComentarioAviso
+from .serializers import AvisoSerializer, ComentarioAvisoSerializer
 from users.models import Usuario
 from notificacoes.services import criar_notificacao_em_massa
 from notificacoes.constants import TipoNotificacao
@@ -71,3 +72,37 @@ class AvisoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'], url_path='comentarios')
+    def adicionar_comentario(self, request, pk=None):
+        aviso = self.get_object()
+        texto = request.data.get('texto', '').strip()
+        if not texto:
+            return Response(
+                {'detail': 'O texto do comentário é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        comentario = ComentarioAviso.objects.create(
+            aviso=aviso, autor=request.user, texto=texto
+        )
+        serializer = ComentarioAvisoSerializer(comentario)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['delete'], url_path='comentarios/(?P<comentario_id>[0-9]+)')
+    def apagar_comentario(self, request, pk=None, comentario_id=None):
+        aviso = self.get_object()
+        try:
+            comentario = aviso.comentarios.get(id=comentario_id)
+        except ComentarioAviso.DoesNotExist:
+            return Response(
+                {'detail': 'Comentário não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        # Autor do comentário ou coordenador podem apagar
+        if comentario.autor != request.user and request.user.tipo_usuario != 'COORDENADOR':
+            return Response(
+                {'detail': 'Sem permissão para apagar este comentário.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        comentario.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

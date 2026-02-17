@@ -8,9 +8,12 @@ import {
   X,
   Loader2,
   AlertCircle,
+  MessageCircle,
+  Send,
 } from 'lucide-react'
 import { avisosService } from '../../servicos/avisos'
 import { useToast } from '../../contextos/ToastProvider'
+import { useAutenticacao } from '../../autenticacao'
 import type { Aviso } from '../../types/avisos'
 
 interface Props {
@@ -25,6 +28,21 @@ const PERFIS = [
 ]
 
 const TODOS_PERFIS = PERFIS.map((p) => p.value)
+
+const CORES = [
+  { value: '', label: 'Padrão', bg: '', border: '' },
+  { value: 'azul', label: 'Azul', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-300 dark:border-blue-700' },
+  { value: 'verde', label: 'Verde', bg: 'bg-green-50 dark:bg-green-950/30', border: 'border-green-300 dark:border-green-700' },
+  { value: 'amarelo', label: 'Amarelo', bg: 'bg-yellow-50 dark:bg-yellow-950/30', border: 'border-yellow-300 dark:border-yellow-700' },
+  { value: 'vermelho', label: 'Vermelho', bg: 'bg-red-50 dark:bg-red-950/30', border: 'border-red-300 dark:border-red-700' },
+  { value: 'roxo', label: 'Roxo', bg: 'bg-purple-50 dark:bg-purple-950/30', border: 'border-purple-300 dark:border-purple-700' },
+  { value: 'laranja', label: 'Laranja', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-300 dark:border-orange-700' },
+]
+
+function getCorClasses(cor: string) {
+  const c = CORES.find((x) => x.value === cor)
+  return c && c.value ? { bg: c.bg, border: c.border } : null
+}
 
 function formatarData(iso: string) {
   const d = new Date(iso)
@@ -43,12 +61,17 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
   const [avisoEditando, setAvisoEditando] = useState<Aviso | null>(null)
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<number | null>(null)
   const [salvando, setSalvando] = useState(false)
+  const [comentariosAbertos, setComentariosAbertos] = useState<Set<number>>(new Set())
+  const [textoComentario, setTextoComentario] = useState<Record<number, string>>({})
+  const [enviandoComentario, setEnviandoComentario] = useState<number | null>(null)
   const { sucesso, erro } = useToast()
+  const { usuario } = useAutenticacao()
 
   // Form state
   const [titulo, setTitulo] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [destinatarios, setDestinatarios] = useState<string[]>([])
+  const [cor, setCor] = useState('')
   const [fixado, setFixado] = useState(false)
 
   const carregarAvisos = useCallback(async () => {
@@ -72,6 +95,7 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
     setTitulo('')
     setMensagem('')
     setDestinatarios([...TODOS_PERFIS])
+    setCor('')
     setFixado(false)
     setModalAberto(true)
   }
@@ -81,6 +105,7 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
     setTitulo(aviso.titulo)
     setMensagem(aviso.mensagem)
     setDestinatarios(aviso.destinatarios)
+    setCor(aviso.cor || '')
     setFixado(aviso.fixado)
     setModalAberto(true)
   }
@@ -112,7 +137,7 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
 
     try {
       setSalvando(true)
-      const payload = { titulo: titulo.trim(), mensagem: mensagem.trim(), destinatarios, fixado }
+      const payload = { titulo: titulo.trim(), mensagem: mensagem.trim(), destinatarios, cor, fixado }
       if (avisoEditando) {
         await avisosService.editar(avisoEditando.id, payload)
         sucesso('Aviso atualizado com sucesso!')
@@ -137,6 +162,39 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
       carregarAvisos()
     } catch {
       erro('Erro ao remover aviso.')
+    }
+  }
+
+  const toggleComentarios = (avisoId: number) => {
+    setComentariosAbertos((prev) => {
+      const next = new Set(prev)
+      if (next.has(avisoId)) next.delete(avisoId)
+      else next.add(avisoId)
+      return next
+    })
+  }
+
+  const handleComentar = async (avisoId: number) => {
+    const texto = (textoComentario[avisoId] || '').trim()
+    if (!texto) return
+    try {
+      setEnviandoComentario(avisoId)
+      await avisosService.comentar(avisoId, texto)
+      setTextoComentario((prev) => ({ ...prev, [avisoId]: '' }))
+      carregarAvisos()
+    } catch {
+      erro('Erro ao enviar comentário.')
+    } finally {
+      setEnviandoComentario(null)
+    }
+  }
+
+  const handleApagarComentario = async (avisoId: number, comentarioId: number) => {
+    try {
+      await avisosService.apagarComentario(avisoId, comentarioId)
+      carregarAvisos()
+    } catch {
+      erro('Erro ao remover comentário.')
     }
   }
 
@@ -187,10 +245,13 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
           {avisos.map((aviso) => (
             <div
               key={aviso.id}
-              className={`bg-cor-superficie rounded-xl border p-5 transition-shadow hover:shadow-md ${
-                aviso.fixado
-                  ? 'border-cor-destaque/40 shadow-sm'
-                  : 'border-cor-borda'
+              className={`rounded-xl border p-5 transition-shadow hover:shadow-md ${
+                (() => {
+                  const corClasses = getCorClasses(aviso.cor)
+                  if (corClasses) return `${corClasses.bg} ${corClasses.border}`
+                  if (aviso.fixado) return 'bg-cor-superficie border-cor-destaque/40 shadow-sm'
+                  return 'bg-cor-superficie border-cor-borda'
+                })()
               }`}
             >
               <div className="flex items-start justify-between gap-4">
@@ -266,6 +327,78 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
                   </div>
                 )}
               </div>
+
+              {/* Comentários */}
+              <div className="mt-3 pt-3 border-t border-cor-borda">
+                <button
+                  onClick={() => toggleComentarios(aviso.id)}
+                  className="flex items-center gap-1.5 text-xs text-cor-texto opacity-50 hover:opacity-80 transition-opacity"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  {(aviso.comentarios?.length || 0) > 0
+                    ? `${aviso.comentarios.length} comentário${aviso.comentarios.length > 1 ? 's' : ''}`
+                    : 'Comentar'}
+                </button>
+
+                {comentariosAbertos.has(aviso.id) && (
+                  <div className="mt-3 space-y-3">
+                    {/* Lista de comentários */}
+                    {aviso.comentarios?.map((c) => (
+                      <div key={c.id} className="flex items-start gap-2 group">
+                        <div className="h-6 w-6 rounded-full bg-cor-destaque/20 text-cor-destaque flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                          {c.autor_nome?.charAt(0) || '?'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-cor-texto">{c.autor_nome}</span>
+                            <span className="text-[10px] text-cor-texto opacity-40">{formatarData(c.criado_em)}</span>
+                            {(c.autor === usuario?.id || podeGerenciar) && (
+                              <button
+                                onClick={() => handleApagarComentario(aviso.id, c.id)}
+                                className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-[rgb(var(--cor-erro))]"
+                                title="Apagar comentário"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-sm text-cor-texto opacity-80">{c.texto}</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Input de comentário */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={textoComentario[aviso.id] || ''}
+                        onChange={(e) =>
+                          setTextoComentario((prev) => ({ ...prev, [aviso.id]: e.target.value }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleComentar(aviso.id)
+                          }
+                        }}
+                        placeholder="Escreva um comentário..."
+                        className="flex-1 px-3 py-1.5 rounded-lg border border-cor-borda bg-cor-fundo text-cor-texto text-sm focus:outline-none focus:ring-1 focus:ring-cor-destaque/50"
+                      />
+                      <button
+                        onClick={() => handleComentar(aviso.id)}
+                        disabled={enviandoComentario === aviso.id || !(textoComentario[aviso.id] || '').trim()}
+                        className="p-1.5 rounded-lg bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] hover:opacity-90 transition-opacity disabled:opacity-30"
+                      >
+                        {enviandoComentario === aviso.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -311,7 +444,7 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
                   onChange={(e) => setMensagem(e.target.value)}
                   placeholder="Escreva a mensagem do aviso..."
                   rows={5}
-                  className="w-full px-3 py-2 rounded-lg border border-cor-borda bg-cor-fundo text-cor-texto text-sm focus:outline-none focus:ring-2 focus:ring-cor-destaque/50 resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-cor-borda bg-cor-fundo text-cor-texto text-sm focus:outline-none focus:ring-2 focus:ring-cor-destaque/50 resize-y"
                 />
               </div>
 
@@ -339,6 +472,34 @@ export default function MuralAvisos({ podeGerenciar }: Props) {
                     Selecione pelo menos um perfil
                   </p>
                 )}
+              </div>
+
+              {/* Cor do card */}
+              <div>
+                <label className="block text-sm font-medium text-cor-texto mb-2">
+                  Cor do card
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {CORES.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setCor(c.value)}
+                      className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                        cor === c.value ? 'ring-2 ring-cor-destaque ring-offset-1' : ''
+                      } ${
+                        c.value === '' ? 'bg-cor-superficie border-cor-borda' :
+                        c.value === 'azul' ? 'bg-blue-400 border-blue-500' :
+                        c.value === 'verde' ? 'bg-green-400 border-green-500' :
+                        c.value === 'amarelo' ? 'bg-yellow-400 border-yellow-500' :
+                        c.value === 'vermelho' ? 'bg-red-400 border-red-500' :
+                        c.value === 'roxo' ? 'bg-purple-400 border-purple-500' :
+                        'bg-orange-400 border-orange-500'
+                      }`}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Fixar no topo */}
