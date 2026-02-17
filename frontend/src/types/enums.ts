@@ -38,6 +38,7 @@ export const TipoDocumento = {
   TERMO_SOLICITACAO_AVALIACAO: 'TERMO_SOLICITACAO_AVALIACAO',
   APRESENTACAO: 'APRESENTACAO',
   ATA: 'ATA',
+  RELATORIO_AVALIACAO: 'RELATORIO_AVALIACAO',
   OUTRO: 'OUTRO'
 } as const;
 
@@ -162,6 +163,7 @@ export const TipoDocumentoLabels: Record<TipoDocumento, string> = {
   [TipoDocumento.TERMO_SOLICITACAO_AVALIACAO]: 'Termo de solicitação de avaliação',
   [TipoDocumento.APRESENTACAO]: 'Apresentação',
   [TipoDocumento.ATA]: 'Ata',
+  [TipoDocumento.RELATORIO_AVALIACAO]: 'Relatório de avaliação',
   [TipoDocumento.OUTRO]: 'Outro'
 };
 

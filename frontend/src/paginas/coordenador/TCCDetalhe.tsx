@@ -23,13 +23,14 @@ import {
 import { useTCCsCoordenador, useTimelineTCC } from '../../hooks'
 import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, TipoDocumentoLabels, CursoLabels } from '../../types/enums'
 import type { TCC } from '../../types'
+import api from '../../servicos/api'
 import { TimelineVerticalDetalhada } from '../../componentes/TimelineVerticalDetalhada'
 import { FormacaoBancaFase1 } from './components/FormacaoBancaFase1'
 import { AnalisarAvaliacoesFase1 } from './components/AnalisarAvaliacoesFase1'
 import { AnalisarAvaliacoesFase2 } from './components/AnalisarAvaliacoesFase2'
 import { AnaliseFinalCoordenador } from './components/AnaliseFinalCoordenador'
 import { formatarDataCurta } from '../../utils/datas'
-import { useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 
 export function TCCDetalhe() {
   const { id } = useParams<{ id: string }>()
@@ -46,6 +47,40 @@ export function TCCDetalhe() {
     tccId: tcc?.id || null,
     autoCarregar: !!tcc
   })
+
+  const [baixandoRelatorio, setBaixandoRelatorio] = useState(false)
+
+  const handleBaixarRelatorio = useCallback(async () => {
+    if (!tcc) return
+
+    // Se já existe um documento RELATORIO_AVALIACAO, abrir diretamente
+    const docRelatorio = tcc.documentos?.find(d => d.tipo_documento === 'RELATORIO_AVALIACAO')
+    if (docRelatorio?.arquivo) {
+      window.open(docRelatorio.arquivo, '_blank')
+      return
+    }
+
+    // Senão, gerar via endpoint
+    setBaixandoRelatorio(true)
+    try {
+      const response = await api.get(`/tccs/${tcc.id}/relatorio-avaliacao/`, {
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(response.data)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Relatorio_Avaliacao_${tcc.aluno_dados?.nome_completo?.replace(/ /g, '_') || 'TCC'}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      recarregar()
+    } catch {
+      alert('Erro ao gerar relatório. Verifique se o TCC possui avaliações bloqueadas.')
+    } finally {
+      setBaixandoRelatorio(false)
+    }
+  }, [tcc, recarregar])
 
   // Função para determinar status do TCC
   const getStatus = (tcc: TCC): 'normal' | 'atencao' | 'urgente' => {
@@ -168,10 +203,16 @@ export function TCCDetalhe() {
               <Edit className="h-4 w-4" />
               Editar
             </button>
-            <button className="px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90 rounded-lg transition-colors flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Baixar Relatório
-            </button>
+            {([EtapaTCC.APROVADO, EtapaTCC.ANALISE_FINAL_COORDENADOR, EtapaTCC.AGUARDANDO_AJUSTES_FINAIS, EtapaTCC.CONCLUIDO] as string[]).includes(tcc.etapa_atual) && (
+              <button
+                onClick={handleBaixarRelatorio}
+                disabled={baixandoRelatorio}
+                className="px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {baixandoRelatorio ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {baixandoRelatorio ? 'Gerando...' : 'Baixar Relatório'}
+              </button>
+            )}
           </div>
         </div>
       </div>

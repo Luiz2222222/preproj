@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'definicoes.apps.DefinicoesConfig',
     'tccs',
     'notificacoes',
+    'avisos',
 ]
 
 MIDDLEWARE = [

@@ -33,6 +33,7 @@ import { EstruturaCoord } from './estrutura/EstruturaCoord'
 import { EstruturaProfessor } from './estrutura/EstruturaProfessor'
 import { EstruturaAvaliador } from './estrutura/EstruturaAvaliador'
 import { PerfilWrapper } from './paginas/PerfilWrapper'
+import MuralAvisos from './paginas/compartilhado/MuralAvisos'
 
 export function App() {
   return (
@@ -115,6 +116,16 @@ export function App() {
             </RotaProtegida>
           }
         />
+        <Route
+          path="/aluno/avisos"
+          element={
+            <RotaProtegida tiposPermitidos={['ALUNO']}>
+              <EstruturaAluno>
+                <MuralAvisos podeGerenciar={false} />
+              </EstruturaAluno>
+            </RotaProtegida>
+          }
+        />
         {/* Rotas do Professor (com layout) */}
         <Route
           path="/professor"
@@ -186,6 +197,16 @@ export function App() {
             <RotaProtegida tiposPermitidos={['PROFESSOR']}>
               <EstruturaProfessor>
                 <BancasAvaliacaoDetalhe />
+              </EstruturaProfessor>
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/professor/avisos"
+          element={
+            <RotaProtegida tiposPermitidos={['PROFESSOR']}>
+              <EstruturaProfessor>
+                <MuralAvisos podeGerenciar={false} />
               </EstruturaProfessor>
             </RotaProtegida>
           }
@@ -296,6 +317,16 @@ export function App() {
           }
         />
         <Route
+          path="/avisos"
+          element={
+            <RotaProtegida tiposPermitidos={['COORDENADOR']}>
+              <EstruturaCoord>
+                <MuralAvisos podeGerenciar={true} />
+              </EstruturaCoord>
+            </RotaProtegida>
+          }
+        />
+        <Route
           path="/configuracoes"
           element={
             <RotaProtegida tiposPermitidos={['COORDENADOR']}>
@@ -353,6 +384,16 @@ export function App() {
             <RotaProtegida tiposPermitidos={['AVALIADOR']}>
               <EstruturaAvaliador>
                 <DetalheCoOrientacao />
+              </EstruturaAvaliador>
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="/avaliador/avisos"
+          element={
+            <RotaProtegida tiposPermitidos={['AVALIADOR']}>
+              <EstruturaAvaliador>
+                <MuralAvisos podeGerenciar={false} />
               </EstruturaAvaliador>
             </RotaProtegida>
           }

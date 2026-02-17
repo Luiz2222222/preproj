@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect, type PropsWithChildren } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAutenticacao } from '../autenticacao'
-import { LogOut, Home, FileText, FolderOpen, Info, RotateCcw, User, ChevronDown, Bell, Settings } from 'lucide-react'
+import { LogOut, Home, FileText, FolderOpen, Info, RotateCcw, User, ChevronDown, Bell, Settings, Megaphone } from 'lucide-react'
 import { useToast } from '../contextos/ToastProvider'
 import { useNotificacoes } from '../contextos/NotificacoesContext'
 import { usePendingActionsAluno } from '../hooks'
@@ -19,6 +19,7 @@ const menuItems = [
   { path: '/aluno/meu-tcc', label: 'Meu TCC', icon: FileText },
   { path: '/aluno/documentos', label: 'Documentos', icon: FolderOpen },
   { path: '/aluno/informacoes', label: 'Informações', icon: Info },
+  { path: '/aluno/avisos', label: 'Mural de avisos', icon: Megaphone },
   { path: '/aluno/configuracoes', label: 'Configurações', icon: Settings },
 ]
 

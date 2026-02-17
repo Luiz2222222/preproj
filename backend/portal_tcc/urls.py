@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/', include('tccs.urls')),
     path('api/notificacoes/', include('notificacoes.urls')),
     path('api/config/', include('definicoes.urls')),
+    path('api/avisos/', include('avisos.urls')),
 ]
 
 # Servir arquivos de mídia em desenvolvimento

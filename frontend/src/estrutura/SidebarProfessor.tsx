@@ -6,7 +6,8 @@ import {
   ClipboardCheck,
   Settings,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Megaphone
 } from 'lucide-react'
 import { usePendingActionsProfessor } from '../hooks'
 import { useNotificacoes } from '../contextos/NotificacoesContext'
@@ -151,6 +152,21 @@ export function SidebarProfessor() {
               {convitesBancaNaoLidos > 9 ? '9+' : convitesBancaNaoLidos}
             </span>
           )}
+        </NavLink>
+
+        {/* Mural de avisos */}
+        <NavLink
+          to="/professor/avisos"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isActive
+                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
+                : 'text-cor-texto hover:bg-cor-fundo'
+            }`
+          }
+        >
+          <Megaphone className="h-5 w-5" />
+          <span>Mural de avisos</span>
         </NavLink>
 
         {/* Configurações */}

@@ -2424,6 +2424,30 @@ class TCCViewSet(viewsets.ModelViewSet):
                 prioridade=PrioridadeNotificacao.ALTA
             )
 
+        # Gerar Relatório de Avaliação automaticamente
+        try:
+            from .relatorio_pdf import gerar_relatorio_avaliacao_pdf
+            from django.core.files.base import ContentFile
+
+            pdf_bytes = gerar_relatorio_avaliacao_pdf(tcc)
+            nome_arquivo = f'Relatorio_Avaliacao_{tcc.aluno.nome_completo.replace(" ", "_")}.pdf'
+
+            # Remover relatório anterior se existir
+            DocumentoTCC.objects.filter(tcc=tcc, tipo_documento=TipoDocumento.RELATORIO_AVALIACAO).delete()
+
+            doc_relatorio = DocumentoTCC(
+                tcc=tcc,
+                tipo_documento=TipoDocumento.RELATORIO_AVALIACAO,
+                nome_original=nome_arquivo,
+                tamanho=len(pdf_bytes),
+                versao=1,
+                enviado_por=request.user,
+                status=StatusDocumento.APROVADO,
+            )
+            doc_relatorio.arquivo.save(nome_arquivo, ContentFile(pdf_bytes), save=True)
+        except Exception:
+            pass  # Não bloquear a conclusão se o relatório falhar
+
         return Response({
             'message': 'TCC aprovado e concluído com sucesso',
             'etapa_atual': tcc.etapa_atual,
@@ -2433,6 +2457,55 @@ class TCCViewSet(viewsets.ModelViewSet):
             'media_final': float(tcc.media_final) if tcc.media_final else None,
             'resultado_final': tcc.resultado_final
         }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], url_path='relatorio-avaliacao', permission_classes=[IsCoordenador])
+    def relatorio_avaliacao(self, request, pk=None):
+        """
+        GET /api/tccs/{id}/relatorio-avaliacao/
+        Gera (ou regenera) o Relatório de Avaliação do TCC em PDF e retorna para download.
+        Também salva como DocumentoTCC para ficar disponível em Documentos do TCC.
+        """
+        from .relatorio_pdf import gerar_relatorio_avaliacao_pdf
+        from django.core.files.base import ContentFile
+        from django.http import HttpResponse
+
+        tcc = self.get_object()
+
+        # Validar que o TCC tem avaliações suficientes
+        avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc, status='BLOQUEADO').count()
+        if avaliacoes_f1 == 0:
+            return Response(
+                {'detail': 'O TCC não possui avaliações da Fase I bloqueadas para gerar o relatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            pdf_bytes = gerar_relatorio_avaliacao_pdf(tcc)
+        except Exception as e:
+            return Response(
+                {'detail': f'Erro ao gerar relatório: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        nome_arquivo = f'Relatorio_Avaliacao_{tcc.aluno.nome_completo.replace(" ", "_")}.pdf'
+
+        # Salvar/atualizar como DocumentoTCC
+        DocumentoTCC.objects.filter(tcc=tcc, tipo_documento=TipoDocumento.RELATORIO_AVALIACAO).delete()
+        doc_relatorio = DocumentoTCC(
+            tcc=tcc,
+            tipo_documento=TipoDocumento.RELATORIO_AVALIACAO,
+            nome_original=nome_arquivo,
+            tamanho=len(pdf_bytes),
+            versao=1,
+            enviado_por=request.user,
+            status=StatusDocumento.APROVADO,
+        )
+        doc_relatorio.arquivo.save(nome_arquivo, ContentFile(pdf_bytes), save=True)
+
+        # Retornar PDF para download direto
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
+        return response
 
     @action(detail=True, methods=['post'], url_path='aprovar-avaliacoes-fase2', permission_classes=[IsCoordenador])
     def aprovar_avaliacoes_fase2(self, request, pk=None):
@@ -2705,7 +2778,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                     try:
                         # Ler arquivo da storage
                         arquivo_path = ultima_monografia.arquivo.path
-                        arquivo_nome = os.path.basename(arquivo_path)
+                        arquivo_nome = ultima_monografia.nome_original or os.path.basename(arquivo_path)
 
                         with open(arquivo_path, 'rb') as f:
                             zip_file.writestr(
@@ -2740,139 +2813,181 @@ class TCCViewSet(viewsets.ModelViewSet):
 
         return response
 
-    def _formatar_nota(self, nota):
+    def _fmt(self, nota):
         """Formata uma nota de forma segura, retornando '-' se for None."""
         if nota is None:
             return "-"
         return f"{nota:.2f}".replace('.', ',')
 
+    def _linha_nota(self, criterio, nota, peso_max, largura=45):
+        """Gera linha formatada de nota com pontos alinhados."""
+        nota_str = f"{self._fmt(nota)} / {self._fmt(peso_max)}"
+        pontos = '.' * max(2, largura - len(criterio) - len(nota_str))
+        return f"    {criterio} {pontos} {nota_str}"
+
     def _gerar_texto_avaliacoes_completo(self, avaliacoes_f1, avaliacoes_f2, aluno, tcc):
         """Gera conteúdo em texto unificado das avaliações Fase I e Fase II."""
-        linhas = []
+        from definicoes.models import CalendarioSemestre
 
-        # Gerar conteúdo da Fase I se existir
+        cal = CalendarioSemestre.obter_calendario_atual(tcc.semestre)
+        # Pesos Fase I
+        p_res = float(cal.peso_resumo) if cal else 1.0
+        p_int = float(cal.peso_introducao) if cal else 2.0
+        p_rev = float(cal.peso_revisao) if cal else 2.0
+        p_dev = float(cal.peso_desenvolvimento) if cal else 3.5
+        p_con = float(cal.peso_conclusoes) if cal else 1.5
+        # Pesos Fase II
+        p_coe = float(cal.peso_coerencia_conteudo) if cal else 2.0
+        p_qua = float(cal.peso_qualidade_apresentacao) if cal else 2.0
+        p_dom = float(cal.peso_dominio_tema) if cal else 2.5
+        p_cla = float(cal.peso_clareza_fluencia) if cal else 2.5
+        p_tem = float(cal.peso_observancia_tempo) if cal else 1.0
+
+        L = []
+        sep = "\u2500" * 78  # ──────
+        sep2 = "\u2550" * 78  # ══════
+
+        # Cabeçalho
+        L.append(sep2)
+        L.append("  RELATÓRIO DE AVALIAÇÕES \u2014 TRABALHO DE CONCLUSÃO DE CURSO")
+        L.append(sep2)
+        L.append("")
+        L.append(f"  Aluno ............. {aluno.nome_completo}")
+        L.append(f"  TCC ............... {tcc.titulo}")
+        orientador_nome = tcc.orientador.nome_completo if tcc.orientador else 'N/A'
+        L.append(f"  Orientador ........ {orientador_nome}")
+        L.append(f"  Semestre .......... {tcc.semestre}")
+        L.append("")
+
+        # ── FASE I ──
         if avaliacoes_f1.exists():
-            conteudo_f1 = self._gerar_texto_avaliacoes_fase1(avaliacoes_f1, aluno, tcc)
-            linhas.append(conteudo_f1)
+            L.append(sep)
+            L.append("  FASE I \u2014 AVALIAÇÃO DA MONOGRAFIA")
+            L.append(sep)
+            L.append("")
 
-        # Adicionar separador entre fases se ambas existirem
-        if avaliacoes_f1.exists() and avaliacoes_f2.exists():
-            linhas.append("\n\n")
+            notas_totais_f1 = []
+            for i, av in enumerate(avaliacoes_f1, 1):
+                trat = av.avaliador.tratamento or ''
+                nome = f"{trat} {av.avaliador.nome_completo}".strip()
+                L.append(f"  Avaliador #{i}: {nome}")
+                L.append(f"  {'─' * (len(nome) + 16)}")
 
-        # Gerar conteúdo da Fase II se existir
+                if av.status in ['ENVIADO', 'BLOQUEADO']:
+                    L.append(self._linha_nota("Resumo", av.nota_resumo, p_res))
+                    L.append(self._linha_nota("Introdução/Relevância", av.nota_introducao, p_int))
+                    L.append(self._linha_nota("Revisão Bibliográfica", av.nota_revisao, p_rev))
+                    L.append(self._linha_nota("Desenvolvimento", av.nota_desenvolvimento, p_dev))
+                    L.append(self._linha_nota("Conclusões", av.nota_conclusoes, p_con))
+                    nota_total = av.calcular_nota_total()
+                    notas_totais_f1.append(float(nota_total) if nota_total else 0)
+                    total_txt = f"TOTAL {self._fmt(nota_total)} / 10,00"
+                    total_pad = ' ' * (51 - len(total_txt))
+                    L.append(f"{total_pad}{'─' * len(total_txt)}")
+                    L.append(f"{total_pad}{total_txt}")
+                else:
+                    L.append("    (Avaliação pendente)")
+
+                L.append("")
+
+            if notas_totais_f1:
+                nf1 = sum(notas_totais_f1) / len(notas_totais_f1)
+                L.append(f"  \u25b8 NF1 (Média Fase I) = {self._fmt(nf1)}")
+                L.append("")
+
+        # ── FASE II ──
         if avaliacoes_f2.exists():
-            conteudo_f2 = self._gerar_texto_avaliacoes_fase2(avaliacoes_f2, aluno, tcc)
-            linhas.append(conteudo_f2)
+            L.append(sep)
+            L.append("  FASE II \u2014 AVALIAÇÃO DA APRESENTAÇÃO")
+            L.append(sep)
+            L.append("")
 
-        return "".join(linhas)
+            notas_totais_f2 = []
+            for i, av in enumerate(avaliacoes_f2, 1):
+                trat = av.avaliador.tratamento or ''
+                nome = f"{trat} {av.avaliador.nome_completo}".strip()
+                L.append(f"  Avaliador #{i}: {nome}")
+                L.append(f"  {'─' * (len(nome) + 16)}")
 
-    def _gerar_texto_avaliacoes_fase1(self, avaliacoes, aluno, tcc):
-        """Gera conteúdo em texto das avaliações da Fase I."""
-        linhas = [
-            "=" * 80,
-            "AVALIAÇÕES DA FASE I - MONOGRAFIA".center(80),
-            "=" * 80,
-            "",
-            f"Aluno: {aluno.nome_completo}",
-            f"TCC: {tcc.titulo}",
-            f"Orientador: {tcc.orientador.nome_completo}",
-            ""
-        ]
+                if av.status in ['ENVIADO', 'BLOQUEADO']:
+                    L.append(self._linha_nota("Coerência do Conteúdo", av.nota_coerencia_conteudo, p_coe))
+                    L.append(self._linha_nota("Qualidade e Estrutura", av.nota_qualidade_apresentacao, p_qua))
+                    L.append(self._linha_nota("Domínio e Conhecimento", av.nota_dominio_tema, p_dom))
+                    L.append(self._linha_nota("Clareza e Fluência", av.nota_clareza_fluencia, p_cla))
+                    L.append(self._linha_nota("Observância do Tempo", av.nota_observancia_tempo, p_tem))
+                    nota_total = av.calcular_nota_total()
+                    notas_totais_f2.append(float(nota_total) if nota_total else 0)
+                    total_txt = f"TOTAL {self._fmt(nota_total)} / 10,00"
+                    total_pad = ' ' * (51 - len(total_txt))
+                    L.append(f"{total_pad}{'─' * len(total_txt)}")
+                    L.append(f"{total_pad}{total_txt}")
+                else:
+                    L.append("    (Avaliação pendente)")
 
-        for i, avaliacao in enumerate(avaliacoes, 1):
-            # Separador de avaliação
-            linhas.append("=" * 80)
-            linhas.append(f"AVALIAÇÃO #{i}")
-            linhas.append("")
-            linhas.append(f"Avaliador: {avaliacao.avaliador.nome_completo}")
+                L.append("")
 
-            if avaliacao.status in ['ENVIADO', 'BLOQUEADO']:
-                linhas.append("")
-                # Critérios com notas
-                linhas.append(f"  ▸ Resumo - {self._formatar_nota(avaliacao.nota_resumo)}/1,00")
-                linhas.append(f"  ▸ Introdução/Relevância - {self._formatar_nota(avaliacao.nota_introducao)}/2,00")
-                linhas.append(f"  ▸ Revisão Bibliográfica - {self._formatar_nota(avaliacao.nota_revisao)}/2,00")
-                linhas.append(f"  ▸ Desenvolvimento - {self._formatar_nota(avaliacao.nota_desenvolvimento)}/3,50")
-                linhas.append(f"  ▸ Conclusões - {self._formatar_nota(avaliacao.nota_conclusoes)}/1,50")
-                linhas.append("")
+            if notas_totais_f2:
+                media_f2 = sum(notas_totais_f2) / len(notas_totais_f2)
+                L.append(f"  \u25b8 Média Fase II = {self._fmt(media_f2)}")
+                L.append("")
 
-                # Parecer/Comentários
-                if avaliacao.parecer:
-                    linhas.append("COMENTÁRIOS:")
-                    linhas.append("")
-                    # Adicionar conteúdo do parecer com indentação
-                    for linha_parecer in avaliacao.parecer.split('\n'):
-                        if linha_parecer.strip():
-                            linhas.append(f"  {linha_parecer}")
-                    linhas.append("")
+        # ── RESULTADO FINAL ──
+        if avaliacoes_f1.exists() and avaliacoes_f2.exists():
+            nf1_val = sum(notas_totais_f1) / len(notas_totais_f1) if notas_totais_f1 else 0
+            nf2_val = sum(notas_totais_f2) / len(notas_totais_f2) if notas_totais_f2 else 0
+            nf1_pond = nf1_val * 0.6
+            nf2_pond = nf2_val * 0.4
+            nota_final = nf1_pond + nf2_pond
+            resultado = tcc.resultado_final or ('APROVADO' if nota_final >= 6 else 'REPROVADO')
 
-                # Nota total no final
-                linhas.append("=" * 80)
-                nota_total = avaliacao.calcular_nota_total()
-                if nota_total is not None:
-                    nota_formatada = f"{nota_total:.2f}".replace('.', ',')
-                    linhas.append(f"NOTA TOTAL: {nota_formatada}/10,00".center(80))
-                linhas.append("=" * 80)
-                linhas.append("")
-            elif avaliacao.status == 'PENDENTE':
-                linhas.append("Status: Avaliação ainda não foi enviada")
-                linhas.append("")
+            L.append(sep)
+            L.append("  RESULTADO FINAL")
+            L.append(sep)
+            L.append("")
+            L.append(f"    NF1 (Fase I)  = {self._fmt(nf1_val)}  \u00d7  0,6  =  {self._fmt(nf1_pond)}")
+            L.append(f"    NF2 (Fase II) = {self._fmt(nf2_val)}  \u00d7  0,4  =  {self._fmt(nf2_pond)}")
+            nf_txt = f"NOTA FINAL {self._fmt(nota_final)}"
+            nf_pad = ' ' * (51 - len(nf_txt))
+            L.append(f"{nf_pad}{'─' * len(nf_txt)}")
+            L.append(f"{nf_pad}{nf_txt}")
+            L.append("")
+            L.append(f"    Resultado: {resultado}")
+            L.append("")
 
-        return "\n".join(linhas)
+        # ── COMENTÁRIOS FASE I ──
+        pareceres_f1 = [(i, av) for i, av in enumerate(avaliacoes_f1, 1) if av.parecer and av.parecer.strip()]
+        if pareceres_f1:
+            L.append(sep)
+            L.append("  COMENTÁRIOS DOS AVALIADORES \u2014 FASE I")
+            L.append(sep)
+            L.append("")
+            for idx, av in pareceres_f1:
+                trat = av.avaliador.tratamento or ''
+                nome = f"{trat} {av.avaliador.nome_completo}".strip()
+                L.append(f"  Avaliador #{idx} \u2014 {nome}:")
+                L.append("")
+                for linha in av.parecer.strip().split('\n'):
+                    L.append(f"    {linha}")
+                L.append("")
 
-    def _gerar_texto_avaliacoes_fase2(self, avaliacoes, aluno, tcc):
-        """Gera conteúdo em texto das avaliações da Fase II."""
-        linhas = [
-            "=" * 80,
-            "AVALIAÇÕES DA FASE II - APRESENTAÇÃO".center(80),
-            "=" * 80,
-            "",
-            f"Aluno: {aluno.nome_completo}",
-            f"TCC: {tcc.titulo}",
-            f"Orientador: {tcc.orientador.nome_completo}",
-            ""
-        ]
+        # ── COMENTÁRIOS FASE II ──
+        pareceres_f2 = [(i, av) for i, av in enumerate(avaliacoes_f2, 1) if av.parecer and av.parecer.strip()]
+        if pareceres_f2:
+            L.append(sep)
+            L.append("  COMENTÁRIOS DOS AVALIADORES \u2014 FASE II")
+            L.append(sep)
+            L.append("")
+            for idx, av in pareceres_f2:
+                trat = av.avaliador.tratamento or ''
+                nome = f"{trat} {av.avaliador.nome_completo}".strip()
+                L.append(f"  Avaliador #{idx} \u2014 {nome}:")
+                L.append("")
+                for linha in av.parecer.strip().split('\n'):
+                    L.append(f"    {linha}")
+                L.append("")
 
-        for i, avaliacao in enumerate(avaliacoes, 1):
-            # Separador de avaliação
-            linhas.append("=" * 80)
-            linhas.append(f"AVALIAÇÃO #{i}")
-            linhas.append("")
-            linhas.append(f"Avaliador: {avaliacao.avaliador.nome_completo}")
-
-            if avaliacao.status in ['ENVIADO', 'BLOQUEADO']:
-                linhas.append("")
-                # Critérios com notas
-                linhas.append(f"  ▸ Coerência do Conteúdo - {self._formatar_nota(avaliacao.nota_coerencia_conteudo)}/2,00")
-                linhas.append(f"  ▸ Qualidade e Estrutura da Apresentação - {self._formatar_nota(avaliacao.nota_qualidade_apresentacao)}/2,00")
-                linhas.append(f"  ▸ Domínio e Conhecimento do Tema - {self._formatar_nota(avaliacao.nota_dominio_tema)}/2,00")
-                linhas.append(f"  ▸ Clareza e Fluência Verbal - {self._formatar_nota(avaliacao.nota_clareza_fluencia)}/2,00")
-                linhas.append(f"  ▸ Observância do Tempo - {self._formatar_nota(avaliacao.nota_observancia_tempo)}/2,00")
-                linhas.append("")
-
-                # Parecer/Comentários
-                if avaliacao.parecer:
-                    linhas.append("COMENTÁRIOS:")
-                    linhas.append("")
-                    # Adicionar conteúdo do parecer com indentação
-                    for linha_parecer in avaliacao.parecer.split('\n'):
-                        if linha_parecer.strip():
-                            linhas.append(f"  {linha_parecer}")
-                    linhas.append("")
-
-                # Nota total no final
-                linhas.append("=" * 80)
-                nota_total = avaliacao.calcular_nota_total()
-                if nota_total is not None:
-                    nota_formatada = f"{nota_total:.2f}".replace('.', ',')
-                    linhas.append(f"NOTA TOTAL: {nota_formatada}/10,00".center(80))
-                linhas.append("=" * 80)
-                linhas.append("")
-            elif avaliacao.status == 'PENDENTE':
-                linhas.append("Status: Avaliação ainda não foi enviada")
-                linhas.append("")
-
-        return "\n".join(linhas)
+        L.append(sep2)
+        return "\n".join(L)
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def reset(self, request):

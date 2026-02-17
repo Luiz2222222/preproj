@@ -61,6 +61,7 @@ class TipoDocumento:
     TERMO_SOLICITACAO_AVALIACAO = 'TERMO_SOLICITACAO_AVALIACAO'
     APRESENTACAO = 'APRESENTACAO'
     ATA = 'ATA'
+    RELATORIO_AVALIACAO = 'RELATORIO_AVALIACAO'
     OUTRO = 'OUTRO'
 
     CHOICES = [
@@ -71,6 +72,7 @@ class TipoDocumento:
         (TERMO_SOLICITACAO_AVALIACAO, 'Termo de Solicitação de Avaliação'),
         (APRESENTACAO, 'Apresentação'),
         (ATA, 'Ata'),
+        (RELATORIO_AVALIACAO, 'Relatório de Avaliação'),
         (OUTRO, 'Outro'),
     ]
 

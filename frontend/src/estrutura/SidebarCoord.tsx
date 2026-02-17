@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ClipboardList,
   FileSpreadsheet,
+  Megaphone,
   UserCheck,
   GraduationCap,
   Building2
@@ -93,6 +94,7 @@ export function SidebarCoord() {
     { label: 'TCCs', icon: FileText, path: '/tccs' },
     { label: 'Relatórios', icon: FileSpreadsheet, path: '/relatorios' },
     { label: 'Solicitações', icon: ClipboardList, path: '/solicitacoes' },
+    { label: 'Mural de avisos', icon: Megaphone, path: '/avisos' },
     {
       label: 'Usuários',
       icon: Users,

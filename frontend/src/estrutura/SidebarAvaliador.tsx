@@ -4,7 +4,8 @@ import {
   LayoutDashboard,
   Users,
   Settings,
-  ClipboardCheck
+  ClipboardCheck,
+  Megaphone
 } from 'lucide-react'
 import { useNotificacoes } from '../contextos/NotificacoesContext'
 import { TipoNotificacao } from '../types/notificacoes'
@@ -71,6 +72,21 @@ export function SidebarAvaliador() {
         >
           <Users className="h-5 w-5" />
           <span>Co-orientações</span>
+        </NavLink>
+
+        {/* Mural de avisos */}
+        <NavLink
+          to="/avaliador/avisos"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isActive
+                ? 'bg-cor-destaque text-[rgb(var(--cor-texto-sobre-destaque))] shadow-sm'
+                : 'text-cor-texto hover:bg-cor-fundo'
+            }`
+          }
+        >
+          <Megaphone className="h-5 w-5" />
+          <span>Mural de avisos</span>
         </NavLink>
 
         {/* Configurações */}
