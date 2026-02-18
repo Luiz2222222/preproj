@@ -12,7 +12,11 @@ from .views import (
     ListarProfessoresView,
     ListarCoorientadoresView,
     ProfessoresEstatisticasView,
+    AlunosEstatisticasView,
+    ExternosEstatisticasView,
     ChangePasswordView,
+    EditarUsuarioView,
+    ResetarSenhaUsuarioView,
 )
 from definicoes.views import CodigoCadastroViewSet, CalendarioSemestreViewSet, DocumentoReferenciaViewSet
 
@@ -41,8 +45,18 @@ urlpatterns = [
     path('professores/', ListarProfessoresView.as_view(), name='listar_professores'),
     path('professores/estatisticas/', ProfessoresEstatisticasView.as_view(), name='professores_estatisticas'),
 
+    # Listar alunos
+    path('alunos/estatisticas/', AlunosEstatisticasView.as_view(), name='alunos_estatisticas'),
+
+    # Listar membros externos
+    path('externos/estatisticas/', ExternosEstatisticasView.as_view(), name='externos_estatisticas'),
+
     # Listar co-orientadores (professores + avaliadores externos)
     path('coorientadores/', ListarCoorientadoresView.as_view(), name='listar_coorientadores'),
+
+    # Gerenciamento de usuarios pelo coordenador
+    path('usuarios/<int:usuario_id>/', EditarUsuarioView.as_view(), name='editar_usuario'),
+    path('usuarios/<int:usuario_id>/resetar-senha/', ResetarSenhaUsuarioView.as_view(), name='resetar_senha_usuario'),
 
     # Gerenciamento de códigos (coordenador)
     path('config/', include(router.urls)),

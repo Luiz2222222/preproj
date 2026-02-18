@@ -15,8 +15,11 @@ from .serializers import (
     PreferenciasVisuaisSerializer,
     ProfessorListSerializer,
     ProfessorEstatisticasSerializer,
+    AlunoEstatisticasSerializer,
+    ExternoEstatisticasSerializer,
     ChangePasswordSerializer,
     CoordenadorUpdateSerializer,
+    EditarProfessorSerializer,
 )
 
 
@@ -367,6 +370,62 @@ class ProfessoresEstatisticasView(APIView):
         return Response(serializer.data)
 
 
+class AlunosEstatisticasView(APIView):
+    """View para listar alunos com dados do TCC."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.tipo_usuario != 'COORDENADOR':
+            return Response(
+                {'error': 'Apenas coordenadores podem acessar esta informação'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        from django.db.models import Prefetch
+        from tccs.models import TCC
+
+        alunos = Usuario.objects.filter(
+            tipo_usuario='ALUNO'
+        ).prefetch_related(
+            Prefetch(
+                'tccs_como_aluno',
+                queryset=TCC.objects.select_related('orientador', 'coorientador').order_by('-id')
+            )
+        ).order_by('nome_completo')
+
+        serializer = AlunoEstatisticasSerializer(alunos, many=True)
+        return Response(serializer.data)
+
+
+class ExternosEstatisticasView(APIView):
+    """View para listar avaliadores externos com suas bancas."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.tipo_usuario != 'COORDENADOR':
+            return Response(
+                {'error': 'Apenas coordenadores podem acessar esta informação'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        from django.db.models import Prefetch
+        from tccs.models import MembroBanca
+
+        externos = Usuario.objects.filter(
+            tipo_usuario='AVALIADOR'
+        ).prefetch_related(
+            Prefetch(
+                'participacoes_banca',
+                queryset=MembroBanca.objects.select_related('banca__tcc__aluno').order_by('-id')
+            )
+        ).order_by('nome_completo')
+
+        serializer = ExternoEstatisticasSerializer(externos, many=True)
+        return Response(serializer.data)
+
+
 class ChangePasswordView(APIView):
     """View para alteração de senha do usuário autenticado."""
 
@@ -384,3 +443,77 @@ class ChangePasswordView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EditarUsuarioView(APIView):
+    """View para coordenador editar dados de um usuario."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, usuario_id):
+        if request.user.tipo_usuario != 'COORDENADOR':
+            return Response(
+                {'error': 'Apenas coordenadores podem editar usuarios.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuario nao encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = EditarProfessorSerializer(
+            usuario, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response({
+            'message': 'Usuario atualizado com sucesso.',
+            'usuario': {
+                'id': usuario.id,
+                'nome_completo': usuario.nome_completo,
+                'email': usuario.email,
+                'tratamento': usuario.tratamento,
+                'tratamento_customizado': usuario.tratamento_customizado,
+                'departamento': usuario.departamento,
+            }
+        })
+
+
+class ResetarSenhaUsuarioView(APIView):
+    """View para coordenador resetar a senha de um usuario."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, usuario_id):
+        if request.user.tipo_usuario != 'COORDENADOR':
+            return Response(
+                {'error': 'Apenas coordenadores podem resetar senhas.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuario nao encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        nova_senha = request.data.get('nova_senha')
+        if not nova_senha or len(nova_senha) < 6:
+            return Response(
+                {'error': 'A nova senha deve ter pelo menos 6 caracteres.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        usuario.set_password(nova_senha)
+        usuario.save()
+
+        return Response({
+            'message': f'Senha de {usuario.nome_completo} resetada com sucesso.'
+        })

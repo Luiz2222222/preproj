@@ -11,21 +11,137 @@ import {
   CheckCircle,
   AlertTriangle,
   UserCheck,
-  FileCheck
+  FileCheck,
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { MiniTimelineTCC } from '../../componentes/MiniTimelineTCC';
-import { useProfessoresEstatisticas } from '../../hooks/useProfessoresEstatisticas';
+import { useProfessoresEstatisticas, type ProfessorEstatisticas } from '../../hooks/useProfessoresEstatisticas';
+import { editarUsuario, resetarSenhaUsuario } from '../../servicos/usuarios';
+
+const TRATAMENTOS = ['Prof. Dr.', 'Prof. Ms.', 'Prof.', 'Dr.', 'Eng.', 'Outro'];
+const DEPARTAMENTOS = ['Departamento de Engenharia Elétrica', 'Departamento de Controle e Automação'];
 
 export function ProfessoresPage() {
-  // Hook para buscar estatísticas de professores
   const {
     professores,
     carregando: carregandoProfessores,
-    erro: erroProfessores
+    erro: erroProfessores,
+    recarregar
   } = useProfessoresEstatisticas();
 
   const [busca, setBusca] = useState('');
   const [filtroWorkload, setFiltroWorkload] = useState<'todos' | 'disponivel' | 'ocupado' | 'sobrecarregado'>('todos');
+
+  // Modal de edição
+  const [editandoProfessor, setEditandoProfessor] = useState<ProfessorEstatisticas | null>(null);
+  const [editNome, setEditNome] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editTratamento, setEditTratamento] = useState('');
+  const [editTratamentoCustom, setEditTratamentoCustom] = useState('');
+  const [editDepartamento, setEditDepartamento] = useState('');
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [erroEdicao, setErroEdicao] = useState('');
+  const [sucessoEdicao, setSucessoEdicao] = useState('');
+
+  // Modal de reset de senha
+  const [resetandoProfessor, setResetandoProfessor] = useState<ProfessorEstatisticas | null>(null);
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [salvandoReset, setSalvandoReset] = useState(false);
+  const [erroReset, setErroReset] = useState('');
+  const [sucessoReset, setSucessoReset] = useState('');
+
+  const abrirModalEdicao = (prof: ProfessorEstatisticas) => {
+    setEditandoProfessor(prof);
+    setEditNome(prof.nome_completo);
+    setEditEmail(prof.email);
+    setEditTratamento(prof.tratamento || '');
+    setEditTratamentoCustom(prof.tratamento_customizado || '');
+    setEditDepartamento(prof.departamento || '');
+    setErroEdicao('');
+    setSucessoEdicao('');
+  };
+
+  const fecharModalEdicao = () => {
+    setEditandoProfessor(null);
+    setErroEdicao('');
+    setSucessoEdicao('');
+  };
+
+  const salvarEdicao = async () => {
+    if (!editandoProfessor) return;
+    if (!editNome.trim() || !editEmail.trim() || !editDepartamento) {
+      setErroEdicao('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (editTratamento === 'Outro' && !editTratamentoCustom.trim()) {
+      setErroEdicao('Preencha o tratamento customizado.');
+      return;
+    }
+
+    setSalvandoEdicao(true);
+    setErroEdicao('');
+    setSucessoEdicao('');
+    try {
+      await editarUsuario(editandoProfessor.id, {
+        nome_completo: editNome.trim(),
+        email: editEmail.trim(),
+        tratamento: editTratamento || undefined,
+        tratamento_customizado: editTratamento === 'Outro' ? editTratamentoCustom.trim() : '',
+        departamento: editDepartamento,
+      });
+      setSucessoEdicao('Dados atualizados com sucesso!');
+      await recarregar();
+      setTimeout(() => fecharModalEdicao(), 1200);
+    } catch (err: any) {
+      setErroEdicao(err.message || 'Erro ao salvar alterações.');
+    } finally {
+      setSalvandoEdicao(false);
+    }
+  };
+
+  const abrirModalReset = (prof: ProfessorEstatisticas) => {
+    setResetandoProfessor(prof);
+    setNovaSenha('');
+    setConfirmarSenha('');
+    setMostrarSenha(false);
+    setErroReset('');
+    setSucessoReset('');
+  };
+
+  const fecharModalReset = () => {
+    setResetandoProfessor(null);
+    setErroReset('');
+    setSucessoReset('');
+  };
+
+  const salvarReset = async () => {
+    if (!resetandoProfessor) return;
+    if (!novaSenha || novaSenha.length < 6) {
+      setErroReset('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+    if (novaSenha !== confirmarSenha) {
+      setErroReset('As senhas não coincidem.');
+      return;
+    }
+
+    setSalvandoReset(true);
+    setErroReset('');
+    setSucessoReset('');
+    try {
+      const res = await resetarSenhaUsuario(resetandoProfessor.id, novaSenha);
+      setSucessoReset(res.message);
+      setTimeout(() => fecharModalReset(), 1500);
+    } catch (err: any) {
+      setErroReset(err.message || 'Erro ao resetar senha.');
+    } finally {
+      setSalvandoReset(false);
+    }
+  };
 
   // Calcular estatísticas de carga de trabalho dos professores
   const estatisticas = useMemo(() => {
@@ -52,7 +168,6 @@ export function ProfessoresPage() {
   const professoresFiltrados = useMemo(() => {
     let filtrados = professores;
 
-    // Filtrar por busca
     if (busca) {
       filtrados = filtrados.filter(p =>
         p.nome_completo.toLowerCase().includes(busca.toLowerCase()) ||
@@ -60,7 +175,6 @@ export function ProfessoresPage() {
       );
     }
 
-    // Filtrar por carga de trabalho
     if (filtroWorkload !== 'todos') {
       filtrados = filtrados.filter(p => {
         const carga = p.total_orientacoes + p.total_bancas;
@@ -304,12 +418,14 @@ export function ProfessoresPage() {
                       {/* Coluna Ações */}
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
+                          onClick={() => abrirModalEdicao(professor)}
                           className="text-[rgb(var(--cor-destaque))] hover:text-[rgb(var(--cor-destaque))]/80 mr-3"
                           title="Editar"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => abrirModalReset(professor)}
                           className="text-[rgb(var(--cor-alerta))] hover:text-[rgb(var(--cor-alerta))]/80"
                           title="Resetar Senha"
                         >
@@ -347,6 +463,198 @@ export function ProfessoresPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Edição */}
+      {editandoProfessor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-xl w-full max-w-lg">
+            <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--cor-borda))]">
+              <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))]">
+                Editar professor
+              </h2>
+              <button onClick={fecharModalEdicao} className="text-[rgb(var(--cor-icone))] hover:text-[rgb(var(--cor-texto-primario))]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">Nome completo *</label>
+                <input
+                  type="text"
+                  value={editNome}
+                  onChange={e => setEditNome(e.target.value)}
+                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda-forte))] rounded-lg bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))] focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={e => setEditEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda-forte))] rounded-lg bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))] focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">Tratamento</label>
+                <select
+                  value={editTratamento}
+                  onChange={e => setEditTratamento(e.target.value)}
+                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda-forte))] rounded-lg bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))] focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:border-transparent"
+                >
+                  <option value="">Selecione...</option>
+                  {TRATAMENTOS.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {editTratamento === 'Outro' && (
+                <div>
+                  <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">Tratamento customizado *</label>
+                  <input
+                    type="text"
+                    value={editTratamentoCustom}
+                    onChange={e => setEditTratamentoCustom(e.target.value)}
+                    className="w-full px-3 py-2 border border-[rgb(var(--cor-borda-forte))] rounded-lg bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))] focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:border-transparent"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">Departamento *</label>
+                <select
+                  value={editDepartamento}
+                  onChange={e => setEditDepartamento(e.target.value)}
+                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda-forte))] rounded-lg bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))] focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:border-transparent"
+                >
+                  <option value="">Selecione...</option>
+                  {DEPARTAMENTOS.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              {erroEdicao && (
+                <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-erro))]">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{erroEdicao}</span>
+                </div>
+              )}
+
+              {sucessoEdicao && (
+                <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-sucesso))]">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{sucessoEdicao}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 p-5 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={fecharModalEdicao}
+                className="px-4 py-2 text-sm font-medium text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-texto-primario))] border border-[rgb(var(--cor-borda-forte))] rounded-lg hover:bg-[rgb(var(--cor-fundo))]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarEdicao}
+                disabled={salvandoEdicao}
+                className="px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--cor-destaque))] rounded-lg hover:bg-[rgb(var(--cor-destaque))]/90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {salvandoEdicao && <Loader2 className="w-4 h-4 animate-spin" />}
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reset de Senha */}
+      {resetandoProfessor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--cor-borda))]">
+              <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))]">
+                Resetar senha
+              </h2>
+              <button onClick={fecharModalReset} className="text-[rgb(var(--cor-icone))] hover:text-[rgb(var(--cor-texto-primario))]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                Definir nova senha para <strong className="text-[rgb(var(--cor-texto-primario))]">{resetandoProfessor.nome_completo}</strong>
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">Nova senha *</label>
+                <div className="relative">
+                  <input
+                    type={mostrarSenha ? 'text' : 'password'}
+                    value={novaSenha}
+                    onChange={e => setNovaSenha(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    className="w-full px-3 py-2 pr-10 border border-[rgb(var(--cor-borda-forte))] rounded-lg bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))] focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha(!mostrarSenha)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[rgb(var(--cor-icone))] hover:text-[rgb(var(--cor-texto-primario))]"
+                  >
+                    {mostrarSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[rgb(var(--cor-texto-secundario))] mb-1">Confirmar senha *</label>
+                <input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={confirmarSenha}
+                  onChange={e => setConfirmarSenha(e.target.value)}
+                  className="w-full px-3 py-2 border border-[rgb(var(--cor-borda-forte))] rounded-lg bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))] focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:border-transparent"
+                />
+              </div>
+
+              {erroReset && (
+                <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-erro))]">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{erroReset}</span>
+                </div>
+              )}
+
+              {sucessoReset && (
+                <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-sucesso))]">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{sucessoReset}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 p-5 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={fecharModalReset}
+                className="px-4 py-2 text-sm font-medium text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-texto-primario))] border border-[rgb(var(--cor-borda-forte))] rounded-lg hover:bg-[rgb(var(--cor-fundo))]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarReset}
+                disabled={salvandoReset}
+                className="px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--cor-alerta))] rounded-lg hover:bg-[rgb(var(--cor-alerta))]/90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {salvandoReset && <Loader2 className="w-4 h-4 animate-spin" />}
+                Resetar senha
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

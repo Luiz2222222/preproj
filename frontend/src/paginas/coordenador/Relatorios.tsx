@@ -281,7 +281,7 @@ export function Relatorios() {
 
       return {
         'ID': tcc.id,
-        'Curso': tcc.aluno_dados?.curso || '',
+        'Curso': tcc.aluno_dados?.curso_display || tcc.aluno_dados?.curso || '',
         'Título': tcc.titulo,
         'Aluno': tcc.aluno_dados?.nome_completo || '',
         'Orientador': tcc.orientador_dados?.nome_completo || '',
@@ -772,12 +772,12 @@ function DadosGeraisTabela({ tccs, bancasMap }: { tccs: TCC[]; bancasMap: Map<nu
                 <tr key={tcc.id} className="hover:bg-cor-fundo transition-colors">
                   {/* ID */}
                   <td className="px-3 py-3 text-cor-texto font-mono whitespace-nowrap align-top">
-                    #{tcc.id}
+                    {tcc.id}
                   </td>
 
                   {/* Curso */}
                   <td className="px-3 py-3 text-cor-texto whitespace-nowrap align-top">
-                    {tcc.aluno_dados?.curso || '-'}
+                    {tcc.aluno_dados?.curso_display || tcc.aluno_dados?.curso || '-'}
                   </td>
 
                   {/* Título */}
@@ -1009,8 +1009,8 @@ function AvaliacoesFase1Tabela({
                   {/* Nota Total (empilhadas) */}
                   <td className="px-3 py-3 text-cor-texto border-r border-cor-borda bg-cor-fase1-linha">
                     <div className="space-y-1">
-                      <div className="text-xs text-center font-semibold">{aval1?.nota_final !== null && aval1?.nota_final !== undefined ? formatarNota(aval1.nota_final) : '-'}</div>
-                      <div className="text-xs text-center font-semibold border-t border-cor-borda pt-1">{aval2?.nota_final !== null && aval2?.nota_final !== undefined ? formatarNota(aval2.nota_final) : '-'}</div>
+                      <div className="text-xs text-center">{aval1?.nota_final !== null && aval1?.nota_final !== undefined ? formatarNota(aval1.nota_final) : '-'}</div>
+                      <div className="text-xs text-center border-t border-cor-borda pt-1">{aval2?.nota_final !== null && aval2?.nota_final !== undefined ? formatarNota(aval2.nota_final) : '-'}</div>
                     </div>
                   </td>
 
@@ -1127,7 +1127,7 @@ function BancasFase2Tabela({
                 <tr key={tcc.id} className="hover:bg-cor-fundo transition-colors">
                   {/* ID */}
                   <td className="px-3 py-3 text-cor-texto font-mono whitespace-nowrap align-top">
-                    #{tcc.id}
+                    {tcc.id}
                   </td>
 
                   {/* Título */}
@@ -1202,9 +1202,9 @@ function BancasFase2Tabela({
                   {/* Nota Total (empilhadas) */}
                   <td className="px-3 py-3 text-cor-texto border-r border-cor-borda bg-cor-fase2-linha">
                     <div className="space-y-1">
-                      <div className="text-xs text-center font-semibold">{formatarNota(aval1?.nota_final) || '-'}</div>
-                      <div className="text-xs text-center font-semibold border-t border-cor-borda pt-1">{formatarNota(aval2?.nota_final) || '-'}</div>
-                      <div className="text-xs text-center font-semibold border-t border-cor-borda pt-1">{formatarNota(aval3?.nota_final) || '-'}</div>
+                      <div className="text-xs text-center">{formatarNota(aval1?.nota_final) || '-'}</div>
+                      <div className="text-xs text-center border-t border-cor-borda pt-1">{formatarNota(aval2?.nota_final) || '-'}</div>
+                      <div className="text-xs text-center border-t border-cor-borda pt-1">{formatarNota(aval3?.nota_final) || '-'}</div>
                     </div>
                   </td>
 
@@ -1338,7 +1338,7 @@ function ApuracaoFinalTabela({
                 <tr key={tcc.id} className="hover:bg-cor-fundo transition-colors">
                   {/* ID */}
                   <td className="px-3 py-3 text-cor-texto font-mono whitespace-nowrap align-top">
-                    #{tcc.id}
+                    {tcc.id}
                   </td>
 
                   {/* Título */}
@@ -1369,7 +1369,7 @@ function ApuracaoFinalTabela({
                   {/* Fase 1 - Média */}
                   <td className="px-3 py-3 text-center align-top bg-cor-fase1-linha">
                     {mediaFase1 !== null ? (
-                      <span className="font-semibold text-cor-texto">{formatarNota(mediaFase1)}</span>
+                      <span className="text-cor-texto">{formatarNota(mediaFase1)}</span>
                     ) : (
                       <span className="text-cor-texto/40">-</span>
                     )}
@@ -1402,7 +1402,7 @@ function ApuracaoFinalTabela({
                   {/* Fase 2 - Média */}
                   <td className="px-3 py-3 text-center align-top bg-cor-fase2-linha">
                     {mediaFase2 !== null ? (
-                      <span className="font-semibold text-cor-texto">{formatarNota(mediaFase2)}</span>
+                      <span className="text-cor-texto">{formatarNota(mediaFase2)}</span>
                     ) : (
                       <span className="text-cor-texto/40">-</span>
                     )}
@@ -1553,7 +1553,7 @@ function RelatorioAvaliacaoTabela({
 
               return (
                 <tr key={tcc.id} className="hover:bg-cor-fundo transition-colors">
-                  <td className="px-3 py-3 text-cor-texto font-mono whitespace-nowrap align-top border-r border-cor-borda">#{tcc.id}</td>
+                  <td className="px-3 py-3 text-cor-texto font-mono whitespace-nowrap align-top border-r border-cor-borda">{tcc.id}</td>
                   <td className="px-3 py-3 text-cor-texto min-w-[300px] align-top border-r border-cor-borda"><p className="line-clamp-3" title={tcc.titulo}>{tcc.titulo}</p></td>
                   <td className="px-3 py-3 text-cor-texto whitespace-nowrap align-top border-r border-cor-borda">{tcc.aluno_dados?.nome_completo || '-'}</td>
                   <td className="px-3 py-3 text-cor-texto whitespace-nowrap align-top border-r border-cor-borda">{tcc.data_defesa ? new Date(tcc.data_defesa).toLocaleDateString('pt-BR') : '-'}</td>

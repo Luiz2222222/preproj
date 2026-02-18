@@ -226,6 +226,7 @@ class ProfessorEstatisticasSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'nome_completo', 'email',
+            'tratamento', 'tratamento_customizado', 'departamento',
             'orientacoes', 'bancas',
             'total_orientacoes', 'total_bancas'
         ]
@@ -262,12 +263,13 @@ class ProfessorEstatisticasSerializer(serializers.ModelSerializer):
         return resultado
 
     def get_bancas(self, obj):
-        """Retorna lista de TCCs onde o professor é membro de banca."""
-        # Usar dados já prefetchados (evita N+1 queries)
+        """Retorna lista de TCCs onde o professor é avaliador de banca (exclui orientador)."""
         participacoes = obj.participacoes_banca.all()
 
         resultado = []
         for participacao in participacoes:
+            if participacao.tipo == 'ORIENTADOR':
+                continue
             tcc = participacao.banca.tcc
             resultado.append({
                 'id': tcc.id,
@@ -281,16 +283,76 @@ class ProfessorEstatisticasSerializer(serializers.ModelSerializer):
 
     def get_total_orientacoes(self, obj):
         """Total de orientações + co-orientações."""
-        # Usar dados já carregados em memória (sem query extra)
         orientacoes = list(obj.tccs_como_orientador.all())
         coorientacoes = list(obj.tccs_como_coorientador.all())
 
         return len(orientacoes) + len(coorientacoes)
 
     def get_total_bancas(self, obj):
-        """Total de participações em bancas."""
-        # Usar dados já carregados em memória (sem query extra)
-        return len(list(obj.participacoes_banca.all()))
+        """Total de participações em bancas (apenas como avaliador)."""
+        return len([p for p in obj.participacoes_banca.all() if p.tipo != 'ORIENTADOR'])
+
+
+class AlunoEstatisticasSerializer(serializers.ModelSerializer):
+    """Serializer com dados do aluno e seu TCC."""
+
+    curso_display = serializers.CharField(source='get_curso_display', read_only=True)
+    tcc = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Usuario
+        fields = [
+            'id', 'nome_completo', 'email', 'curso', 'curso_display',
+            'date_joined', 'tcc'
+        ]
+
+    def get_tcc(self, obj):
+        tccs = obj.tccs_como_aluno.all()
+        if not tccs:
+            return None
+        tcc = tccs[0]
+        return {
+            'id': tcc.id,
+            'titulo': tcc.titulo,
+            'etapa_atual': tcc.etapa_atual,
+            'orientador_nome': tcc.orientador.nome_completo if tcc.orientador else None,
+            'coorientador_nome': tcc.coorientador.nome_completo if tcc.coorientador else None,
+            'semestre': tcc.semestre,
+        }
+
+
+class ExternoEstatisticasSerializer(serializers.ModelSerializer):
+    """Serializer com dados do avaliador externo e suas bancas."""
+
+    bancas = serializers.SerializerMethodField()
+    total_bancas = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Usuario
+        fields = [
+            'id', 'nome_completo', 'email',
+            'tratamento', 'tratamento_customizado',
+            'afiliacao', 'afiliacao_customizada',
+            'bancas', 'total_bancas'
+        ]
+
+    def get_bancas(self, obj):
+        resultado = []
+        for participacao in obj.participacoes_banca.all():
+            if participacao.tipo == 'ORIENTADOR':
+                continue
+            tcc = participacao.banca.tcc
+            resultado.append({
+                'id': tcc.id,
+                'titulo': tcc.titulo,
+                'aluno_nome': tcc.aluno.nome_completo,
+                'aluno_id': tcc.aluno.id,
+                'etapa_atual': tcc.etapa_atual,
+            })
+        return resultado
+
+    def get_total_bancas(self, obj):
+        return len([p for p in obj.participacoes_banca.all() if p.tipo != 'ORIENTADOR'])
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -319,6 +381,59 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['nova_senha'])
         user.save()
         return user
+
+
+class EditarProfessorSerializer(serializers.ModelSerializer):
+    """Serializer para coordenador editar dados de um usuario."""
+
+    tratamento_customizado = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    afiliacao_customizada = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = Usuario
+        fields = [
+            'nome_completo', 'email', 'tratamento', 'tratamento_customizado',
+            'departamento', 'curso', 'afiliacao', 'afiliacao_customizada'
+        ]
+
+    def validate_tratamento(self, value):
+        if value:
+            tratamentos_validos = [choice[0] for choice in Usuario.TRATAMENTO_CHOICES]
+            if value not in tratamentos_validos:
+                raise serializers.ValidationError(f'Tratamento invalido.')
+        return value
+
+    def validate_departamento(self, value):
+        if value:
+            departamentos_validos = [choice[0] for choice in Usuario.DEPARTAMENTO_CHOICES]
+            if value not in departamentos_validos:
+                raise serializers.ValidationError(f'Departamento invalido.')
+        return value
+
+    def validate_curso(self, value):
+        if value:
+            cursos_validos = [choice[0] for choice in Usuario.CURSO_CHOICES]
+            if value not in cursos_validos:
+                raise serializers.ValidationError(f'Curso invalido.')
+        return value
+
+    def validate_afiliacao(self, value):
+        if value:
+            afiliacoes_validas = [choice[0] for choice in Usuario.AFILIACAO_CHOICES]
+            if value not in afiliacoes_validas:
+                raise serializers.ValidationError(f'Afiliacao invalida.')
+        return value
+
+    def validate_email(self, value):
+        user = self.instance
+        if Usuario.objects.filter(email=value).exclude(id=user.id).exists():
+            raise serializers.ValidationError('Este email ja esta em uso.')
+        return value
+
+    def validate(self, attrs):
+        if attrs.get('tratamento') == 'Outro' and not attrs.get('tratamento_customizado'):
+            raise serializers.ValidationError({'tratamento_customizado': 'Tratamento customizado eh obrigatorio quando seleciona "Outro".'})
+        return attrs
 
 
 class CoordenadorUpdateSerializer(serializers.ModelSerializer):

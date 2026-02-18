@@ -1,40 +1,40 @@
-/**
- * Hook para buscar estatísticas de professores (orientações, co-orientações e bancas)
- * Usado pelo coordenador para visualizar a carga de trabalho dos professores
- */
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AxiosError } from 'axios';
 import api, { extrairMensagemErro } from '../servicos/api';
-import type { TCCResumo } from '../componentes/MiniTimelineTCC';
 
-export interface ProfessorEstatisticas {
+export interface AlunoTCCResumo {
+  id: number;
+  titulo: string;
+  etapa_atual: string;
+  orientador_nome: string | null;
+  coorientador_nome: string | null;
+  semestre: string;
+}
+
+export interface AlunoEstatisticas {
   id: number;
   nome_completo: string;
   email: string;
-  tratamento: string | null;
-  tratamento_customizado: string | null;
-  departamento: string | null;
-  orientacoes: TCCResumo[];  // Inclui orientações e co-orientações com tipo_orientacao
-  bancas: TCCResumo[];
-  total_orientacoes: number;  // Total de orientações + co-orientações
-  total_bancas: number;
+  curso: string | null;
+  curso_display: string | null;
+  date_joined: string;
+  tcc: AlunoTCCResumo | null;
 }
 
-interface UseProfessoresEstatisticasResult {
-  professores: ProfessorEstatisticas[];
+interface UseAlunosEstatisticasResult {
+  alunos: AlunoEstatisticas[];
   carregando: boolean;
   erro: string | null;
   recarregar: () => Promise<void>;
 }
 
-export function useProfessoresEstatisticas(): UseProfessoresEstatisticasResult {
-  const [professores, setProfessores] = useState<ProfessorEstatisticas[]>([]);
+export function useAlunosEstatisticas(): UseAlunosEstatisticasResult {
+  const [alunos, setAlunos] = useState<AlunoEstatisticas[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
-  const buscarProfessores = useCallback(async () => {
+  const buscarAlunos = useCallback(async () => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
@@ -42,21 +42,21 @@ export function useProfessoresEstatisticas(): UseProfessoresEstatisticasResult {
       setCarregando(true);
       setErro(null);
 
-      const resposta = await api.get<ProfessorEstatisticas[]>('/professores/estatisticas/');
+      const resposta = await api.get<AlunoEstatisticas[]>('/alunos/estatisticas/');
 
       if (requestId !== requestIdRef.current) return;
 
       if (Array.isArray(resposta.data)) {
-        setProfessores(resposta.data);
+        setAlunos(resposta.data);
       } else {
-        setProfessores([]);
+        setAlunos([]);
       }
     } catch (err) {
       const axiosErr = err as AxiosError;
 
       if (axiosErr?.response?.status === 404) {
         if (requestId !== requestIdRef.current) return;
-        setProfessores([]);
+        setAlunos([]);
         setErro(null);
       } else {
         if (requestId !== requestIdRef.current) return;
@@ -70,16 +70,15 @@ export function useProfessoresEstatisticas(): UseProfessoresEstatisticasResult {
   }, []);
 
   const recarregar = useCallback(async () => {
-    await buscarProfessores();
-  }, [buscarProfessores]);
+    await buscarAlunos();
+  }, [buscarAlunos]);
 
-  // Carrega os dados inicialmente
   useEffect(() => {
-    buscarProfessores();
-  }, [buscarProfessores]);
+    buscarAlunos();
+  }, [buscarAlunos]);
 
   return {
-    professores,
+    alunos,
     carregando,
     erro,
     recarregar,

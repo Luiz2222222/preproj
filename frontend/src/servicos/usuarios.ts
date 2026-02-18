@@ -110,3 +110,42 @@ export async function atualizarPerfilCoordenador(dados: AtualizarPerfilCoordenad
     throw new Error(mensagem);
   }
 }
+
+export interface EditarUsuarioData {
+  nome_completo?: string;
+  email?: string;
+  tratamento?: string;
+  tratamento_customizado?: string;
+  departamento?: string;
+  curso?: string;
+  afiliacao?: string;
+  afiliacao_customizada?: string;
+}
+
+/**
+ * Editar dados de um usuario (coordenador only)
+ * PATCH /usuarios/{id}/
+ */
+export async function editarUsuario(id: number, dados: EditarUsuarioData): Promise<any> {
+  try {
+    const resposta = await api.patch(`/usuarios/${id}/`, dados);
+    return resposta.data;
+  } catch (erro) {
+    const mensagem = extrairMensagemErro(erro);
+    throw new Error(mensagem);
+  }
+}
+
+/**
+ * Resetar senha de um usuario (coordenador only)
+ * POST /usuarios/{id}/resetar-senha/
+ */
+export async function resetarSenhaUsuario(id: number, novaSenha: string): Promise<{ message: string }> {
+  try {
+    const resposta = await api.post<{ message: string }>(`/usuarios/${id}/resetar-senha/`, { nova_senha: novaSenha });
+    return resposta.data;
+  } catch (erro) {
+    const mensagem = extrairMensagemErro(erro);
+    throw new Error(mensagem);
+  }
+}

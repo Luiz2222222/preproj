@@ -19,6 +19,7 @@ interface MiniTimelineTCCProps {
   tcc: TCCResumo;
   tipo: 'orientacao' | 'coorientacao' | 'banca';
   className?: string;
+  apenasTimeline?: boolean;
 }
 
 // Mapear etapa atual para índice de progresso (1-7)
@@ -86,7 +87,7 @@ function obterLabelEtapa(etapa: string): string {
   }
 }
 
-export const MiniTimelineTCC = ({ tcc, tipo, className = '' }: MiniTimelineTCCProps) => {
+export const MiniTimelineTCC = ({ tcc, tipo, className = '', apenasTimeline = false }: MiniTimelineTCCProps) => {
   const indiceProgresso = obterIndiceProgresso(tcc.etapa_atual);
   const labelEtapa = obterLabelEtapa(tcc.etapa_atual);
   const isCoorientacao = tipo === 'coorientacao' || tcc.tipo_orientacao === 'CO_ORIENTADOR';
@@ -97,22 +98,26 @@ export const MiniTimelineTCC = ({ tcc, tipo, className = '' }: MiniTimelineTCCPr
 
   return (
     <div className={`space-y-2 ${className}`}>
-      {/* Nome do aluno */}
-      <div>
-        <p className="text-sm font-medium text-cor-texto">
-          {tcc.aluno_nome}
-        </p>
-        {isCoorientacao && (
-          <p className="text-xs text-cor-texto/60 mt-0.5">
-            Co-orientação
-          </p>
-        )}
-      </div>
+      {!apenasTimeline && (
+        <>
+          {/* Nome do aluno */}
+          <div>
+            <p className="text-sm font-medium text-cor-texto">
+              {tcc.aluno_nome}
+            </p>
+            {isCoorientacao && (
+              <p className="text-xs text-cor-texto/60 mt-0.5">
+                Co-orientação
+              </p>
+            )}
+          </div>
 
-      {/* Título do TCC */}
-      <p className="text-xs text-cor-texto/80 line-clamp-2" title={tcc.titulo}>
-        {tcc.titulo}
-      </p>
+          {/* Título do TCC */}
+          <p className="text-xs text-cor-texto/80 line-clamp-2" title={tcc.titulo}>
+            {tcc.titulo}
+          </p>
+        </>
+      )}
 
       {/* Timeline com 7 pontos */}
       <div className="flex items-center gap-1.5">
