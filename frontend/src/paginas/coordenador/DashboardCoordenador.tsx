@@ -533,7 +533,7 @@ export function DashboardCoordenador() {
                       onMouseEnter={(e) => mostrarTooltip(e, etapa.tooltipHtml)}
                       onMouseMove={(e) => mostrarTooltip(e, etapa.tooltipHtml)}
                       onMouseLeave={esconderTooltip}
-                      onClick={() => navigate('/tccs', { state: { filtroEtapa: etapa.etapas[0] } })}
+                      onClick={() => navigate('/tccs', { state: { filtroEtapas: etapa.etapas } })}
                     >
                       <span className="text-sm text-white font-semibold">{etapa.count}</span>
                     </div>

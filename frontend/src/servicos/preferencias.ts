@@ -11,6 +11,7 @@ export interface PreferenciasEmail {
   aluno_agendamento_defesa: boolean;
   aluno_finalizacao_tcc: boolean;
   // Preferências de professor
+  prof_convite_orientacao: boolean;
   prof_receber_monografia: boolean;
   prof_continuidade_aprovada: boolean;
   prof_lembrete_termo: boolean;

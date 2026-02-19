@@ -39,6 +39,7 @@ class PreferenciasEmailSerializer(serializers.ModelSerializer):
             'aluno_agendamento_defesa',
             'aluno_finalizacao_tcc',
             # Preferências de professor
+            'prof_convite_orientacao',
             'prof_receber_monografia',
             'prof_continuidade_aprovada',
             'prof_lembrete_termo',

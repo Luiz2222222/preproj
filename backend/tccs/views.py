@@ -7,10 +7,13 @@ from django.utils import timezone
 from django.db.models import Q
 from django.conf import settings
 from django.http import StreamingHttpResponse
+from django.core.mail import EmailMessage as DjangoEmailMessage
+from django.contrib.auth.hashers import check_password
 import os
 import shutil
 import zipfile
 import io
+import logging
 from collections import defaultdict
 
 from .models import TCC, SolicitacaoOrientacao, DocumentoTCC, EventoTimeline, BancaFase1, MembroBanca, AvaliacaoFase1, AvaliacaoFase2
@@ -241,13 +244,12 @@ class TCCViewSet(viewsets.ModelViewSet):
             from .models import HistoricoRecusa
             HistoricoRecusa.objects.filter(aluno=aluno).delete()
 
-            # Criar TCC
+            # Criar TCC (sem orientador e sem coorientador FK — serão setados na aprovação)
             tcc = TCC.objects.create(
                 aluno=aluno,
                 titulo=dados['titulo'],
                 resumo=dados.get('resumo', ''),
                 semestre=dados['semestre'],
-                coorientador=dados.get('coorientador'),  # Co-orientador cadastrado (FK)
                 coorientador_nome=dados.get('coorientador_nome', ''),
                 coorientador_titulacao=dados.get('coorientador_titulacao', ''),
                 coorientador_afiliacao=dados.get('coorientador_afiliacao', ''),
@@ -1628,9 +1630,133 @@ class TCCViewSet(viewsets.ModelViewSet):
                     visibilidade=Visibilidade.TODOS
                 )
 
-                # Notificações de RESULTADO_FASE_1 desabilitadas
-                # O resultado da Fase I não deve gerar notificações automáticas para nenhum perfil
-                # O coordenador comunica o resultado por outros meios quando apropriado
+                # Notificar orientador (e co-orientador) sobre resultado da Fase I
+                from notificacoes.services import criar_notificacao_com_email
+
+                rodape_html = """<p>---<br>
+Portal TCC<br>
+Esta é uma notificação automática. Para mais informações, acesse o sistema.</p>"""
+
+                rodape_texto = """---
+Portal TCC
+Esta é uma notificação automática. Para mais informações, acesse o sistema."""
+
+                if resultado == 'APROVADO':
+                    def _gerar_email_fase1_aprovado(nome_destinatario):
+                        corpo_html = f"""
+<p>Olá, {nome_destinatario},</p>
+
+<p>A avaliação da banca da <b>Fase I</b> do TCC foi concluída e confirmada pela coordenação.</p>
+
+<p>O aluno <b>{tcc.aluno.nome_completo}</b> foi <b>aprovado</b> na Fase I.</p>
+
+<p><b>Tema:</b> {tcc.titulo}</p>
+
+<p>O agendamento da defesa já pode ser realizado no sistema.</p>
+
+<p>Acesse o sistema: <a href="http://localhost:5500">http://localhost:5500</a></p>
+
+{rodape_html}
+"""
+                        corpo_texto = f"""Olá, {nome_destinatario},
+
+A avaliação da banca da Fase I do TCC foi concluída e confirmada pela coordenação.
+
+O aluno {tcc.aluno.nome_completo} foi APROVADO na Fase I.
+
+Tema: {tcc.titulo}
+
+O agendamento da defesa já pode ser realizado no sistema.
+
+Acesse o sistema: http://localhost:5500
+
+{rodape_texto}
+"""
+                        return corpo_html, corpo_texto
+
+                    html_ori, texto_ori = _gerar_email_fase1_aprovado(tcc.orientador.nome_completo)
+                    criar_notificacao_com_email(
+                        usuario=tcc.orientador,
+                        tipo=TipoNotificacao.RESULTADO_FASE_1,
+                        titulo='Resultado Fase I: Aprovado',
+                        mensagem=f'A avaliação da Fase I do TCC "{tcc.titulo}" foi aprovada. O agendamento da defesa já pode ser realizado.',
+                        campo_preferencia='prof_resultado_fase_1',
+                        action_url=f'/tccs/{tcc.id}',
+                        tcc_id=tcc.id,
+                        prioridade=PrioridadeNotificacao.ALTA,
+                        corpo_html_customizado=html_ori,
+                        corpo_texto_customizado=texto_ori
+                    )
+
+                    if tcc.coorientador:
+                        html_coori, texto_coori = _gerar_email_fase1_aprovado(tcc.coorientador.nome_completo)
+                        criar_notificacao_com_email(
+                            usuario=tcc.coorientador,
+                            tipo=TipoNotificacao.RESULTADO_FASE_1,
+                            titulo='Resultado Fase I: Aprovado',
+                            mensagem=f'A avaliação da Fase I do TCC "{tcc.titulo}" foi aprovada. O agendamento da defesa já pode ser realizado.',
+                            campo_preferencia='prof_resultado_fase_1',
+                            action_url=f'/tccs/{tcc.id}',
+                            tcc_id=tcc.id,
+                            prioridade=PrioridadeNotificacao.ALTA,
+                            corpo_html_customizado=html_coori,
+                            corpo_texto_customizado=texto_coori
+                        )
+
+                else:
+                    # REPROVADO na Fase I
+                    def _gerar_email_fase1_reprovado(nome_destinatario):
+                        corpo_html = f"""
+<p>Olá, {nome_destinatario},</p>
+
+<p>A avaliação da banca da <b>Fase I</b> do TCC foi concluída e confirmada pela coordenação.</p>
+
+<p>O aluno <b>{tcc.aluno.nome_completo}</b> foi <b>reprovado</b> na Fase I.</p>
+
+<p><b>Tema:</b> {tcc.titulo}</p>
+
+{rodape_html}
+"""
+                        corpo_texto = f"""Olá, {nome_destinatario},
+
+A avaliação da banca da Fase I do TCC foi concluída e confirmada pela coordenação.
+
+O aluno {tcc.aluno.nome_completo} foi REPROVADO na Fase I.
+
+Tema: {tcc.titulo}
+
+{rodape_texto}
+"""
+                        return corpo_html, corpo_texto
+
+                    html_ori, texto_ori = _gerar_email_fase1_reprovado(tcc.orientador.nome_completo)
+                    criar_notificacao_com_email(
+                        usuario=tcc.orientador,
+                        tipo=TipoNotificacao.RESULTADO_FASE_1,
+                        titulo='Resultado Fase I: Reprovado',
+                        mensagem=f'O aluno {tcc.aluno.nome_completo} foi reprovado na Fase I do TCC "{tcc.titulo}".',
+                        campo_preferencia='prof_resultado_fase_1',
+                        action_url=f'/tccs/{tcc.id}',
+                        tcc_id=tcc.id,
+                        prioridade=PrioridadeNotificacao.ALTA,
+                        corpo_html_customizado=html_ori,
+                        corpo_texto_customizado=texto_ori
+                    )
+
+                    if tcc.coorientador:
+                        html_coori, texto_coori = _gerar_email_fase1_reprovado(tcc.coorientador.nome_completo)
+                        criar_notificacao_com_email(
+                            usuario=tcc.coorientador,
+                            tipo=TipoNotificacao.RESULTADO_FASE_1,
+                            titulo='Resultado Fase I: Reprovado',
+                            mensagem=f'O aluno {tcc.aluno.nome_completo} foi reprovado na Fase I do TCC "{tcc.titulo}".',
+                            campo_preferencia='prof_resultado_fase_1',
+                            action_url=f'/tccs/{tcc.id}',
+                            tcc_id=tcc.id,
+                            prioridade=PrioridadeNotificacao.ALTA,
+                            corpo_html_customizado=html_coori,
+                            corpo_texto_customizado=texto_coori
+                        )
 
                 return Response({
                     'message': 'Aprovação completa concluída',
@@ -2632,20 +2758,125 @@ class TCCViewSet(viewsets.ModelViewSet):
                 prioridade=PrioridadeNotificacao.URGENTE
             )
 
-            # Notificar orientador e coorientador
-            usuarios_notificar = [tcc.orientador]
-            if tcc.coorientador:
-                usuarios_notificar.append(tcc.coorientador)
+            # Notificar orientador e coorientador com e-mail HTML
+            from notificacoes.services import criar_notificacao_com_email
 
-            criar_notificacao_em_massa(
-                usuarios=usuarios_notificar,
-                tipo=TipoNotificacao.RESULTADO_FINAL,
-                titulo=f'Resultado Final: {resultado}',
-                mensagem=f'TCC "{tcc.titulo}" foi {resultado.lower()} com nota final {nf2_arredondado}.',
-                action_url=f'/tccs/{tcc.id}',
-                tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.ALTA
-            )
+            rodape_html = """<p>---<br>
+Portal TCC<br>
+Esta é uma notificação automática. Para mais informações, acesse o sistema.</p>"""
+
+            rodape_texto = """---
+Portal TCC
+Esta é uma notificação automática. Para mais informações, acesse o sistema."""
+
+            if resultado == 'APROVADO':
+                def _gerar_email_fase2_aprovado(nome_destinatario):
+                    corpo_html = f"""
+<p>Olá, {nome_destinatario},</p>
+
+<p>A avaliação da <b>defesa</b> do TCC foi concluída e confirmada pela coordenação.</p>
+
+<p>O aluno <b>{tcc.aluno.nome_completo}</b> foi <b>aprovado</b> na defesa.</p>
+
+<p><b>Tema:</b> {tcc.titulo}</p>
+
+{rodape_html}
+"""
+                    corpo_texto = f"""Olá, {nome_destinatario},
+
+A avaliação da defesa do TCC foi concluída e confirmada pela coordenação.
+
+O aluno {tcc.aluno.nome_completo} foi APROVADO na defesa.
+
+Tema: {tcc.titulo}
+
+{rodape_texto}
+"""
+                    return corpo_html, corpo_texto
+
+                html_ori, texto_ori = _gerar_email_fase2_aprovado(tcc.orientador.nome_completo)
+                criar_notificacao_com_email(
+                    usuario=tcc.orientador,
+                    tipo=TipoNotificacao.RESULTADO_FINAL,
+                    titulo='Resultado da Defesa: Aprovado',
+                    mensagem=f'A avaliação da defesa do TCC "{tcc.titulo}" foi aprovada.',
+                    campo_preferencia='prof_resultado_fase_1',
+                    action_url=f'/tccs/{tcc.id}',
+                    tcc_id=tcc.id,
+                    prioridade=PrioridadeNotificacao.ALTA,
+                    corpo_html_customizado=html_ori,
+                    corpo_texto_customizado=texto_ori
+                )
+
+                if tcc.coorientador:
+                    html_coori, texto_coori = _gerar_email_fase2_aprovado(tcc.coorientador.nome_completo)
+                    criar_notificacao_com_email(
+                        usuario=tcc.coorientador,
+                        tipo=TipoNotificacao.RESULTADO_FINAL,
+                        titulo='Resultado da Defesa: Aprovado',
+                        mensagem=f'A avaliação da defesa do TCC "{tcc.titulo}" foi aprovada.',
+                        campo_preferencia='prof_resultado_fase_1',
+                        action_url=f'/tccs/{tcc.id}',
+                        tcc_id=tcc.id,
+                        prioridade=PrioridadeNotificacao.ALTA,
+                        corpo_html_customizado=html_coori,
+                        corpo_texto_customizado=texto_coori
+                    )
+
+            else:
+                # REPROVADO na defesa
+                def _gerar_email_fase2_reprovado(nome_destinatario):
+                    corpo_html = f"""
+<p>Olá, {nome_destinatario},</p>
+
+<p>A avaliação da <b>defesa</b> do TCC foi concluída e confirmada pela coordenação.</p>
+
+<p>O aluno <b>{tcc.aluno.nome_completo}</b> foi <b>reprovado</b> na defesa.</p>
+
+<p><b>Tema:</b> {tcc.titulo}</p>
+
+{rodape_html}
+"""
+                    corpo_texto = f"""Olá, {nome_destinatario},
+
+A avaliação da defesa do TCC foi concluída e confirmada pela coordenação.
+
+O aluno {tcc.aluno.nome_completo} foi REPROVADO na defesa.
+
+Tema: {tcc.titulo}
+
+{rodape_texto}
+"""
+                    return corpo_html, corpo_texto
+
+                html_ori, texto_ori = _gerar_email_fase2_reprovado(tcc.orientador.nome_completo)
+                criar_notificacao_com_email(
+                    usuario=tcc.orientador,
+                    tipo=TipoNotificacao.RESULTADO_FINAL,
+                    titulo='Resultado da Defesa: Reprovado',
+                    mensagem=f'O aluno {tcc.aluno.nome_completo} foi reprovado na defesa do TCC "{tcc.titulo}".',
+                    campo_preferencia='prof_resultado_fase_1',
+                    action_url=f'/tccs/{tcc.id}',
+                    tcc_id=tcc.id,
+                    prioridade=PrioridadeNotificacao.ALTA,
+                    corpo_html_customizado=html_ori,
+                    corpo_texto_customizado=texto_ori
+                )
+
+                if tcc.coorientador:
+                    html_coori, texto_coori = _gerar_email_fase2_reprovado(tcc.coorientador.nome_completo)
+                    criar_notificacao_com_email(
+                        usuario=tcc.coorientador,
+                        tipo=TipoNotificacao.RESULTADO_FINAL,
+                        titulo='Resultado da Defesa: Reprovado',
+                        mensagem=f'O aluno {tcc.aluno.nome_completo} foi reprovado na defesa do TCC "{tcc.titulo}".',
+                        campo_preferencia='prof_resultado_fase_1',
+                        action_url=f'/tccs/{tcc.id}',
+                        tcc_id=tcc.id,
+                        prioridade=PrioridadeNotificacao.ALTA,
+                        corpo_html_customizado=html_coori,
+                        corpo_texto_customizado=texto_coori
+                    )
 
             # Notificar membros da banca
             membros_banca = [av.avaliador for av in avaliacoes_enviadas]
@@ -2730,16 +2961,32 @@ class TCCViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsCoordenador])
     def exportar_dados(self, request):
         """
-        GET /api/tccs/exportar_dados/
+        GET /api/tccs/exportar_dados/?dados=true&monografia=true&documentos=true
         Exporta dados de todos os alunos com TCC em formato ZIP.
 
-        Para cada aluno, cria uma pasta contendo:
-        - Última monografia enviada (se existir)
-        - Fichas de avaliação da Fase I em .txt (se existirem)
-        - Fichas de avaliação da Fase II em .txt (se existirem)
+        Query params (todos true por padrão):
+        - dados: inclui avaliacoes.txt (fichas de avaliação)
+        - monografia: inclui última monografia
+        - documentos: inclui documentos gerais (plano, termos, apresentação, relatório, etc.)
 
         Apenas coordenador tem acesso.
         """
+        # Ler filtros dos query params
+        incluir_dados = request.query_params.get('dados', 'true').lower() == 'true'
+        incluir_monografia = request.query_params.get('monografia', 'true').lower() == 'true'
+        incluir_documentos = request.query_params.get('documentos', 'true').lower() == 'true'
+
+        # Tipos de documentos gerais (tudo exceto MONOGRAFIA e MONOGRAFIA_AVALIACAO)
+        tipos_documentos_gerais = [
+            TipoDocumento.PLANO_DESENVOLVIMENTO,
+            TipoDocumento.TERMO_ACEITE,
+            TipoDocumento.TERMO_SOLICITACAO_AVALIACAO,
+            TipoDocumento.APRESENTACAO,
+            TipoDocumento.ATA,
+            TipoDocumento.RELATORIO_AVALIACAO,
+            TipoDocumento.OUTRO,
+        ]
+
         # Buscar todos os TCCs agrupados por aluno
         tccs = TCC.objects.select_related('aluno').order_by('aluno__nome_completo', '-criado_em')
 
@@ -2767,41 +3014,49 @@ class TCCViewSet(viewsets.ModelViewSet):
                     nome_pasta = f"{nome_aluno} ({nomes_usados[nome_aluno] + 1})"
                 nomes_usados[nome_aluno] += 1
 
-                # Buscar última monografia do aluno (aprovada ou não)
-                ultima_monografia = DocumentoTCC.objects.filter(
-                    tcc=tcc,
-                    tipo_documento=TipoDocumento.MONOGRAFIA
-                ).order_by('-versao', '-criado_em').first()
+                # Monografia aprovada pelo orientador
+                if incluir_monografia:
+                    ultima_monografia = DocumentoTCC.objects.filter(
+                        tcc=tcc,
+                        tipo_documento=TipoDocumento.MONOGRAFIA,
+                        status=StatusDocumento.APROVADO
+                    ).order_by('-versao', '-criado_em').first()
 
-                # Adicionar monografia ao ZIP se existir
-                if ultima_monografia and ultima_monografia.arquivo:
-                    try:
-                        # Ler arquivo da storage
-                        arquivo_path = ultima_monografia.arquivo.path
-                        arquivo_nome = ultima_monografia.nome_original or os.path.basename(arquivo_path)
+                    if ultima_monografia and ultima_monografia.arquivo:
+                        try:
+                            arquivo_path = ultima_monografia.arquivo.path
+                            arquivo_nome = ultima_monografia.nome_original or os.path.basename(arquivo_path)
+                            with open(arquivo_path, 'rb') as f:
+                                zip_file.writestr(f"{nome_pasta}/{arquivo_nome}", f.read())
+                        except Exception:
+                            pass
 
-                        with open(arquivo_path, 'rb') as f:
-                            zip_file.writestr(
-                                f"{nome_pasta}/{arquivo_nome}",
-                                f.read()
-                            )
-                    except Exception as e:
-                        # Se houver erro ao ler arquivo, continuar para próximo
-                        pass
+                # Dados (relatório txt)
+                if incluir_dados:
+                    avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc).select_related('avaliador')
+                    avaliacoes_f2 = AvaliacaoFase2.objects.filter(tcc=tcc).select_related('avaliador')
 
-                # Buscar avaliações Fase I e Fase II
-                avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc).select_related('avaliador')
-                avaliacoes_f2 = AvaliacaoFase2.objects.filter(tcc=tcc).select_related('avaliador')
-
-                # Gerar arquivo unificado se houver pelo menos uma avaliação
-                if avaliacoes_f1.exists() or avaliacoes_f2.exists():
                     conteudo_completo = self._gerar_texto_avaliacoes_completo(
                         avaliacoes_f1, avaliacoes_f2, aluno, tcc
                     )
-                    zip_file.writestr(
-                        f"{nome_pasta}/avaliacoes.txt",
-                        conteudo_completo
-                    )
+                    zip_file.writestr(f"{nome_pasta}/dados.txt", conteudo_completo)
+
+                # Documentos gerais
+                if incluir_documentos:
+                    documentos = DocumentoTCC.objects.filter(
+                        tcc=tcc,
+                        tipo_documento__in=tipos_documentos_gerais
+                    ).order_by('tipo_documento', '-versao')
+
+                    for doc in documentos:
+                        if doc.arquivo:
+                            try:
+                                arquivo_path = doc.arquivo.path
+                                arquivo_nome = doc.nome_original or os.path.basename(arquivo_path)
+                                with open(arquivo_path, 'rb') as f:
+                                    zip_file.writestr(f"{nome_pasta}/{arquivo_nome}", f.read())
+                            except Exception:
+                                pass
 
         # Preparar resposta com streaming
         zip_buffer.seek(0)
@@ -2811,6 +3066,68 @@ class TCCViewSet(viewsets.ModelViewSet):
         )
         response['Content-Disposition'] = 'attachment; filename="dados_tccs.zip"'
 
+        return response
+
+    @action(detail=True, methods=['get'], url_path='exportar-dados', permission_classes=[IsAuthenticated, IsCoordenador])
+    def exportar_dados_tcc(self, request, pk=None):
+        """
+        GET /api/tccs/{id}/exportar-dados/
+        Exporta dados de um TCC individual em formato ZIP.
+
+        Cria um ZIP contendo:
+        - Última monografia enviada (se existir)
+        - Fichas de avaliação em .txt (se existirem)
+        - Relatório de avaliação em PDF (se existir)
+        """
+        tcc = self.get_object()
+        aluno = tcc.aluno
+        nome_aluno = aluno.nome_completo
+
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Monografia
+            ultima_monografia = DocumentoTCC.objects.filter(
+                tcc=tcc,
+                tipo_documento=TipoDocumento.MONOGRAFIA
+            ).order_by('-versao', '-criado_em').first()
+
+            if ultima_monografia and ultima_monografia.arquivo:
+                try:
+                    arquivo_path = ultima_monografia.arquivo.path
+                    arquivo_nome = ultima_monografia.nome_original or os.path.basename(arquivo_path)
+                    with open(arquivo_path, 'rb') as f:
+                        zip_file.writestr(arquivo_nome, f.read())
+                except Exception:
+                    pass
+
+            # Relatório TXT
+            avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc).select_related('avaliador')
+            avaliacoes_f2 = AvaliacaoFase2.objects.filter(tcc=tcc).select_related('avaliador')
+
+            conteudo = self._gerar_texto_avaliacoes_completo(
+                avaliacoes_f1, avaliacoes_f2, aluno, tcc
+            )
+            zip_file.writestr('dados.txt', conteudo)
+
+            # Relatório PDF (se existir)
+            relatorio_pdf = DocumentoTCC.objects.filter(
+                tcc=tcc,
+                tipo_documento=TipoDocumento.RELATORIO_AVALIACAO
+            ).order_by('-criado_em').first()
+
+            if relatorio_pdf and relatorio_pdf.arquivo:
+                try:
+                    arquivo_path = relatorio_pdf.arquivo.path
+                    with open(arquivo_path, 'rb') as f:
+                        zip_file.writestr('relatorio_avaliacao.pdf', f.read())
+                except Exception:
+                    pass
+
+        zip_buffer.seek(0)
+        nome_arquivo = f"{nome_aluno}.zip".replace(' ', '_')
+        response = StreamingHttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
         return response
 
     def _fmt(self, nota):
@@ -2825,9 +3142,14 @@ class TCCViewSet(viewsets.ModelViewSet):
         pontos = '.' * max(2, largura - len(criterio) - len(nota_str))
         return f"    {criterio} {pontos} {nota_str}"
 
+    def _centralizar(self, texto, largura=78):
+        """Centraliza texto dentro da largura."""
+        return texto.center(largura)
+
     def _gerar_texto_avaliacoes_completo(self, avaliacoes_f1, avaliacoes_f2, aluno, tcc):
-        """Gera conteúdo em texto unificado das avaliações Fase I e Fase II."""
+        """Gera relatório completo do TCC em texto."""
         from definicoes.models import CalendarioSemestre
+        from .models import AgendamentoDefesa
 
         cal = CalendarioSemestre.obter_calendario_atual(tcc.semestre)
         # Pesos Fase I
@@ -2844,25 +3166,98 @@ class TCCViewSet(viewsets.ModelViewSet):
         p_tem = float(cal.peso_observancia_tempo) if cal else 1.0
 
         L = []
-        sep = "\u2500" * 78  # ──────
-        sep2 = "\u2550" * 78  # ══════
+        sep = "  " + "\u2500" * 78  # ──────
+        sep2 = "  " + "\u2550" * 78  # ══════
 
-        # Cabeçalho
+        # ── CABEÇALHO ──
         L.append(sep2)
-        L.append("  RELATÓRIO DE AVALIAÇÕES \u2014 TRABALHO DE CONCLUSÃO DE CURSO")
+        L.append(self._centralizar("RELATÓRIO DO TCC \u2014 TRABALHO DE CONCLUSÃO DE CURSO"))
         L.append(sep2)
         L.append("")
-        L.append(f"  Aluno ............. {aluno.nome_completo}")
-        L.append(f"  TCC ............... {tcc.titulo}")
-        orientador_nome = tcc.orientador.nome_completo if tcc.orientador else 'N/A'
-        L.append(f"  Orientador ........ {orientador_nome}")
-        L.append(f"  Semestre .......... {tcc.semestre}")
+        L.append(f"    Aluno ............. {aluno.nome_completo}")
+        orientador_nome = tcc.orientador.nome_completo if tcc.orientador else ''
+        L.append(f"    Orientador ........ {orientador_nome}")
+
+        # Co-orientador (só se tiver)
+        coori_nome = ''
+        if tcc.coorientador:
+            coori_nome = tcc.coorientador.nome_completo
+        elif tcc.coorientador_nome:
+            coori_nome = tcc.coorientador_nome
+        if coori_nome:
+            L.append(f"    Co-orientador ..... {coori_nome}")
+
+        L.append(f"    Tema .............. {tcc.titulo}")
+        L.append(f"    Semestre .......... {tcc.semestre}")
+        L.append("")
+
+        # ── INFORMAÇÕES DO PROCESSO ──
+        # Monografia
+        monografia_aprovada = DocumentoTCC.objects.filter(
+            tcc=tcc, tipo_documento=TipoDocumento.MONOGRAFIA, status=StatusDocumento.APROVADO
+        ).exists()
+        monografia_pendente = DocumentoTCC.objects.filter(
+            tcc=tcc, tipo_documento=TipoDocumento.MONOGRAFIA
+        ).exclude(status=StatusDocumento.APROVADO).exists()
+
+        if monografia_aprovada:
+            status_mono = 'Aprovada'
+        elif monografia_pendente:
+            status_mono = 'Aguardando ajustes'
+        else:
+            status_mono = ''
+        L.append(f"    Monografia ................. {status_mono}")
+
+        # Continuidade
+        if tcc.etapa_atual == EtapaTCC.DESCONTINUADO:
+            status_cont = 'Encerrada'
+        elif tcc.flag_continuidade:
+            status_cont = 'Ok'
+        else:
+            status_cont = ''
+        L.append(f"    Confirmação de continuidade  {status_cont}")
+
+        # Termo de solicitação
+        tem_termo = DocumentoTCC.objects.filter(
+            tcc=tcc, tipo_documento=TipoDocumento.TERMO_SOLICITACAO_AVALIACAO
+        ).exists()
+        L.append(f"    Termo de solicitação ........ {'Enviado' if tem_termo else ''}")
+
+        # Fase I resultado
+        fase1_resultado = ''
+        if tcc.nf1 is not None:
+            fase1_resultado = 'Aprovado' if float(tcc.nf1) >= 6 else 'Reprovado'
+        elif tcc.etapa_atual == EtapaTCC.REPROVADO_FASE_1:
+            fase1_resultado = 'Reprovado'
+        L.append(f"    Fase I ..................... {fase1_resultado}")
+
+        # Agendamento
+        agendamento_txt = ''
+        try:
+            agendamento = tcc.agendamento_defesa
+            data_str = agendamento.data.strftime('%d/%m/%Y')
+            hora_str = agendamento.hora.strftime('%H:%M')
+            agendamento_txt = f"{data_str} às {hora_str} - {agendamento.local}"
+        except AgendamentoDefesa.DoesNotExist:
+            pass
+        L.append(f"    Agendamento ................ {agendamento_txt}")
+
+        # Fase II resultado
+        fase2_resultado = ''
+        if tcc.nf2 is not None:
+            fase2_resultado = 'Aprovado' if float(tcc.nf2) >= 6 else 'Reprovado'
+        elif tcc.etapa_atual == EtapaTCC.REPROVADO_FASE_2:
+            fase2_resultado = 'Reprovado'
+        L.append(f"    Fase II .................... {fase2_resultado}")
+
+        # Etapa atual
+        L.append(f"    Etapa atual ................ {tcc.get_etapa_atual_display()}")
         L.append("")
 
         # ── FASE I ──
         if avaliacoes_f1.exists():
             L.append(sep)
-            L.append("  FASE I \u2014 AVALIAÇÃO DA MONOGRAFIA")
+            L.append(self._centralizar("FASE I \u2014 AVALIAÇÃO DA MONOGRAFIA"))
             L.append(sep)
             L.append("")
 
@@ -2870,8 +3265,8 @@ class TCCViewSet(viewsets.ModelViewSet):
             for i, av in enumerate(avaliacoes_f1, 1):
                 trat = av.avaliador.tratamento or ''
                 nome = f"{trat} {av.avaliador.nome_completo}".strip()
-                L.append(f"  Avaliador #{i}: {nome}")
-                L.append(f"  {'─' * (len(nome) + 16)}")
+                L.append(f"    Avaliador #{i}: {nome}")
+                L.append(f"    {'─' * (len(nome) + 16)}")
 
                 if av.status in ['ENVIADO', 'BLOQUEADO']:
                     L.append(self._linha_nota("Resumo", av.nota_resumo, p_res))
@@ -2882,23 +3277,29 @@ class TCCViewSet(viewsets.ModelViewSet):
                     nota_total = av.calcular_nota_total()
                     notas_totais_f1.append(float(nota_total) if nota_total else 0)
                     total_txt = f"TOTAL {self._fmt(nota_total)} / 10,00"
-                    total_pad = ' ' * (51 - len(total_txt))
+                    total_pad = ' ' * (53 - len(total_txt))
                     L.append(f"{total_pad}{'─' * len(total_txt)}")
                     L.append(f"{total_pad}{total_txt}")
+
+                    # Comentário geral do avaliador
+                    if av.parecer and av.parecer.strip():
+                        L.append("")
+                        for linha in av.parecer.strip().split('\n'):
+                            L.append(f"      {linha}")
                 else:
-                    L.append("    (Avaliação pendente)")
+                    L.append("      (Avaliação pendente)")
 
                 L.append("")
 
             if notas_totais_f1:
                 nf1 = sum(notas_totais_f1) / len(notas_totais_f1)
-                L.append(f"  \u25b8 NF1 (Média Fase I) = {self._fmt(nf1)}")
+                L.append(f"    \u25b8 NF1 (Média Fase I) = {self._fmt(nf1)}")
                 L.append("")
 
         # ── FASE II ──
         if avaliacoes_f2.exists():
             L.append(sep)
-            L.append("  FASE II \u2014 AVALIAÇÃO DA APRESENTAÇÃO")
+            L.append(self._centralizar("FASE II \u2014 AVALIAÇÃO DA APRESENTAÇÃO"))
             L.append(sep)
             L.append("")
 
@@ -2906,8 +3307,8 @@ class TCCViewSet(viewsets.ModelViewSet):
             for i, av in enumerate(avaliacoes_f2, 1):
                 trat = av.avaliador.tratamento or ''
                 nome = f"{trat} {av.avaliador.nome_completo}".strip()
-                L.append(f"  Avaliador #{i}: {nome}")
-                L.append(f"  {'─' * (len(nome) + 16)}")
+                L.append(f"    Avaliador #{i}: {nome}")
+                L.append(f"    {'─' * (len(nome) + 16)}")
 
                 if av.status in ['ENVIADO', 'BLOQUEADO']:
                     L.append(self._linha_nota("Coerência do Conteúdo", av.nota_coerencia_conteudo, p_coe))
@@ -2918,17 +3319,23 @@ class TCCViewSet(viewsets.ModelViewSet):
                     nota_total = av.calcular_nota_total()
                     notas_totais_f2.append(float(nota_total) if nota_total else 0)
                     total_txt = f"TOTAL {self._fmt(nota_total)} / 10,00"
-                    total_pad = ' ' * (51 - len(total_txt))
+                    total_pad = ' ' * (53 - len(total_txt))
                     L.append(f"{total_pad}{'─' * len(total_txt)}")
                     L.append(f"{total_pad}{total_txt}")
+
+                    # Comentário geral do avaliador
+                    if av.parecer and av.parecer.strip():
+                        L.append("")
+                        for linha in av.parecer.strip().split('\n'):
+                            L.append(f"      {linha}")
                 else:
-                    L.append("    (Avaliação pendente)")
+                    L.append("      (Avaliação pendente)")
 
                 L.append("")
 
             if notas_totais_f2:
                 media_f2 = sum(notas_totais_f2) / len(notas_totais_f2)
-                L.append(f"  \u25b8 Média Fase II = {self._fmt(media_f2)}")
+                L.append(f"    \u25b8 Média Fase II = {self._fmt(media_f2)}")
                 L.append("")
 
         # ── RESULTADO FINAL ──
@@ -2941,53 +3348,472 @@ class TCCViewSet(viewsets.ModelViewSet):
             resultado = tcc.resultado_final or ('APROVADO' if nota_final >= 6 else 'REPROVADO')
 
             L.append(sep)
-            L.append("  RESULTADO FINAL")
+            L.append(self._centralizar("RESULTADO FINAL"))
             L.append(sep)
             L.append("")
-            L.append(f"    NF1 (Fase I)  = {self._fmt(nf1_val)}  \u00d7  0,6  =  {self._fmt(nf1_pond)}")
-            L.append(f"    NF2 (Fase II) = {self._fmt(nf2_val)}  \u00d7  0,4  =  {self._fmt(nf2_pond)}")
+            L.append(f"      NF1 (Fase I)  = {self._fmt(nf1_val)}  \u00d7  0,6  =  {self._fmt(nf1_pond)}")
+            L.append(f"      NF2 (Fase II) = {self._fmt(nf2_val)}  \u00d7  0,4  =  {self._fmt(nf2_pond)}")
             nf_txt = f"NOTA FINAL {self._fmt(nota_final)}"
-            nf_pad = ' ' * (51 - len(nf_txt))
+            nf_pad = ' ' * (53 - len(nf_txt))
             L.append(f"{nf_pad}{'─' * len(nf_txt)}")
             L.append(f"{nf_pad}{nf_txt}")
             L.append("")
-            L.append(f"    Resultado: {resultado}")
+            L.append(f"      Resultado: {resultado}")
             L.append("")
-
-        # ── COMENTÁRIOS FASE I ──
-        pareceres_f1 = [(i, av) for i, av in enumerate(avaliacoes_f1, 1) if av.parecer and av.parecer.strip()]
-        if pareceres_f1:
-            L.append(sep)
-            L.append("  COMENTÁRIOS DOS AVALIADORES \u2014 FASE I")
-            L.append(sep)
-            L.append("")
-            for idx, av in pareceres_f1:
-                trat = av.avaliador.tratamento or ''
-                nome = f"{trat} {av.avaliador.nome_completo}".strip()
-                L.append(f"  Avaliador #{idx} \u2014 {nome}:")
-                L.append("")
-                for linha in av.parecer.strip().split('\n'):
-                    L.append(f"    {linha}")
-                L.append("")
-
-        # ── COMENTÁRIOS FASE II ──
-        pareceres_f2 = [(i, av) for i, av in enumerate(avaliacoes_f2, 1) if av.parecer and av.parecer.strip()]
-        if pareceres_f2:
-            L.append(sep)
-            L.append("  COMENTÁRIOS DOS AVALIADORES \u2014 FASE II")
-            L.append(sep)
-            L.append("")
-            for idx, av in pareceres_f2:
-                trat = av.avaliador.tratamento or ''
-                nome = f"{trat} {av.avaliador.nome_completo}".strip()
-                L.append(f"  Avaliador #{idx} \u2014 {nome}:")
-                L.append("")
-                for linha in av.parecer.strip().split('\n'):
-                    L.append(f"    {linha}")
-                L.append("")
 
         L.append(sep2)
         return "\n".join(L)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsCoordenador])
+    def verificar_email_reset(self, request):
+        """
+        GET /api/tccs/verificar_email_reset/
+        Verifica se há email configurado para envio do backup.
+        """
+        from definicoes.models import ConfiguracaoEmail
+        config = ConfiguracaoEmail.obter_configuracao()
+        email_configurado = bool(config.email_host_user)
+        return Response({
+            'email_configurado': email_configurado,
+            'email': config.email_host_user if email_configurado else None
+        })
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsCoordenador])
+    def resetar_periodo(self, request):
+        """
+        POST /api/tccs/resetar_periodo/
+        Reseta o período: faz backup dos dados, envia por email e apaga tudo
+        exceto professores e coordenador.
+        """
+        logger = logging.getLogger(__name__)
+        from users.models import Usuario
+        from avisos.models import Aviso, ComentarioAviso
+        from notificacoes.models import Notificacao, PreferenciasEmail
+        from definicoes.models import ConfiguracaoEmail
+
+        senha = request.data.get('senha')
+        email_destino = request.data.get('email_destino')
+
+        if not senha:
+            return Response({'detail': 'Senha é obrigatória.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validar senha do coordenador
+        if not check_password(senha, request.user.password):
+            return Response({'detail': 'Senha incorreta.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Verificar email de destino
+        config_email = ConfiguracaoEmail.obter_configuracao()
+        if not email_destino:
+            if config_email.email_host_user:
+                email_destino = config_email.email_host_user
+            else:
+                return Response(
+                    {'detail': 'Nenhum email configurado. Envie email_destino no body.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # ============ GERAR BACKUP ZIP (mesmo que exportar_dados) ============
+        tccs_qs = TCC.objects.select_related('aluno', 'orientador', 'coorientador').order_by('aluno__nome_completo', '-criado_em')
+        alunos_tccs = {}
+        for tcc in tccs_qs:
+            if tcc.aluno_id not in alunos_tccs:
+                alunos_tccs[tcc.aluno_id] = tcc
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            nomes_usados = defaultdict(int)
+
+            for aluno_id, tcc in alunos_tccs.items():
+                aluno = tcc.aluno
+                nome_aluno = aluno.nome_completo
+                if nomes_usados[nome_aluno] == 0:
+                    nome_pasta = nome_aluno
+                else:
+                    nome_pasta = f"{nome_aluno} ({nomes_usados[nome_aluno] + 1})"
+                nomes_usados[nome_aluno] += 1
+
+                # Monografia
+                ultima_monografia = DocumentoTCC.objects.filter(
+                    tcc=tcc, tipo_documento=TipoDocumento.MONOGRAFIA
+                ).order_by('-versao', '-criado_em').first()
+
+                if ultima_monografia and ultima_monografia.arquivo:
+                    try:
+                        arquivo_path = ultima_monografia.arquivo.path
+                        arquivo_nome = ultima_monografia.nome_original or os.path.basename(arquivo_path)
+                        with open(arquivo_path, 'rb') as f:
+                            zip_file.writestr(f"{nome_pasta}/{arquivo_nome}", f.read())
+                    except Exception:
+                        pass
+
+                # Relatório TXT
+                avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc).select_related('avaliador')
+                avaliacoes_f2 = AvaliacaoFase2.objects.filter(tcc=tcc).select_related('avaliador')
+                conteudo = self._gerar_texto_avaliacoes_completo(avaliacoes_f1, avaliacoes_f2, aluno, tcc)
+                zip_file.writestr(f"{nome_pasta}/dados.txt", conteudo)
+
+            # ============ GERAR EXCEL (Relatório) ============
+            try:
+                excel_buffer = self._gerar_excel_relatorio()
+                zip_file.writestr('Relatorio_TCCs.xlsx', excel_buffer.getvalue())
+            except Exception as e:
+                logger.error(f"Erro ao gerar Excel: {e}")
+
+        zip_buffer.seek(0)
+        zip_bytes = zip_buffer.getvalue()
+
+        # ============ GERAR TXT CONSOLIDADO ============
+        txt_consolidado = self._gerar_txt_consolidado(alunos_tccs)
+
+        # ============ ENVIAR EMAIL ============
+        try:
+            # Forçar backend SMTP real, mesmo que email_enabled esteja False
+            from notificacoes.email_backend import EmailBackend as SMTPBackend
+
+            # Configurar credenciais SMTP a partir da configuração salva
+            smtp_settings = {
+                'host': config_email.email_host,
+                'port': config_email.email_port,
+                'username': config_email.email_host_user,
+                'password': config_email.get_password(),
+                'use_tls': config_email.email_use_tls,
+            }
+            from_email = f'Portal TCC <{config_email.email_host_user}>'
+
+            email = DjangoEmailMessage(
+                subject='Backup do Período - Portal TCC',
+                body='Segue em anexo o backup dos dados do período que foi resetado.\n\n'
+                     '- avaliacoes_consolidado.txt: Dados de todos os alunos em texto\n'
+                     '- Relatorio_TCCs.xlsx: Relatório completo em Excel\n\n'
+                     'Este email foi gerado automaticamente pelo Portal TCC.',
+                from_email=from_email,
+                to=[email_destino],
+            )
+            email.attach('avaliacoes_consolidado.txt', txt_consolidado.encode('utf-8'), 'text/plain; charset=utf-8')
+
+            try:
+                excel_buffer_email = self._gerar_excel_relatorio()
+                email.attach(
+                    'Relatorio_TCCs.xlsx',
+                    excel_buffer_email.getvalue(),
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+            except Exception as e:
+                logger.error(f"Erro ao gerar Excel para email: {e}")
+
+            # Enviar usando backend SMTP direto (ignora email_enabled)
+            backend = SMTPBackend(
+                host=smtp_settings['host'],
+                port=smtp_settings['port'],
+                username=smtp_settings['username'],
+                password=smtp_settings['password'],
+                use_tls=smtp_settings['use_tls'],
+                fail_silently=False,
+            )
+            backend.send_messages([email])
+            email_enviado = True
+        except Exception as e:
+            logger.error(f"Erro ao enviar email de backup: {e}")
+            email_enviado = False
+
+        # ============ APAGAR DADOS ============
+        # Contar antes de apagar
+        contagem = {
+            'tccs': TCC.objects.count(),
+            'alunos': Usuario.objects.filter(tipo_usuario='ALUNO').count(),
+            'externos': Usuario.objects.filter(tipo_usuario='AVALIADOR').count(),
+            'avisos': Aviso.objects.count(),
+            'notificacoes': Notificacao.objects.count(),
+        }
+
+        # Apagar TCCs (cascade deleta: DocumentoTCC, EventoTimeline, BancaFase1,
+        # MembroBanca, AvaliacaoFase1, AvaliacaoFase2, AgendamentoDefesa, HistoricoRecusa, etc.)
+        TCC.objects.all().delete()
+
+        # Apagar solicitações de orientação restantes
+        SolicitacaoOrientacao.objects.all().delete()
+
+        # Apagar avisos e comentários
+        Aviso.objects.all().delete()
+
+        # Apagar notificações
+        Notificacao.objects.all().delete()
+
+        # Apagar alunos e avaliadores externos
+        Usuario.objects.filter(tipo_usuario='ALUNO').delete()
+        Usuario.objects.filter(tipo_usuario='AVALIADOR').delete()
+
+        # Apagar arquivos físicos
+        media_tccs_path = os.path.join(settings.MEDIA_ROOT, 'tccs')
+        if os.path.exists(media_tccs_path):
+            shutil.rmtree(media_tccs_path)
+            os.makedirs(media_tccs_path)
+
+        # Retornar ZIP para download
+        response = StreamingHttpResponse(io.BytesIO(zip_bytes), content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="backup_periodo.zip"'
+        response['X-Email-Enviado'] = 'true' if email_enviado else 'false'
+        response['X-Contagem'] = str(contagem)
+        response['Access-Control-Expose-Headers'] = 'X-Email-Enviado, X-Contagem'
+        return response
+
+    def _gerar_txt_consolidado(self, alunos_tccs):
+        """Gera um TXT consolidado com dados de todos os alunos."""
+        partes = []
+        for aluno_id, tcc in alunos_tccs.items():
+            aluno = tcc.aluno
+            avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc).select_related('avaliador')
+            avaliacoes_f2 = AvaliacaoFase2.objects.filter(tcc=tcc).select_related('avaliador')
+            conteudo = self._gerar_texto_avaliacoes_completo(avaliacoes_f1, avaliacoes_f2, aluno, tcc)
+            partes.append(conteudo)
+        return "\n\n".join(partes)
+
+    def _gerar_excel_relatorio(self):
+        """Gera Excel com as mesmas 5 abas do Relatórios do frontend."""
+        import openpyxl
+        from openpyxl.utils import get_column_letter
+
+        wb = openpyxl.Workbook()
+
+        # Buscar dados
+        tccs = TCC.objects.select_related(
+            'aluno', 'orientador', 'coorientador'
+        ).order_by('id')
+
+        bancas = {}
+        for banca in BancaFase1.objects.select_related('tcc').prefetch_related(
+            'membros__usuario'
+        ):
+            bancas[banca.tcc_id] = banca
+
+        avaliacoes_f1_map = {}
+        for av in AvaliacaoFase1.objects.select_related('avaliador'):
+            avaliacoes_f1_map.setdefault(av.tcc_id, []).append(av)
+
+        avaliacoes_f2_map = {}
+        for av in AvaliacaoFase2.objects.select_related('avaliador'):
+            avaliacoes_f2_map.setdefault(av.tcc_id, []).append(av)
+
+        def nota_num(valor):
+            if valor is None:
+                return None
+            try:
+                n = float(valor)
+                return round(n, 2)
+            except (TypeError, ValueError):
+                return None
+
+        # === ABA 1: Dados Gerais ===
+        ws1 = wb.active
+        ws1.title = 'Dados Gerais'
+        headers1 = ['ID', 'Curso', 'Título', 'Aluno', 'Orientador', 'Orientador - Tratamento',
+                     'Orientador - Afiliação', 'Coorientador', 'Coorientador - Tratamento',
+                     'Coorientador - Afiliação', 'Avaliador 1 (Fase I)', 'Avaliador 2 (Fase I)',
+                     'Avaliador 1 (Fase II)', 'Avaliador 2 (Fase II)', 'Avaliador 3 (Fase II)',
+                     'Data Defesa', 'Semestre']
+        ws1.append(headers1)
+
+        for tcc in tccs:
+            banca = bancas.get(tcc.id)
+            avaliadores = sorted(
+                [m for m in (banca.membros.all() if banca else []) if m.tipo == 'AVALIADOR'],
+                key=lambda m: m.ordem
+            )
+            coori = tcc.coorientador
+            ws1.append([
+                tcc.id,
+                tcc.aluno.get_curso_display() if tcc.aluno.curso else '',
+                tcc.titulo,
+                tcc.aluno.nome_completo,
+                tcc.orientador.nome_completo if tcc.orientador else '',
+                tcc.orientador.tratamento if tcc.orientador else '',
+                getattr(tcc.orientador, 'afiliacao', '') if tcc.orientador else '',
+                coori.nome_completo if coori else '',
+                coori.tratamento if coori else '',
+                getattr(coori, 'afiliacao', '') if coori else '',
+                avaliadores[0].usuario.nome_completo if len(avaliadores) > 0 else '',
+                avaliadores[1].usuario.nome_completo if len(avaliadores) > 1 else '',
+                tcc.orientador.nome_completo if tcc.orientador else '',
+                avaliadores[0].usuario.nome_completo if len(avaliadores) > 0 else '',
+                avaliadores[1].usuario.nome_completo if len(avaliadores) > 1 else '',
+                tcc.data_defesa.strftime('%d/%m/%Y') if tcc.data_defesa else '',
+                tcc.semestre or '',
+            ])
+
+        # === ABA 2: Avaliações Fase I ===
+        ws2 = wb.create_sheet('Avaliações Fase I')
+        headers2 = ['ID', 'Título', 'Aluno', 'Orientador', 'Avaliador',
+                     'Q1 - Resumo', 'Q2 - Introdução', 'Q3 - Revisão',
+                     'Q4 - Desenvolvimento', 'Q5 - Conclusões', 'Nota Total']
+        ws2.append(headers2)
+
+        for tcc in tccs:
+            banca = bancas.get(tcc.id)
+            avaliadores = sorted(
+                [m for m in (banca.membros.all() if banca else []) if m.tipo == 'AVALIADOR'],
+                key=lambda m: m.ordem
+            )
+            avaliacoes = avaliacoes_f1_map.get(tcc.id, [])
+
+            if not avaliadores:
+                ws2.append([tcc.id, tcc.titulo, tcc.aluno.nome_completo,
+                           tcc.orientador.nome_completo if tcc.orientador else '',
+                           '', None, None, None, None, None, None])
+            else:
+                for membro in avaliadores:
+                    aval = next((a for a in avaliacoes if a.avaliador_id == membro.usuario_id), None)
+                    ws2.append([
+                        tcc.id, tcc.titulo, tcc.aluno.nome_completo,
+                        tcc.orientador.nome_completo if tcc.orientador else '',
+                        membro.usuario.nome_completo,
+                        nota_num(aval.nota_resumo) if aval else None,
+                        nota_num(aval.nota_introducao) if aval else None,
+                        nota_num(aval.nota_revisao) if aval else None,
+                        nota_num(aval.nota_desenvolvimento) if aval else None,
+                        nota_num(aval.nota_conclusoes) if aval else None,
+                        nota_num(aval.calcular_nota_total()) if aval and aval.status in ['ENVIADO', 'BLOQUEADO'] else None,
+                    ])
+
+        # === ABA 3: Avaliações Fase II ===
+        ws3 = wb.create_sheet('Avaliações Fase II')
+        headers3 = ['ID', 'Título', 'Aluno', 'Orientador', 'Avaliador',
+                     'Q1 - Coerência', 'Q2 - Qualidade', 'Q3 - Domínio',
+                     'Q4 - Clareza', 'Q5 - Tempo', 'Nota Total']
+        ws3.append(headers3)
+
+        for tcc in tccs:
+            banca = bancas.get(tcc.id)
+            avaliadores_f1 = sorted(
+                [m for m in (banca.membros.all() if banca else []) if m.tipo == 'AVALIADOR'],
+                key=lambda m: m.ordem
+            )
+            avaliacoes = avaliacoes_f2_map.get(tcc.id, [])
+
+            # Orientador + 2 avaliadores da fase 1
+            aval_orient = next((a for a in avaliacoes if a.avaliador_id == (tcc.orientador_id or -1)), None)
+            if not aval_orient and tcc.coorientador_id:
+                aval_orient = next((a for a in avaliacoes if a.avaliador_id == tcc.coorientador_id), None)
+
+            lista_avals = [
+                (tcc.orientador.nome_completo if tcc.orientador else '', aval_orient),
+            ]
+            for membro in avaliadores_f1:
+                aval = next((a for a in avaliacoes if a.avaliador_id == membro.usuario_id), None)
+                lista_avals.append((membro.usuario.nome_completo, aval))
+
+            for nome, aval in lista_avals:
+                ws3.append([
+                    tcc.id, tcc.titulo, tcc.aluno.nome_completo,
+                    tcc.orientador.nome_completo if tcc.orientador else '',
+                    nome,
+                    nota_num(aval.nota_coerencia_conteudo) if aval else None,
+                    nota_num(aval.nota_qualidade_apresentacao) if aval else None,
+                    nota_num(aval.nota_dominio_tema) if aval else None,
+                    nota_num(aval.nota_clareza_fluencia) if aval else None,
+                    nota_num(aval.nota_observancia_tempo) if aval else None,
+                    nota_num(aval.calcular_nota_total()) if aval and aval.status in ['ENVIADO', 'BLOQUEADO'] else None,
+                ])
+
+        # === ABA 4: Apuração Final ===
+        ws4 = wb.create_sheet('Apuração Final')
+        headers4 = ['ID', 'Título', 'Aluno', 'Orientador',
+                     'Fase I - Nota 1', 'Fase I - Nota 2', 'Fase I - Média', 'Fase I - Nota com peso (60%)',
+                     'Fase II - Nota 1', 'Fase II - Nota 2', 'Fase II - Nota 3',
+                     'Fase II - Média', 'Fase II - Nota com peso (40%)', 'Nota Final']
+        ws4.append(headers4)
+
+        for tcc in tccs:
+            avals_f1 = avaliacoes_f1_map.get(tcc.id, [])
+            notas_f1 = [nota_num(a.calcular_nota_total()) for a in avals_f1 if a.status in ['ENVIADO', 'BLOQUEADO']]
+            n1f1 = notas_f1[0] if len(notas_f1) > 0 else None
+            n2f1 = notas_f1[1] if len(notas_f1) > 1 else None
+            media_f1 = round((n1f1 + n2f1) / 2, 2) if n1f1 is not None and n2f1 is not None else None
+            peso_f1 = round(media_f1 * 0.6, 2) if media_f1 is not None else None
+
+            avals_f2 = avaliacoes_f2_map.get(tcc.id, [])
+            nota_orient = None
+            for a in avals_f2:
+                if a.avaliador_id == (tcc.orientador_id or -1) and a.status in ['ENVIADO', 'BLOQUEADO']:
+                    nota_orient = nota_num(a.calcular_nota_total())
+                    break
+            if nota_orient is None and tcc.coorientador_id:
+                for a in avals_f2:
+                    if a.avaliador_id == tcc.coorientador_id and a.status in ['ENVIADO', 'BLOQUEADO']:
+                        nota_orient = nota_num(a.calcular_nota_total())
+                        break
+
+            outros_f2 = [a for a in avals_f2 if a.avaliador_id != (tcc.orientador_id or -1) and a.status in ['ENVIADO', 'BLOQUEADO']]
+            outros_f2.sort(key=lambda a: a.id)
+            n1f2 = nota_num(outros_f2[0].calcular_nota_total()) if len(outros_f2) > 0 else None
+            n2f2 = nota_num(outros_f2[1].calcular_nota_total()) if len(outros_f2) > 1 else None
+
+            media_f2 = round((nota_orient + n1f2 + n2f2) / 3, 2) if all(v is not None for v in [nota_orient, n1f2, n2f2]) else None
+            peso_f2 = round(media_f2 * 0.4, 2) if media_f2 is not None else None
+            nota_final = round(peso_f1 + peso_f2, 2) if peso_f1 is not None and peso_f2 is not None else None
+
+            ws4.append([
+                tcc.id, tcc.titulo, tcc.aluno.nome_completo,
+                tcc.orientador.nome_completo if tcc.orientador else '',
+                n1f1, n2f1, media_f1, peso_f1,
+                nota_orient, n1f2, n2f2, media_f2, peso_f2, nota_final,
+            ])
+
+        # === ABA 5: Relatório de Avaliação ===
+        ws5 = wb.create_sheet('Relatório de Avaliação')
+        headers5 = ['ID', 'Título', 'Aluno', 'Data Defesa',
+                     'Avaliador 1 (Fase I)', 'Parecer Avaliador 1 (Fase I)',
+                     'Avaliador 2 (Fase I)', 'Parecer Avaliador 2 (Fase I)',
+                     'Avaliador 1 (Fase II)', 'Parecer Avaliador 1 (Fase II)',
+                     'Avaliador 2 (Fase II)', 'Parecer Avaliador 2 (Fase II)',
+                     'Avaliador 3 (Fase II)', 'Parecer Avaliador 3 (Fase II)']
+        ws5.append(headers5)
+
+        for tcc in tccs:
+            banca = bancas.get(tcc.id)
+            avaliadores_banca = sorted(
+                [m for m in (banca.membros.all() if banca else []) if m.tipo == 'AVALIADOR'],
+                key=lambda m: m.ordem
+            )
+            avals_f1 = avaliacoes_f1_map.get(tcc.id, [])
+            avals_f2 = avaliacoes_f2_map.get(tcc.id, [])
+
+            aval1_f1 = next((a for a in avals_f1 if len(avaliadores_banca) > 0 and a.avaliador_id == avaliadores_banca[0].usuario_id), None)
+            aval2_f1 = next((a for a in avals_f1 if len(avaliadores_banca) > 1 and a.avaliador_id == avaliadores_banca[1].usuario_id), None)
+
+            aval1_f2 = next((a for a in avals_f2 if a.avaliador_id == (tcc.orientador_id or -1)), None)
+            if not aval1_f2 and tcc.coorientador_id:
+                aval1_f2 = next((a for a in avals_f2 if a.avaliador_id == tcc.coorientador_id), None)
+            aval2_f2 = next((a for a in avals_f2 if len(avaliadores_banca) > 0 and a.avaliador_id == avaliadores_banca[0].usuario_id), None)
+            aval3_f2 = next((a for a in avals_f2 if len(avaliadores_banca) > 1 and a.avaliador_id == avaliadores_banca[1].usuario_id), None)
+
+            ws5.append([
+                tcc.id, tcc.titulo, tcc.aluno.nome_completo,
+                tcc.data_defesa.strftime('%d/%m/%Y') if tcc.data_defesa else '',
+                avaliadores_banca[0].usuario.nome_completo if len(avaliadores_banca) > 0 else '',
+                aval1_f1.parecer if aval1_f1 and aval1_f1.parecer else '',
+                avaliadores_banca[1].usuario.nome_completo if len(avaliadores_banca) > 1 else '',
+                aval2_f1.parecer if aval2_f1 and aval2_f1.parecer else '',
+                tcc.orientador.nome_completo if tcc.orientador else '',
+                aval1_f2.parecer if aval1_f2 and aval1_f2.parecer else '',
+                avaliadores_banca[0].usuario.nome_completo if len(avaliadores_banca) > 0 else '',
+                aval2_f2.parecer if aval2_f2 and aval2_f2.parecer else '',
+                avaliadores_banca[1].usuario.nome_completo if len(avaliadores_banca) > 1 else '',
+                aval3_f2.parecer if aval3_f2 and aval3_f2.parecer else '',
+            ])
+
+        # Ajustar largura das colunas
+        for ws in [ws1, ws2, ws3, ws4, ws5]:
+            for col_idx, col in enumerate(ws.columns, 1):
+                max_len = 10
+                for cell in col:
+                    if cell.value:
+                        max_len = max(max_len, min(len(str(cell.value)), 60))
+                ws.column_dimensions[get_column_letter(col_idx)].width = max_len + 2
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        return buffer
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def reset(self, request):
@@ -3049,7 +3875,22 @@ class SolicitacaoOrientacaoViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Você não pode criar solicitação para TCC de outro aluno')
 
-        serializer.save()
+        solicitacao = serializer.save()
+
+        # Notificar coordenador(es) sobre nova solicitação de orientação
+        from users.models import Usuario
+        from notificacoes.services import criar_notificacao_em_massa_com_email
+        coordenadores = Usuario.objects.filter(tipo_usuario='COORDENADOR')
+        criar_notificacao_em_massa_com_email(
+            usuarios=list(coordenadores),
+            tipo=TipoNotificacao.CONVITE_ALUNO,
+            titulo='Nova Solicitação de Orientação',
+            mensagem=f'O aluno {self.request.user.nome_completo} enviou uma solicitação de orientação para o professor {solicitacao.professor.nome_completo}.',
+            campo_preferencia='coord_convite_aluno',
+            action_url='/solicitacoes',
+            tcc_id=tcc.id,
+            prioridade=PrioridadeNotificacao.NORMAL
+        )
 
     def get_queryset(self):
         """Filtrar solicitações conforme tipo de usuário."""
@@ -3136,6 +3977,15 @@ class SolicitacaoOrientacaoViewSet(viewsets.ModelViewSet):
                 tcc.coorientador_afiliacao = solicitacao.coorientador_afiliacao
                 tcc.coorientador_lattes = solicitacao.coorientador_lattes
 
+                # Tentar vincular coorientador cadastrado pelo nome
+                from users.models import Usuario
+                coorientador_user = Usuario.objects.filter(
+                    nome_completo=solicitacao.coorientador_nome,
+                    tipo_usuario__in=['PROFESSOR', 'COORDENADOR', 'AVALIADOR']
+                ).first()
+                if coorientador_user:
+                    tcc.coorientador = coorientador_user
+
             tcc.save()
 
             # Auto-aprovar documentos iniciais (PLANO_DESENVOLVIMENTO e TERMO_ACEITE)
@@ -3161,33 +4011,161 @@ class SolicitacaoOrientacaoViewSet(viewsets.ModelViewSet):
                 visibilidade=Visibilidade.TODOS
             )
 
-            # Criar notificação para aluno e enviar e-mail
+            # Criar notificações e enviar e-mails
             from notificacoes.services import criar_notificacao_com_email
+            from definicoes.models import CalendarioSemestre
+
+            # Buscar datas do calendário (usa o calendário ativo mais recente)
+            calendario = CalendarioSemestre.obter_calendario_atual()
+            data_continuidade = calendario.avaliacao_continuidade_fim.strftime('%d/%m/%Y') if calendario and calendario.avaliacao_continuidade_fim else 'Não definida'
+            data_submissao = calendario.submissao_monografia_fim.strftime('%d/%m/%Y') if calendario and calendario.submissao_monografia_fim else 'Não definida'
+            obs_data = f' ({data_continuidade})' if calendario and calendario.avaliacao_continuidade_fim else ''
+
+            # Dados do co-orientador (se existir)
+            tem_coorientador = bool(tcc.coorientador_nome or tcc.coorientador)
+            coorientador_nome = ''
+            if tcc.coorientador:
+                coorientador_nome = tcc.coorientador.nome_completo
+            elif tcc.coorientador_nome:
+                coorientador_nome = tcc.coorientador_nome
+
+            # Linha de co-orientador (condicional)
+            linha_coori_html = f'<br><b>Co-orientador:</b> {coorientador_nome}' if tem_coorientador else ''
+            linha_coori_texto = f'\nCo-orientador: {coorientador_nome}' if tem_coorientador else ''
+
+            # Bloco de prazos e observação (compartilhado)
+            bloco_prazos_html = f"""<p><b>📅 Próximos prazos:</b></p>
+
+<p>{data_continuidade} – Confirmação de continuidade<br>
+{data_submissao} – Último dia para submissão da <b>Monografia aprovada pelo orientador</b> e do <b>Termo de Solicitação de Avaliação da Monografia</b></p>
+
+<p><b>⚠ Observação importante:</b></p>
+
+<p>Caso você envie o seu TCC para análise e ele seja aprovado pelo orientador antes da data prevista para confirmação de continuidade, a funcionalidade terá sua abertura antecipada, e o encerramento seguirá o prazo original do calendário{obs_data}.</p>"""
+
+            bloco_prazos_texto = f"""Próximos prazos:
+
+{data_continuidade} – Confirmação de continuidade
+{data_submissao} – Último dia para submissão da MONOGRAFIA APROVADA PELO ORIENTADOR e do TERMO DE SOLICITAÇÃO DE AVALIAÇÃO DA MONOGRAFIA
+
+Observação importante:
+
+Caso você envie o seu TCC para análise e ele seja aprovado pelo orientador antes da data prevista para confirmação de continuidade, a funcionalidade terá sua abertura antecipada, e o encerramento seguirá o prazo original do calendário{obs_data}."""
+
+            rodape_html = """<p>---<br>
+Portal TCC<br>
+Esta é uma notificação automática. Para mais informações, acesse o sistema.</p>"""
+
+            rodape_texto = """---
+Portal TCC
+Esta é uma notificação automática. Para mais informações, acesse o sistema."""
+
+            # === 1. Email para o ALUNO ===
+            corpo_html_aluno = f"""
+<p>Olá, {tcc.aluno.nome_completo},</p>
+
+<p>Sua solicitação de orientação foi aprovada com sucesso.</p>
+
+<p><b>Tema:</b> {tcc.titulo}<br>
+<b>Orientador:</b> {solicitacao.professor.nome_completo}{linha_coori_html}</p>
+
+<p>A função de envio do TCC para análise do orientador já está habilitada em sua conta.
+Acesse o sistema pelo link: <a href="http://localhost:5500">http://localhost:5500</a></p>
+
+{bloco_prazos_html}
+
+{rodape_html}
+"""
+
+            corpo_texto_aluno = f"""Olá, {tcc.aluno.nome_completo},
+
+Sua solicitação de orientação foi aprovada com sucesso.
+
+Tema: {tcc.titulo}
+Orientador: {solicitacao.professor.nome_completo}{linha_coori_texto}
+
+A função de envio do TCC para análise do orientador já está habilitada em sua conta.
+Acesse o sistema pelo link: http://localhost:5500
+
+{bloco_prazos_texto}
+
+{rodape_texto}
+"""
+
             criar_notificacao_com_email(
                 usuario=tcc.aluno,
                 tipo=TipoNotificacao.SOLICITACAO_APROVADA,
                 titulo='Solicitação de Orientação Aprovada',
-                mensagem=f'Sua solicitação de orientação foi aprovada! Orientador: {solicitacao.professor.nome_completo}. Agora você pode iniciar o desenvolvimento do seu TCC.',
+                mensagem=f'Sua solicitação de orientação foi aprovada com sucesso. Tema: {tcc.titulo}. Orientador: {solicitacao.professor.nome_completo}.',
                 campo_preferencia='aluno_aceitar_convite_orientador',
                 action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.ALTA
+                prioridade=PrioridadeNotificacao.ALTA,
+                corpo_html_customizado=corpo_html_aluno,
+                corpo_texto_customizado=corpo_texto_aluno
             )
 
-            # Notificar coordenador sobre novo convite
-            from users.models import Usuario
-            coordenadores = Usuario.objects.filter(tipo_usuario='COORDENADOR')
-            from notificacoes.services import criar_notificacao_em_massa_com_email
-            criar_notificacao_em_massa_com_email(
-                usuarios=list(coordenadores),
-                tipo=TipoNotificacao.CONVITE_ALUNO,
-                titulo='Nova Solicitação de Orientação Aprovada',
-                mensagem=f'Aluno {tcc.aluno.nome_completo} teve sua solicitação aprovada com orientador {solicitacao.professor.nome_completo}.',
-                campo_preferencia='coord_convite_aluno',
+            # === 2. Email para o ORIENTADOR ===
+            def _gerar_email_orientacao(nome_destinatario, tipo_orientacao):
+                """Gera HTML e texto para email de orientação/co-orientação aprovada."""
+                corpo_html = f"""
+<p>Olá, {nome_destinatario},</p>
+
+<p>Uma nova {tipo_orientacao} foi aprovada.</p>
+
+<p><b>Tema:</b> {tcc.titulo}<br>
+<b>Orientador:</b> {solicitacao.professor.nome_completo}{linha_coori_html}</p>
+
+{bloco_prazos_html}
+
+{rodape_html}
+"""
+                corpo_texto = f"""Olá, {nome_destinatario},
+
+Uma nova {tipo_orientacao} foi aprovada.
+
+Tema: {tcc.titulo}
+Orientador: {solicitacao.professor.nome_completo}{linha_coori_texto}
+
+{bloco_prazos_texto}
+
+{rodape_texto}
+"""
+                return corpo_html, corpo_texto
+
+            html_ori, texto_ori = _gerar_email_orientacao(
+                solicitacao.professor.nome_completo, 'orientação'
+            )
+            criar_notificacao_com_email(
+                usuario=solicitacao.professor,
+                tipo=TipoNotificacao.SOLICITACAO_APROVADA,
+                titulo='Nova Orientação Aprovada',
+                mensagem=f'Uma nova orientação foi aprovada. Tema: {tcc.titulo}. Aluno: {tcc.aluno.nome_completo}.',
+                campo_preferencia='prof_convite_orientacao',
                 action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.NORMAL
+                prioridade=PrioridadeNotificacao.ALTA,
+                corpo_html_customizado=html_ori,
+                corpo_texto_customizado=texto_ori
             )
+
+            # === 3. Email para o CO-ORIENTADOR (se existir e estiver cadastrado) ===
+            if tcc.coorientador:
+                html_coori, texto_coori = _gerar_email_orientacao(
+                    tcc.coorientador.nome_completo, 'co-orientação'
+                )
+                criar_notificacao_com_email(
+                    usuario=tcc.coorientador,
+                    tipo=TipoNotificacao.SOLICITACAO_APROVADA,
+                    titulo='Nova Co-orientação Aprovada',
+                    mensagem=f'Uma nova co-orientação foi aprovada. Tema: {tcc.titulo}. Aluno: {tcc.aluno.nome_completo}.',
+                    campo_preferencia='prof_convite_orientacao',
+                    action_url=f'/tccs/{tcc.id}',
+                    tcc_id=tcc.id,
+                    prioridade=PrioridadeNotificacao.ALTA,
+                    corpo_html_customizado=html_coori,
+                    corpo_texto_customizado=texto_coori
+                )
 
         return Response({
             'solicitacao': SolicitacaoOrientacaoSerializer(solicitacao, context={'request': request}).data,
@@ -3221,8 +4199,10 @@ class SolicitacaoOrientacaoViewSet(viewsets.ModelViewSet):
         # Capturar dados antes de deletar
         tcc = solicitacao.tcc
         tcc_id = tcc.id
+        tcc_titulo = tcc.titulo
         solicitacao_id = solicitacao.id
         aluno = tcc.aluno
+        professor_nome = solicitacao.professor.nome_completo
         coordenador = request.user
         coordenador_nome = coordenador.nome_completo if hasattr(coordenador, 'nome_completo') else str(coordenador)
 
@@ -3253,6 +4233,58 @@ class SolicitacaoOrientacaoViewSet(viewsets.ModelViewSet):
 
             # Deletar TCC (cascade remove documentos, eventos, timeline e solicitações)
             tcc.delete()
+
+            # Notificar aluno por email sobre a rejeição
+            from notificacoes.services import criar_notificacao_com_email
+
+            motivo = parecer if parecer else 'Nenhum motivo informado.'
+
+            corpo_html = f"""
+<p>Olá, {aluno.nome_completo},</p>
+
+<p>Sua solicitação de orientação não foi aprovada.</p>
+
+<p><b>Motivo:</b><br>
+{motivo}</p>
+
+<p><b>Tema:</b> {tcc_titulo}<br>
+<b>Orientador:</b> {professor_nome}</p>
+
+<p>Acesse o sistema em <a href="http://localhost:5500">http://localhost:5500</a> para realizar uma nova solicitação ou entre em contato com a coordenação.</p>
+
+<p>---<br>
+Portal TCC<br>
+Esta é uma notificação automática.</p>
+"""
+
+            corpo_texto = f"""Olá, {aluno.nome_completo},
+
+Sua solicitação de orientação não foi aprovada.
+
+Motivo:
+{motivo}
+
+Tema: {tcc_titulo}
+Orientador: {professor_nome}
+
+Acesse o sistema em http://localhost:5500 para realizar uma nova solicitação ou entre em contato com a coordenação.
+
+---
+Portal TCC
+Esta é uma notificação automática.
+"""
+
+            criar_notificacao_com_email(
+                usuario=aluno,
+                tipo=TipoNotificacao.SOLICITACAO_REJEITADA,
+                titulo='Solicitação de Orientação Rejeitada',
+                mensagem=f'Sua solicitação de orientação não foi aprovada. Motivo: {motivo}',
+                campo_preferencia='aluno_aceitar_convite_orientador',
+                action_url='/',
+                prioridade=PrioridadeNotificacao.ALTA,
+                corpo_html_customizado=corpo_html,
+                corpo_texto_customizado=corpo_texto
+            )
 
         return Response({
             'message': 'Solicitação recusada pelo coordenador. TCC removido.',
@@ -3401,8 +4433,67 @@ class DocumentoTCCViewSet(viewsets.ModelViewSet):
         # Criar notificações COM e-mail baseadas no tipo de documento
         from notificacoes.services import criar_notificacao_com_email, criar_notificacao_em_massa_com_email
 
-        # Monografia enviada - notificar orientador
+        # Monografia enviada - notificar orientador (e co-orientador se existir)
         if documento.tipo_documento == TipoDocumento.MONOGRAFIA and usuario.tipo_usuario == 'ALUNO':
+            from definicoes.models import CalendarioSemestre
+
+            calendario = CalendarioSemestre.obter_calendario_atual()
+            data_submissao = calendario.submissao_monografia_fim.strftime('%d/%m/%Y') if calendario and calendario.submissao_monografia_fim else 'Não definida'
+
+            # Dados do co-orientador (se existir)
+            tem_coorientador = bool(tcc.coorientador_nome or tcc.coorientador)
+            coorientador_nome = ''
+            if tcc.coorientador:
+                coorientador_nome = tcc.coorientador.nome_completo
+            elif tcc.coorientador_nome:
+                coorientador_nome = tcc.coorientador_nome
+
+            linha_coori_html = f'<br><b>Co-orientador:</b> {coorientador_nome}' if tem_coorientador else ''
+            linha_coori_texto = f'\nCo-orientador: {coorientador_nome}' if tem_coorientador else ''
+
+            rodape_html = """<p>---<br>
+Portal TCC<br>
+Esta é uma notificação automática. Para mais informações, acesse o sistema.</p>"""
+
+            rodape_texto = """---
+Portal TCC
+Esta é uma notificação automática. Para mais informações, acesse o sistema."""
+
+            def _gerar_email_monografia(nome_destinatario):
+                """Gera HTML e texto para email de monografia recebida."""
+                corpo_html = f"""
+<p>Olá, {nome_destinatario},</p>
+
+<p>O aluno <b>{usuario.nome_completo}</b> enviou a monografia para análise.</p>
+
+<p><b>Tema:</b> {tcc.titulo}<br>
+<b>Orientador:</b> {tcc.orientador.nome_completo}{linha_coori_html}<br>
+<b>Versão:</b> {documento.versao}</p>
+
+<p>Acesse o sistema para revisar: <a href="http://localhost:5500/tccs/{tcc.id}">http://localhost:5500/tccs/{tcc.id}</a></p>
+
+<p><b>📅 Prazo para submissão da monografia aprovada:</b> {data_submissao}</p>
+
+{rodape_html}
+"""
+                corpo_texto = f"""Olá, {nome_destinatario},
+
+O aluno {usuario.nome_completo} enviou a monografia para análise.
+
+Tema: {tcc.titulo}
+Orientador: {tcc.orientador.nome_completo}{linha_coori_texto}
+Versão: {documento.versao}
+
+Acesse o sistema para revisar: http://localhost:5500/tccs/{tcc.id}
+
+Prazo para submissão da monografia aprovada: {data_submissao}
+
+{rodape_texto}
+"""
+                return corpo_html, corpo_texto
+
+            # Email para o orientador
+            html_ori, texto_ori = _gerar_email_monografia(tcc.orientador.nome_completo)
             criar_notificacao_com_email(
                 usuario=tcc.orientador,
                 tipo=TipoNotificacao.DOCUMENTO_ENVIADO,
@@ -3411,8 +4502,26 @@ class DocumentoTCCViewSet(viewsets.ModelViewSet):
                 campo_preferencia='prof_receber_monografia',
                 action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.ALTA
+                prioridade=PrioridadeNotificacao.ALTA,
+                corpo_html_customizado=html_ori,
+                corpo_texto_customizado=texto_ori
             )
+
+            # Email para o co-orientador (se existir e estiver cadastrado)
+            if tcc.coorientador:
+                html_coori, texto_coori = _gerar_email_monografia(tcc.coorientador.nome_completo)
+                criar_notificacao_com_email(
+                    usuario=tcc.coorientador,
+                    tipo=TipoNotificacao.DOCUMENTO_ENVIADO,
+                    titulo='Nova Monografia Recebida',
+                    mensagem=f'Aluno {usuario.nome_completo} enviou uma nova versão da monografia (v{documento.versao}).',
+                    campo_preferencia='prof_receber_monografia',
+                    action_url=f'/tccs/{tcc.id}',
+                    tcc_id=tcc.id,
+                    prioridade=PrioridadeNotificacao.ALTA,
+                    corpo_html_customizado=html_coori,
+                    corpo_texto_customizado=texto_coori
+                )
 
         # Termo de solicitação enviado - notificar coordenador
         elif documento.tipo_documento == TipoDocumento.TERMO_SOLICITACAO_AVALIACAO and usuario.tipo_usuario == 'ALUNO':

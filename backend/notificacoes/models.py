@@ -95,8 +95,8 @@ class PreferenciasEmail(models.Model):
     # Notificações relacionadas a solicitações de orientação
     aluno_aceitar_convite_orientador = models.BooleanField(
         default=True,
-        verbose_name='Aceitar convite de orientador',
-        help_text='Notificar quando solicitação de orientação for aprovada'
+        verbose_name='Convite de orientação',
+        help_text='Notificar quando solicitação de orientação for analisada'
     )
     # Notificações sobre documentos
     aluno_ajuste_monografia = models.BooleanField(
@@ -135,6 +135,12 @@ class PreferenciasEmail(models.Model):
     )
 
     # ==================== PREFERÊNCIAS PROFESSOR ====================
+    # Notificações sobre orientação
+    prof_convite_orientacao = models.BooleanField(
+        default=True,
+        verbose_name='Convite de orientação',
+        help_text='Notificar quando orientação for aprovada'
+    )
     # Notificações sobre documentos
     prof_receber_monografia = models.BooleanField(
         default=True,
@@ -144,14 +150,14 @@ class PreferenciasEmail(models.Model):
     # Notificações sobre continuidade
     prof_continuidade_aprovada = models.BooleanField(
         default=True,
-        verbose_name='Continuidade aprovada',
-        help_text='Notificar quando aprovar/rejeitar continuidade'
+        verbose_name='Lembrete de aprovação de continuidade',
+        help_text='Notificar 1 dia antes da confirmação de continuidade'
     )
     # Notificações sobre termos
     prof_lembrete_termo = models.BooleanField(
         default=True,
-        verbose_name='Lembrete de termo',
-        help_text='Notificar sobre prazos de termo de solicitação'
+        verbose_name='Lembrete de envio de termo de solicitação de avaliação',
+        help_text='Notificar 1 dia antes do prazo limite de envio do termo de solicitação de avaliação'
     )
     # Notificações sobre avaliações
     prof_resultado_fase_1 = models.BooleanField(

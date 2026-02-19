@@ -123,8 +123,8 @@ export function PreferenciasEmailCard() {
             <h3 className="text-lg font-medium text-cor-texto">Notificações de Aluno</h3>
             <div className="space-y-3">
               <PreferenciaSwitch
-                label="Convite de orientador aceito"
-                descricao="Notificar quando solicitação de orientação for aprovada"
+                label="Convite de orientação"
+                descricao="Notificar quando solicitação de orientação for analisada"
                 checked={preferenciasEmail.aluno_aceitar_convite_orientador}
                 onChange={(valor) => handleTogglePreferencia('aluno_aceitar_convite_orientador', valor)}
                 disabled={salvandoPreferencia}
@@ -181,6 +181,13 @@ export function PreferenciasEmailCard() {
             <h3 className="text-lg font-medium text-cor-texto">Notificações de Professor</h3>
             <div className="space-y-3">
               <PreferenciaSwitch
+                label="Convite de orientação"
+                descricao="Notificar quando orientação for aprovada"
+                checked={preferenciasEmail.prof_convite_orientacao}
+                onChange={(valor) => handleTogglePreferencia('prof_convite_orientacao', valor)}
+                disabled={salvandoPreferencia}
+              />
+              <PreferenciaSwitch
                 label="Recebimento de monografia"
                 descricao="Notificar quando orientando enviar monografia"
                 checked={preferenciasEmail.prof_receber_monografia}
@@ -188,15 +195,15 @@ export function PreferenciasEmailCard() {
                 disabled={salvandoPreferencia}
               />
               <PreferenciaSwitch
-                label="Decisão de continuidade"
-                descricao="Notificar quando aprovar/rejeitar continuidade"
+                label="Lembrete de aprovação de continuidade"
+                descricao="Notificar 1 dia antes da confirmação de continuidade"
                 checked={preferenciasEmail.prof_continuidade_aprovada}
                 onChange={(valor) => handleTogglePreferencia('prof_continuidade_aprovada', valor)}
                 disabled={salvandoPreferencia}
               />
               <PreferenciaSwitch
-                label="Lembrete de termo"
-                descricao="Notificar sobre prazos de termo de solicitação"
+                label="Lembrete de envio de termo de solicitação de avaliação"
+                descricao="Notificar 1 dia antes do prazo limite de envio do termo de solicitação de avaliação"
                 checked={preferenciasEmail.prof_lembrete_termo}
                 onChange={(valor) => handleTogglePreferencia('prof_lembrete_termo', valor)}
                 disabled={salvandoPreferencia}

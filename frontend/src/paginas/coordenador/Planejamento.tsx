@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Save, Loader2, FileText, Upload, Download, Mail, Eye, EyeOff } from 'lucide-react'
+import { Calendar, Save, Loader2, FileText, Upload, Download, Mail, Eye, EyeOff, AlertTriangle, Trash2 } from 'lucide-react'
 import { useToast } from '../../contextos/ToastProvider'
 import { useCalendarioSemestre } from '../../hooks'
 import {
@@ -15,7 +15,7 @@ import {
   removerDocumentoReferencia,
   type DocumentoReferencia
 } from '../../servicos/documentos'
-import { exportarDados, baixarArquivoZip } from '../../servicos/tccs'
+import { exportarDados, baixarArquivoZip, verificarEmailReset, resetarPeriodo } from '../../servicos/tccs'
 import {
   obterConfiguracaoEmail,
   atualizarConfiguracaoEmail,
@@ -123,6 +123,19 @@ export function Planejamento() {
   const [salvandoEmail, setSalvandoEmail] = useState(false)
   const [salvandoTudo, setSalvandoTudo] = useState(false)
   const [exportandoDados, setExportandoDados] = useState(false)
+  const [modalBaixarAberto, setModalBaixarAberto] = useState(false)
+  const [baixarDados, setBaixarDados] = useState(true)
+  const [baixarMonografia, setBaixarMonografia] = useState(true)
+  const [baixarDocumentos, setBaixarDocumentos] = useState(true)
+
+  // Estados para resetar período
+  const [modalConfirmacao, setModalConfirmacao] = useState(false)
+  const [textoConfirmacao, setTextoConfirmacao] = useState('')
+  const [modalSenha, setModalSenha] = useState(false)
+  const [senhaReset, setSenhaReset] = useState('')
+  const [modalEmail, setModalEmail] = useState(false)
+  const [emailReset, setEmailReset] = useState('')
+  const [resetando, setResetando] = useState(false)
 
   // Carregar códigos e documentos ao montar
   useEffect(() => {
@@ -466,19 +479,106 @@ export function Planejamento() {
     }
   }
 
+  const handleAbrirModalBaixar = () => {
+    setBaixarDados(true)
+    setBaixarMonografia(true)
+    setBaixarDocumentos(true)
+    setModalBaixarAberto(true)
+  }
+
   const handleExportarDados = async () => {
     try {
       setExportandoDados(true)
 
-      const blob = await exportarDados()
+      const blob = await exportarDados({
+        dados: baixarDados,
+        monografia: baixarMonografia,
+        documentos: baixarDocumentos,
+      })
       const nomeArquivo = semestre ? `TCCs_${semestre}.zip` : 'TCCs.zip'
       baixarArquivoZip(blob, nomeArquivo)
 
+      setModalBaixarAberto(false)
       sucesso('Dados baixados com sucesso!')
     } catch (err: any) {
       mostrarErro(err.response?.data?.detail || 'Erro ao exportar dados')
     } finally {
       setExportandoDados(false)
+    }
+  }
+
+  // ===== Reset de Período =====
+  const handleAbrirResetPeriodo = () => {
+    setTextoConfirmacao('')
+    setModalConfirmacao(true)
+  }
+
+  const handleConfirmarApagar = () => {
+    if (textoConfirmacao !== 'APAGAR') return
+    setModalConfirmacao(false)
+    setTextoConfirmacao('')
+    setSenhaReset('')
+    setModalSenha(true)
+  }
+
+  const handleConfirmarSenha = async () => {
+    if (!senhaReset) return
+    setModalSenha(false)
+
+    try {
+      // Verificar se tem email configurado
+      const { email_configurado } = await verificarEmailReset()
+      if (!email_configurado) {
+        setEmailReset('')
+        setModalEmail(true)
+        return
+      }
+      // Se tem email, executar reset direto
+      await executarReset()
+    } catch (err: any) {
+      mostrarErro('Erro ao verificar configuração de email')
+      setSenhaReset('')
+    }
+  }
+
+  const handleConfirmarEmail = async () => {
+    if (!emailReset) return
+    setModalEmail(false)
+    await executarReset(emailReset)
+  }
+
+  const executarReset = async (emailDestino?: string) => {
+    try {
+      setResetando(true)
+      const { blob, emailEnviado } = await resetarPeriodo(senhaReset, emailDestino)
+      const nomeArquivo = semestre ? `Backup_${semestre}.zip` : 'Backup_periodo.zip'
+      baixarArquivoZip(blob, nomeArquivo)
+
+      if (emailEnviado) {
+        sucesso('Período resetado! Backup baixado e enviado por email.')
+      } else {
+        sucesso('Período resetado! Backup baixado. (Falha ao enviar email)')
+      }
+
+      // Recarregar a página para refletir os dados limpos
+      setTimeout(() => window.location.reload(), 2000)
+    } catch (err: any) {
+      // Para respostas blob com erro, precisamos ler o blob como texto
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text()
+          const json = JSON.parse(text)
+          mostrarErro(json.detail || 'Erro ao resetar período')
+        } catch {
+          mostrarErro('Erro ao resetar período')
+        }
+      } else {
+        mostrarErro(err.response?.data?.detail || 'Erro ao resetar período')
+      }
+    } finally {
+      setResetando(false)
+      setSenhaReset('')
+      setEmailReset('')
     }
   }
 
@@ -1237,24 +1337,302 @@ export function Planejamento() {
           Dados
         </h2>
 
-        <button
-          onClick={handleExportarDados}
-          disabled={exportandoDados}
-          className="px-6 py-3 bg-[rgb(var(--cor-sucesso))] text-white rounded-lg font-medium hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {exportandoDados ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Baixando...
-            </>
-          ) : (
-            <>
-              <Download className="h-5 w-5" />
-              Baixar dados
-            </>
-          )}
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handleAbrirModalBaixar}
+            disabled={exportandoDados}
+            className="px-6 py-3 bg-[rgb(var(--cor-sucesso))] text-white rounded-lg font-medium hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {exportandoDados ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Baixando...
+              </>
+            ) : (
+              <>
+                <Download className="h-5 w-5" />
+                Baixar dados
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleAbrirResetPeriodo}
+            disabled={resetando}
+            className="px-6 py-3 bg-[rgb(var(--cor-erro))] text-white rounded-lg font-medium hover:bg-[rgb(var(--cor-erro))]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {resetando ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Resetando...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-5 w-5" />
+                Resetar período
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Modal Baixar Dados */}
+      {modalBaixarAberto && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-[rgb(var(--cor-sucesso))]/10">
+                  <Download className="h-5 w-5 text-[rgb(var(--cor-sucesso))]" />
+                </div>
+                <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))]">
+                  Baixar dados
+                </h3>
+              </div>
+
+              <p className="text-sm text-[rgb(var(--cor-texto-secundario))] mb-4">
+                Selecione o que deseja incluir no download:
+              </p>
+
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--cor-borda))] cursor-pointer hover:bg-[rgb(var(--cor-fundo))] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={baixarDados}
+                    onChange={(e) => setBaixarDados(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[rgb(var(--cor-destaque))]"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Dados</span>
+                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">Arquivo txt com dados das fases</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--cor-borda))] cursor-pointer hover:bg-[rgb(var(--cor-fundo))] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={baixarMonografia}
+                    onChange={(e) => setBaixarMonografia(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[rgb(var(--cor-destaque))]"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Monografias</span>
+                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">Monografia aprovada pelo orientador</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--cor-borda))] cursor-pointer hover:bg-[rgb(var(--cor-fundo))] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={baixarDocumentos}
+                    onChange={(e) => setBaixarDocumentos(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[rgb(var(--cor-destaque))]"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Documentos gerais</span>
+                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">Documentos gerais das fases</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={() => setModalBaixarAberto(false)}
+                disabled={exportandoDados}
+                className="px-4 py-2 text-sm font-medium text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-texto-primario))] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleExportarDados}
+                disabled={exportandoDados || (!baixarDados && !baixarMonografia && !baixarDocumentos)}
+                className="px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--cor-sucesso))] rounded-lg hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {exportandoDados ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Baixando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Baixar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmação - Digitar APAGAR */}
+      {modalConfirmacao && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-[rgb(var(--cor-erro))]/10">
+                  <AlertTriangle className="h-6 w-6 text-[rgb(var(--cor-erro))]" />
+                </div>
+                <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))]">
+                  Resetar período
+                </h3>
+              </div>
+
+              <p className="text-[rgb(var(--cor-texto))] mb-2">
+                Esta ação irá <strong>apagar permanentemente</strong> todos os dados do período atual:
+              </p>
+              <ul className="text-sm text-[rgb(var(--cor-texto))]/80 mb-4 list-disc pl-5 space-y-1">
+                <li>Todos os TCCs e avaliações</li>
+                <li>Todos os alunos cadastrados</li>
+                <li>Todos os membros externos</li>
+                <li>Todos os avisos do mural</li>
+                <li>Todas as notificações</li>
+                <li>Arquivos de monografia</li>
+              </ul>
+              <p className="text-sm text-[rgb(var(--cor-texto))]/80 mb-4">
+                Professores e coordenador serão mantidos. Um backup será baixado e enviado por email antes da exclusão.
+              </p>
+
+              <p className="text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-2">
+                Digite <strong>APAGAR</strong> para confirmar:
+              </p>
+              <input
+                type="text"
+                value={textoConfirmacao}
+                onChange={(e) => setTextoConfirmacao(e.target.value)}
+                placeholder="APAGAR"
+                className="w-full px-4 py-2 rounded-lg border border-[rgb(var(--cor-borda))] bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-primario))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-erro))]/50"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={() => setModalConfirmacao(false)}
+                className="px-4 py-2 rounded-lg border border-[rgb(var(--cor-borda))] text-[rgb(var(--cor-texto))] hover:bg-[rgb(var(--cor-fundo))] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarApagar}
+                disabled={textoConfirmacao !== 'APAGAR'}
+                className="px-4 py-2 rounded-lg bg-[rgb(var(--cor-erro))] text-white font-medium hover:bg-[rgb(var(--cor-erro))]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Senha */}
+      {modalSenha && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-[rgb(var(--cor-erro))]/10">
+                  <AlertTriangle className="h-6 w-6 text-[rgb(var(--cor-erro))]" />
+                </div>
+                <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))]">
+                  Confirmar com senha
+                </h3>
+              </div>
+
+              <p className="text-[rgb(var(--cor-texto))] mb-4">
+                Digite sua senha para confirmar o reset do período.
+              </p>
+
+              <input
+                type="password"
+                value={senhaReset}
+                onChange={(e) => setSenhaReset(e.target.value)}
+                placeholder="Sua senha"
+                className="w-full px-4 py-2 rounded-lg border border-[rgb(var(--cor-borda))] bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-primario))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-erro))]/50"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmarSenha() }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={() => { setModalSenha(false); setSenhaReset('') }}
+                className="px-4 py-2 rounded-lg border border-[rgb(var(--cor-borda))] text-[rgb(var(--cor-texto))] hover:bg-[rgb(var(--cor-fundo))] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarSenha}
+                disabled={!senhaReset}
+                className="px-4 py-2 rounded-lg bg-[rgb(var(--cor-erro))] text-white font-medium hover:bg-[rgb(var(--cor-erro))]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirmar reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Email (quando não há email configurado) */}
+      {modalEmail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Mail className="h-6 w-6 text-[rgb(var(--cor-destaque))]" />
+                <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))]">
+                  Email para backup
+                </h3>
+              </div>
+
+              <p className="text-[rgb(var(--cor-texto))] mb-4">
+                Nenhum email está configurado no sistema. Informe um email para receber o backup dos dados antes da exclusão.
+              </p>
+
+              <input
+                type="email"
+                value={emailReset}
+                onChange={(e) => setEmailReset(e.target.value)}
+                placeholder="email@exemplo.com"
+                className="w-full px-4 py-2 rounded-lg border border-[rgb(var(--cor-borda))] bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-primario))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))]/50"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmarEmail() }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={() => { setModalEmail(false); setEmailReset(''); setSenhaReset('') }}
+                className="px-4 py-2 rounded-lg border border-[rgb(var(--cor-borda))] text-[rgb(var(--cor-texto))] hover:bg-[rgb(var(--cor-fundo))] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarEmail}
+                disabled={!emailReset || !emailReset.includes('@')}
+                className="px-4 py-2 rounded-lg bg-[rgb(var(--cor-erro))] text-white font-medium hover:bg-[rgb(var(--cor-erro))]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirmar reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay de carregamento durante reset */}
+      {resetando && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-2xl p-8 text-center max-w-sm">
+            <Loader2 className="h-10 w-10 animate-spin text-[rgb(var(--cor-erro))] mx-auto mb-4" />
+            <p className="text-[rgb(var(--cor-texto-primario))] font-semibold mb-2">Resetando período...</p>
+            <p className="text-sm text-[rgb(var(--cor-texto))]/70">
+              Gerando backup, enviando email e apagando dados. Isso pode levar alguns instantes.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

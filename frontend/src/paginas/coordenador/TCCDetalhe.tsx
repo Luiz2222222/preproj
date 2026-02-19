@@ -31,6 +31,7 @@ import { AnalisarAvaliacoesFase2 } from './components/AnalisarAvaliacoesFase2'
 import { AnaliseFinalCoordenador } from './components/AnaliseFinalCoordenador'
 import { formatarDataCurta } from '../../utils/datas'
 import { useState, useMemo, useCallback } from 'react'
+import { ModalEditarTCC } from '../../componentes/ModalEditarTCC'
 
 export function TCCDetalhe() {
   const { id } = useParams<{ id: string }>()
@@ -49,6 +50,7 @@ export function TCCDetalhe() {
   })
 
   const [baixandoRelatorio, setBaixandoRelatorio] = useState(false)
+  const [editando, setEditando] = useState(false)
 
   const handleBaixarRelatorio = useCallback(async () => {
     if (!tcc) return
@@ -199,7 +201,10 @@ export function TCCDetalhe() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="px-4 py-2 text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/5 rounded-lg transition-colors flex items-center gap-2">
+            <button
+              onClick={() => setEditando(true)}
+              className="px-4 py-2 text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/5 rounded-lg transition-colors flex items-center gap-2"
+            >
               <Edit className="h-4 w-4" />
               Editar
             </button>
@@ -369,6 +374,18 @@ export function TCCDetalhe() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Edição */}
+      {editando && (
+        <ModalEditarTCC
+          tcc={tcc}
+          onClose={() => setEditando(false)}
+          onSalvo={() => {
+            setEditando(false)
+            recarregar()
+          }}
+        />
+      )}
     </div>
   )
 }

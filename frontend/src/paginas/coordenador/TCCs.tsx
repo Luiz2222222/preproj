@@ -28,21 +28,41 @@ import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, CursoLabels } from '../../typ
 import type { TCC } from '../../types'
 import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
 import { ModalEditarTCC } from '../../componentes/ModalEditarTCC'
+import { exportarDadosTCC, baixarArquivoZip } from '../../servicos/tccs'
 
 export function TCCs() {
   const navigate = useNavigate()
-  const location = useLocation<{ filtroEtapa?: string }>()
+  const location = useLocation<{ filtroEtapa?: string; filtroEtapas?: string[] }>()
   const { tccs, carregando, erro, recarregar } = useTCCsCoordenador()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filtroEtapa, setFiltroEtapa] = useState<string>('todas')
+  const [filtroEtapas, setFiltroEtapas] = useState<string[] | null>(null)
   const [filtroCurso, setFiltroCurso] = useState<string>('todos')
   const [tccEditando, setTccEditando] = useState<TCC | null>(null)
+  const [baixandoId, setBaixandoId] = useState<number | null>(null)
+
+  const handleDownload = async (tcc: TCC) => {
+    try {
+      setBaixandoId(tcc.id)
+      const blob = await exportarDadosTCC(tcc.id)
+      const nomeAluno = tcc.aluno_dados?.nome_completo?.replace(/\s+/g, '_') || `TCC_${tcc.id}`
+      baixarArquivoZip(blob, `${nomeAluno}.zip`)
+    } catch {
+      // Silencioso - o arquivo pode estar vazio
+    } finally {
+      setBaixandoId(null)
+    }
+  }
 
   // Aplicar filtro inicial do state (quando vem do dashboard)
   useEffect(() => {
-    if (location.state?.filtroEtapa) {
+    if (location.state?.filtroEtapas) {
+      setFiltroEtapas(location.state.filtroEtapas)
+      setFiltroEtapa('todas')
+    } else if (location.state?.filtroEtapa) {
       setFiltroEtapa(location.state.filtroEtapa)
+      setFiltroEtapas(null)
     }
   }, [location.state])
 
@@ -123,13 +143,15 @@ export function TCCs() {
         nomeCoorientador.toLowerCase().includes(searchTerm.toLowerCase()) ||
         curso.toLowerCase().includes(searchTerm.toLowerCase())
 
-      const matchEtapa = filtroEtapa === 'todas' || tcc.etapa_atual === filtroEtapa
+      const matchEtapa = filtroEtapas
+        ? filtroEtapas.includes(tcc.etapa_atual)
+        : filtroEtapa === 'todas' || tcc.etapa_atual === filtroEtapa
 
       const matchCurso = filtroCurso === 'todos' || tcc.aluno_dados?.curso === filtroCurso
 
       return matchSearch && matchEtapa && matchCurso
     })
-  }, [tccs, searchTerm, filtroEtapa, filtroCurso])
+  }, [tccs, searchTerm, filtroEtapa, filtroEtapas, filtroCurso])
 
   // Função para determinar status do TCC
   const getStatus = (tcc: TCC): 'normal' | 'atencao' | 'urgente' => {
@@ -250,7 +272,7 @@ export function TCCs() {
           <select
             className="px-4 py-2 border border-[rgb(var(--cor-borda-forte))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] bg-[rgb(var(--cor-superficie))] text-[rgb(var(--cor-texto-primario))]"
             value={filtroEtapa}
-            onChange={(e) => setFiltroEtapa(e.target.value)}
+            onChange={(e) => { setFiltroEtapa(e.target.value); setFiltroEtapas(null) }}
           >
             {etapasDisponiveis.map(etapa => (
               <option key={etapa.value} value={etapa.value}>
@@ -328,14 +350,19 @@ export function TCCs() {
                           Editar
                         </button>
                         <button
-                          className="px-3 py-1.5 text-xs text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/10 rounded-lg transition-colors flex items-center gap-1"
+                          className="px-3 py-1.5 text-xs text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-destaque))] hover:bg-[rgb(var(--cor-destaque))]/10 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50"
+                          disabled={baixandoId === tcc.id}
                           onClick={(e) => {
                             e.stopPropagation()
-                            // Ação de download
+                            handleDownload(tcc)
                           }}
                         >
-                          <Download className="h-3 w-3" />
-                          Download
+                          {baixandoId === tcc.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Download className="h-3 w-3" />
+                          )}
+                          {baixandoId === tcc.id ? 'Baixando...' : 'Download'}
                         </button>
                       </div>
                     </div>

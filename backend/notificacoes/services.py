@@ -99,7 +99,9 @@ def criar_notificacao_com_email(
     action_url=None,
     metadata=None,
     tcc_id=None,
-    prioridade=PrioridadeNotificacao.NORMAL
+    prioridade=PrioridadeNotificacao.NORMAL,
+    corpo_html_customizado=None,
+    corpo_texto_customizado=None
 ):
     """
     Cria uma notificação e envia e-mail se o usuário tiver a preferência habilitada.
@@ -114,6 +116,8 @@ def criar_notificacao_com_email(
         metadata: Dict opcional com dados adicionais
         tcc_id: ID opcional do TCC relacionado
         prioridade: Nível de prioridade (default: NORMAL)
+        corpo_html_customizado: HTML customizado do e-mail (opcional)
+        corpo_texto_customizado: Texto customizado do e-mail (opcional, fallback do HTML)
 
     Returns:
         Instância da Notificacao criada
@@ -133,22 +137,25 @@ def criar_notificacao_com_email(
     # Verificar se deve enviar e-mail
     if deve_enviar_email(usuario, campo_preferencia):
         try:
-            # Montar corpo do e-mail
-            corpo_texto = f"""
-Olá {usuario.nome_completo},
+            if corpo_texto_customizado:
+                corpo_texto = corpo_texto_customizado
+            else:
+                corpo_texto = f"""
+Olá, {usuario.nome_completo},
 
 {mensagem}
 
 ---
 Portal TCC
-Esta é uma notificação automática. Acesse o sistema para mais detalhes.
-            """
+Esta é uma notificação automática. Para mais informações, acesse o sistema.
+                """
 
             # Enviar e-mail
             enviar_email(
                 destinatarios=[usuario.email],
                 assunto=f"[Portal TCC] {titulo}",
-                corpo_texto=corpo_texto
+                corpo_texto=corpo_texto,
+                corpo_html=corpo_html_customizado
             )
         except Exception as e:
             logger.error(f"Erro ao enviar e-mail para {usuario.email}: {str(e)}")

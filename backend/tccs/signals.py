@@ -46,16 +46,16 @@ def verificar_transicao_fase2(sender, instance, created, **kwargs):
     """
     tcc = instance.tcc
 
-    # Contar quantas avaliações estão com status ENVIADO
+    # Contar quantas avaliações estão com status ENVIADO ou BLOQUEADO (já submetidas)
     avaliacoes_enviadas = AvaliacaoFase2.objects.filter(
         tcc=tcc,
-        status='ENVIADO'
+        status__in=['ENVIADO', 'BLOQUEADO']
     ).count()
 
     # CASO 1: TCC em APRESENTACAO_FASE_2 e todas as 3 avaliações foram enviadas
     if tcc.etapa_atual == EtapaTCC.APRESENTACAO_FASE_2 and avaliacoes_enviadas == 3:
         # Calcular NF2 (média das 3 avaliações)
-        avaliacoes = AvaliacaoFase2.objects.filter(tcc=tcc, status='ENVIADO')
+        avaliacoes = AvaliacaoFase2.objects.filter(tcc=tcc, status__in=['ENVIADO', 'BLOQUEADO'])
         notas = []
         for av in avaliacoes:
             nota = av.calcular_nota_total()

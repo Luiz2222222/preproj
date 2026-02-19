@@ -106,7 +106,7 @@ export const MiniTimelineTCC = ({ tcc, tipo, className = '', apenasTimeline = fa
               {tcc.aluno_nome}
             </p>
             {isCoorientacao && (
-              <p className="text-xs text-cor-texto/60 mt-0.5">
+              <p className="text-xs text-cor-destaque mt-0.5 font-semibold">
                 Co-orientação
               </p>
             )}
