@@ -28,7 +28,7 @@ import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, CursoLabels } from '../../typ
 import type { TCC } from '../../types'
 import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
 import { ModalEditarTCC } from '../../componentes/ModalEditarTCC'
-import { exportarDadosTCC, baixarArquivoZip } from '../../servicos/tccs'
+import { exportarDadosTCC, baixarArquivoZip, type OpcoesBaixar } from '../../servicos/tccs'
 
 export function TCCs() {
   const navigate = useNavigate()
@@ -41,15 +41,28 @@ export function TCCs() {
   const [filtroCurso, setFiltroCurso] = useState<string>('todos')
   const [tccEditando, setTccEditando] = useState<TCC | null>(null)
   const [baixandoId, setBaixandoId] = useState<number | null>(null)
+  const [modalBaixarTcc, setModalBaixarTcc] = useState<TCC | null>(null)
+  const [baixarDados, setBaixarDados] = useState(true)
+  const [baixarMonografia, setBaixarMonografia] = useState(true)
+  const [baixarDocumentos, setBaixarDocumentos] = useState(true)
 
-  const handleDownload = async (tcc: TCC) => {
+  const handleAbrirModalBaixar = (tcc: TCC) => {
+    setBaixarDados(true)
+    setBaixarMonografia(true)
+    setBaixarDocumentos(true)
+    setModalBaixarTcc(tcc)
+  }
+
+  const handleDownload = async () => {
+    if (!modalBaixarTcc) return
     try {
-      setBaixandoId(tcc.id)
-      const blob = await exportarDadosTCC(tcc.id)
-      const nomeAluno = tcc.aluno_dados?.nome_completo?.replace(/\s+/g, '_') || `TCC_${tcc.id}`
+      setBaixandoId(modalBaixarTcc.id)
+      const blob = await exportarDadosTCC(modalBaixarTcc.id, { dados: baixarDados, monografia: baixarMonografia, documentos: baixarDocumentos })
+      const nomeAluno = modalBaixarTcc.aluno_dados?.nome_completo?.replace(/\s+/g, '_') || `TCC_${modalBaixarTcc.id}`
       baixarArquivoZip(blob, `${nomeAluno}.zip`)
+      setModalBaixarTcc(null)
     } catch {
-      // Silencioso - o arquivo pode estar vazio
+      // Silencioso
     } finally {
       setBaixandoId(null)
     }
@@ -354,7 +367,7 @@ export function TCCs() {
                           disabled={baixandoId === tcc.id}
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleDownload(tcc)
+                            handleAbrirModalBaixar(tcc)
                           }}
                         >
                           {baixandoId === tcc.id ? (
@@ -412,6 +425,101 @@ export function TCCs() {
             recarregar()
           }}
         />
+      )}
+
+      {/* Modal Baixar Dados */}
+      {modalBaixarTcc && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-[rgb(var(--cor-sucesso))]/10">
+                  <Download className="h-5 w-5 text-[rgb(var(--cor-sucesso))]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))]">
+                    Baixar dados
+                  </h3>
+                  <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">
+                    {modalBaixarTcc.aluno_dados?.nome_completo}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm text-[rgb(var(--cor-texto-secundario))] mb-4">
+                Selecione o que deseja incluir no download:
+              </p>
+
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--cor-borda))] cursor-pointer hover:bg-[rgb(var(--cor-fundo))] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={baixarDados}
+                    onChange={(e) => setBaixarDados(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[rgb(var(--cor-destaque))]"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Dados</span>
+                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">Arquivo txt com dados das fases</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--cor-borda))] cursor-pointer hover:bg-[rgb(var(--cor-fundo))] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={baixarMonografia}
+                    onChange={(e) => setBaixarMonografia(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[rgb(var(--cor-destaque))]"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Monografia</span>
+                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">Monografia aprovada pelo orientador</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--cor-borda))] cursor-pointer hover:bg-[rgb(var(--cor-fundo))] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={baixarDocumentos}
+                    onChange={(e) => setBaixarDocumentos(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[rgb(var(--cor-destaque))]"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">Documentos gerais</span>
+                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">Documentos gerais das fases</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={() => setModalBaixarTcc(null)}
+                disabled={baixandoId !== null}
+                className="px-4 py-2 text-sm font-medium text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-texto-primario))] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={baixandoId !== null || (!baixarDados && !baixarMonografia && !baixarDocumentos)}
+                className="px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--cor-sucesso))] rounded-lg hover:bg-[rgb(var(--cor-sucesso))]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {baixandoId !== null ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Baixando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Baixar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

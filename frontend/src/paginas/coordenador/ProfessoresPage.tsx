@@ -367,7 +367,7 @@ export function ProfessoresPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <div className="text-sm font-medium text-[rgb(var(--cor-texto-primario))]">{professor.nome_completo}</div>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${workloadColors[workloadStatus]}`}>
-                            {workloadLabels[workloadStatus]}
+                            {workloadLabels[workloadStatus]} ({cargaTotal})
                           </span>
                         </div>
                         <div className="text-sm text-[rgb(var(--cor-texto-terciario))]">{professor.email}</div>

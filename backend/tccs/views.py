@@ -3071,58 +3071,80 @@ Tema: {tcc.titulo}
     @action(detail=True, methods=['get'], url_path='exportar-dados', permission_classes=[IsAuthenticated, IsCoordenador])
     def exportar_dados_tcc(self, request, pk=None):
         """
-        GET /api/tccs/{id}/exportar-dados/
+        GET /api/tccs/{id}/exportar-dados/?dados=true&monografia=true&documentos=true
         Exporta dados de um TCC individual em formato ZIP.
 
-        Cria um ZIP contendo:
-        - Última monografia enviada (se existir)
-        - Fichas de avaliação em .txt (se existirem)
-        - Relatório de avaliação em PDF (se existir)
+        Query params (todos true por padrão):
+        - dados: inclui dados.txt (relatório completo)
+        - monografia: inclui monografia aprovada
+        - documentos: inclui documentos gerais (plano, termos, apresentação, relatório, etc.)
         """
         tcc = self.get_object()
         aluno = tcc.aluno
         nome_aluno = aluno.nome_completo
 
+        # Ler filtros dos query params
+        incluir_dados = request.query_params.get('dados', 'true').lower() == 'true'
+        incluir_monografia = request.query_params.get('monografia', 'true').lower() == 'true'
+        incluir_documentos = request.query_params.get('documentos', 'true').lower() == 'true'
+
+        # Tipos de documentos gerais (tudo exceto MONOGRAFIA e MONOGRAFIA_AVALIACAO)
+        tipos_documentos_gerais = [
+            TipoDocumento.PLANO_DESENVOLVIMENTO,
+            TipoDocumento.TERMO_ACEITE,
+            TipoDocumento.TERMO_SOLICITACAO_AVALIACAO,
+            TipoDocumento.APRESENTACAO,
+            TipoDocumento.ATA,
+            TipoDocumento.RELATORIO_AVALIACAO,
+            TipoDocumento.OUTRO,
+        ]
+
         zip_buffer = io.BytesIO()
 
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # Monografia
-            ultima_monografia = DocumentoTCC.objects.filter(
-                tcc=tcc,
-                tipo_documento=TipoDocumento.MONOGRAFIA
-            ).order_by('-versao', '-criado_em').first()
+            # Monografia aprovada
+            if incluir_monografia:
+                ultima_monografia = DocumentoTCC.objects.filter(
+                    tcc=tcc,
+                    tipo_documento=TipoDocumento.MONOGRAFIA,
+                    status=StatusDocumento.APROVADO
+                ).order_by('-versao', '-criado_em').first()
 
-            if ultima_monografia and ultima_monografia.arquivo:
-                try:
-                    arquivo_path = ultima_monografia.arquivo.path
-                    arquivo_nome = ultima_monografia.nome_original or os.path.basename(arquivo_path)
-                    with open(arquivo_path, 'rb') as f:
-                        zip_file.writestr(arquivo_nome, f.read())
-                except Exception:
-                    pass
+                if ultima_monografia and ultima_monografia.arquivo:
+                    try:
+                        arquivo_path = ultima_monografia.arquivo.path
+                        arquivo_nome = ultima_monografia.nome_original or os.path.basename(arquivo_path)
+                        with open(arquivo_path, 'rb') as f:
+                            zip_file.writestr(arquivo_nome, f.read())
+                    except Exception:
+                        pass
 
             # Relatório TXT
-            avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc).select_related('avaliador')
-            avaliacoes_f2 = AvaliacaoFase2.objects.filter(tcc=tcc).select_related('avaliador')
+            if incluir_dados:
+                avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc).select_related('avaliador')
+                avaliacoes_f2 = AvaliacaoFase2.objects.filter(tcc=tcc).select_related('avaliador')
 
-            conteudo = self._gerar_texto_avaliacoes_completo(
-                avaliacoes_f1, avaliacoes_f2, aluno, tcc
-            )
-            zip_file.writestr('dados.txt', conteudo)
+                conteudo = self._gerar_texto_avaliacoes_completo(
+                    avaliacoes_f1, avaliacoes_f2, aluno, tcc
+                )
+                zip_file.writestr('dados.txt', conteudo)
 
-            # Relatório PDF (se existir)
-            relatorio_pdf = DocumentoTCC.objects.filter(
-                tcc=tcc,
-                tipo_documento=TipoDocumento.RELATORIO_AVALIACAO
-            ).order_by('-criado_em').first()
+            # Documentos gerais
+            if incluir_documentos:
+                documentos = DocumentoTCC.objects.filter(
+                    tcc=tcc,
+                    tipo_documento__in=tipos_documentos_gerais
+                ).order_by('tipo_documento', '-versao')
 
-            if relatorio_pdf and relatorio_pdf.arquivo:
-                try:
-                    arquivo_path = relatorio_pdf.arquivo.path
-                    with open(arquivo_path, 'rb') as f:
-                        zip_file.writestr('relatorio_avaliacao.pdf', f.read())
-                except Exception:
-                    pass
+                for doc in documentos:
+                    if doc.arquivo:
+                        try:
+                            arquivo_path = doc.arquivo.path
+                            arquivo_nome = doc.nome_original or os.path.basename(arquivo_path)
+                            with open(arquivo_path, 'rb') as f:
+                                zip_file.writestr(arquivo_nome, f.read())
+                        except Exception:
+                            pass
 
         zip_buffer.seek(0)
         nome_arquivo = f"{nome_aluno}.zip".replace(' ', '_')
@@ -3143,8 +3165,8 @@ Tema: {tcc.titulo}
         return f"    {criterio} {pontos} {nota_str}"
 
     def _centralizar(self, texto, largura=78):
-        """Centraliza texto dentro da largura."""
-        return texto.center(largura)
+        """Centraliza texto dentro da largura, com prefixo de 2 espaços."""
+        return "  " + texto.center(largura)
 
     def _gerar_texto_avaliacoes_completo(self, avaliacoes_f1, avaliacoes_f2, aluno, tcc):
         """Gera relatório completo do TCC em texto."""
@@ -3293,7 +3315,9 @@ Tema: {tcc.titulo}
 
             if notas_totais_f1:
                 nf1 = sum(notas_totais_f1) / len(notas_totais_f1)
+                nf1_pond = nf1 * 0.6
                 L.append(f"    \u25b8 NF1 (Média Fase I) = {self._fmt(nf1)}")
+                L.append(f"    \u25b8 NF1 (Nota final I) = {self._fmt(nf1_pond)}")
                 L.append("")
 
         # ── FASE II ──
@@ -3335,7 +3359,9 @@ Tema: {tcc.titulo}
 
             if notas_totais_f2:
                 media_f2 = sum(notas_totais_f2) / len(notas_totais_f2)
-                L.append(f"    \u25b8 Média Fase II = {self._fmt(media_f2)}")
+                nf2_pond = media_f2 * 0.4
+                L.append(f"    \u25b8 NF2 (Média Fase II) = {self._fmt(media_f2)}")
+                L.append(f"    \u25b8 NF2 (Nota final II) = {self._fmt(nf2_pond)}")
                 L.append("")
 
         # ── RESULTADO FINAL ──

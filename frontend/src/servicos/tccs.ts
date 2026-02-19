@@ -62,10 +62,16 @@ export function baixarArquivoZip(blob: Blob, nomeArquivo: string = 'dados_tccs.z
  * Exporta dados de um TCC individual em formato ZIP
  * GET /api/tccs/{id}/exportar-dados/
  */
-export async function exportarDadosTCC(tccId: number): Promise<Blob> {
-  const response = await api.get(`/tccs/${tccId}/exportar-dados/`, {
-    responseType: 'blob',
-  });
+export async function exportarDadosTCC(tccId: number, opcoes?: OpcoesBaixar): Promise<Blob> {
+  const params = new URLSearchParams();
+  if (opcoes) {
+    if (opcoes.dados !== undefined) params.append('dados', String(opcoes.dados));
+    if (opcoes.monografia !== undefined) params.append('monografia', String(opcoes.monografia));
+    if (opcoes.documentos !== undefined) params.append('documentos', String(opcoes.documentos));
+  }
+  const query = params.toString();
+  const url = `/tccs/${tccId}/exportar-dados/${query ? `?${query}` : ''}`;
+  const response = await api.get(url, { responseType: 'blob' });
   return response.data;
 }
 
