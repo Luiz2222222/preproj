@@ -1,7 +1,6 @@
 /**
  * Página de listagem de participações em bancas
- * Remove todas as informações identificadoras (aluno, orientador, título)
- * para garantir imparcialidade na avaliação
+ * Exibe título do TCC, botão de download e botões de fase (I e II)
  */
 
 import { useState } from 'react';
@@ -11,8 +10,8 @@ import {
   AlertCircle,
   Loader2,
   Download,
-  Clock,
-  Eye
+  FileText,
+  Presentation
 } from 'lucide-react';
 import { useTCCsParaAvaliar } from '../../hooks/useTCCsParaAvaliar';
 import { useAutenticacao } from '../../autenticacao';
@@ -40,28 +39,9 @@ export function BancasProfessor() {
     }
   };
 
-  const handleAvaliar = (tccId: number) => {
-    // Usar prefixo correto baseado no tipo de usuário
+  const handleAvaliar = (tccId: number, fase: 1 | 2) => {
     const prefixo = usuario?.tipo_usuario === 'AVALIADOR' ? '/avaliador' : '/professor';
-    navigate(`${prefixo}/bancas/${tccId}`);
-  };
-
-  // Obter status badge para cada TCC
-  const obterStatusBadge = (tcc: TCC) => {
-    if (tcc.avaliacao_fase1_bloqueada) {
-      return (
-        <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-secundario))] flex items-center gap-1">
-          <Lock className="h-3 w-3" />
-          Bloqueada
-        </span>
-      );
-    }
-    return (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--cor-alerta))]/10 text-[rgb(var(--cor-alerta))] flex items-center gap-1">
-        <Clock className="h-3 w-3" />
-        Pendente
-      </span>
-    );
+    navigate(`${prefixo}/bancas/${tccId}?fase=${fase}`);
   };
 
   return (
@@ -95,52 +75,56 @@ export function BancasProfessor() {
           {tccs.map((tcc) => (
             <div
               key={tcc.id}
-              onClick={() => handleAvaliar(tcc.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && handleAvaliar(tcc.id)}
-              className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 cursor-pointer hover:shadow-md hover:border-[rgb(var(--cor-destaque))]/50 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] focus:ring-offset-2 transition-all"
+              className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6"
             >
-              {/* Header do card */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-bold text-[rgb(var(--cor-texto-primario))] text-xl">
-                      Trabalho #{tcc.id}
-                    </h3>
-                    {obterStatusBadge(tcc)}
-                  </div>
-                  <p className="text-sm text-[rgb(var(--cor-texto-secundario))] mb-3">
-                    Semestre: {tcc.semestre}
-                  </p>
+              {/* Título + Baixar documento */}
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <h3 className="font-bold text-[rgb(var(--cor-texto-primario))] text-lg">
+                  {tcc.titulo}
+                </h3>
+                <button
+                  onClick={() => handleBaixarDocumento(tcc)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white text-sm rounded-lg hover:bg-[rgb(var(--cor-destaque))]/90 transition-colors shrink-0"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Baixar Monografia</span>
+                </button>
+              </div>
 
-                  {/* Bloqueio */}
+              {/* Botões de fase */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Fase I */}
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => handleAvaliar(tcc.id, 1)}
+                    className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-[rgb(var(--cor-info))] text-[rgb(var(--cor-info))] rounded-lg hover:bg-[rgb(var(--cor-info))]/10 transition-colors font-medium"
+                  >
+                    <FileText className="h-5 w-5" />
+                    <span>Fase I – Monografia</span>
+                  </button>
                   {tcc.avaliacao_fase1_bloqueada && (
-                    <div className="mb-3 p-2 bg-[rgb(var(--cor-alerta))]/5 border border-[rgb(var(--cor-alerta))]/20 rounded-lg inline-flex items-center gap-2 text-sm text-[rgb(var(--cor-alerta))]">
-                      <Lock className="h-4 w-4" />
-                      <span>Bloqueado para análise do coordenador</span>
+                    <div className="p-1.5 bg-[rgb(var(--cor-alerta))]/5 border border-[rgb(var(--cor-alerta))]/20 rounded-lg flex items-center justify-center gap-1.5 text-xs text-[rgb(var(--cor-alerta))]">
+                      <Lock className="h-3 w-3" />
+                      <span>Bloqueado pelo coordenador</span>
                     </div>
                   )}
-
-                  {/* Documento anônimo */}
-                  <div className="mt-3">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleBaixarDocumento(tcc);
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-[rgb(var(--cor-destaque))] text-white text-sm rounded-lg hover:bg-[rgb(var(--cor-destaque))]/90 transition-colors"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span>Baixar Documento Anônimo</span>
-                    </button>
-                  </div>
                 </div>
 
-                {/* Indicador visual de ação */}
-                <div className="ml-4 flex items-center gap-2 text-[rgb(var(--cor-info))]">
-                  <Eye className="h-5 w-5" />
-                  <span className="text-sm font-medium">Avaliar</span>
+                {/* Fase II */}
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => handleAvaliar(tcc.id, 2)}
+                    className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-[rgb(var(--cor-info))] text-[rgb(var(--cor-info))] rounded-lg hover:bg-[rgb(var(--cor-info))]/10 transition-colors font-medium"
+                  >
+                    <Presentation className="h-5 w-5" />
+                    <span>Fase II – Apresentação</span>
+                  </button>
+                  {tcc.avaliacao_fase2_bloqueada && (
+                    <div className="p-1.5 bg-[rgb(var(--cor-alerta))]/5 border border-[rgb(var(--cor-alerta))]/20 rounded-lg flex items-center justify-center gap-1.5 text-xs text-[rgb(var(--cor-alerta))]">
+                      <Lock className="h-3 w-3" />
+                      <span>Bloqueado pelo coordenador</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

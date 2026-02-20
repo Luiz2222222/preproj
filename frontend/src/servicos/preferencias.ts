@@ -17,6 +17,13 @@ export interface PreferenciasEmail {
   prof_lembrete_termo: boolean;
   prof_resultado_fase_1: boolean;
   prof_finalizacao_tcc: boolean;
+  prof_participacao_banca: boolean;
+  // Preferências de avaliador externo
+  aval_convite_orientacao: boolean;
+  aval_receber_monografia: boolean;
+  aval_resultado_fase_1: boolean;
+  aval_finalizacao_tcc: boolean;
+  aval_participacao_banca: boolean;
   // Preferências de coordenador
   coord_convite_aluno: boolean;
   coord_monografia_aprovada: boolean;

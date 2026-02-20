@@ -71,7 +71,7 @@ export function TCCDetalhe() {
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
-      link.download = `Relatorio_Avaliacao_${tcc.aluno_dados?.nome_completo?.replace(/ /g, '_') || 'TCC'}.pdf`
+      link.download = `Relatorio_Avaliacao_${tcc.aluno_dados?.nome_completo?.replace(/ /g, '_') || 'TCC'}.docx`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

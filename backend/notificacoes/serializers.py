@@ -45,6 +45,13 @@ class PreferenciasEmailSerializer(serializers.ModelSerializer):
             'prof_lembrete_termo',
             'prof_resultado_fase_1',
             'prof_finalizacao_tcc',
+            'prof_participacao_banca',
+            # Preferências de avaliador externo
+            'aval_convite_orientacao',
+            'aval_receber_monografia',
+            'aval_resultado_fase_1',
+            'aval_finalizacao_tcc',
+            'aval_participacao_banca',
             # Preferências de coordenador
             'coord_convite_aluno',
             'coord_monografia_aprovada',

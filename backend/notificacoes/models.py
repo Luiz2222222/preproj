@@ -171,6 +171,44 @@ class PreferenciasEmail(models.Model):
         verbose_name='Finalização do TCC',
         help_text='Notificar quando TCC de orientando for finalizado'
     )
+    # Notificações sobre bancas
+    prof_participacao_banca = models.BooleanField(
+        default=True,
+        verbose_name='Participação em banca',
+        help_text='Notificar quando for adicionado a uma banca'
+    )
+
+    # ==================== PREFERÊNCIAS AVALIADOR EXTERNO ====================
+    # Notificações sobre co-orientação
+    aval_convite_orientacao = models.BooleanField(
+        default=True,
+        verbose_name='Convite de co-orientação',
+        help_text='Notificar quando co-orientação for aprovada'
+    )
+    # Notificações sobre documentos
+    aval_receber_monografia = models.BooleanField(
+        default=True,
+        verbose_name='Receber monografia',
+        help_text='Notificar quando orientando enviar monografia'
+    )
+    # Notificações sobre avaliações
+    aval_resultado_fase_1 = models.BooleanField(
+        default=True,
+        verbose_name='Resultado Fase I',
+        help_text='Notificar quando todas avaliações da Fase I forem concluídas'
+    )
+    # Notificações sobre conclusão
+    aval_finalizacao_tcc = models.BooleanField(
+        default=True,
+        verbose_name='Finalização do TCC',
+        help_text='Notificar quando TCC de co-orientando for finalizado'
+    )
+    # Notificações sobre bancas
+    aval_participacao_banca = models.BooleanField(
+        default=True,
+        verbose_name='Participação em banca',
+        help_text='Notificar quando for adicionado a uma banca'
+    )
 
     # ==================== PREFERÊNCIAS COORDENADOR ====================
     # Notificações sobre solicitações

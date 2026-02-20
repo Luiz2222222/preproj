@@ -46,6 +46,13 @@ from .services import calcular_permissoes_tcc
 from definicoes.models import CalendarioSemestre
 
 
+def _pref(usuario, campo_prof):
+    """Retorna o campo de preferência correto: prof_* ou aval_* conforme o tipo do usuário."""
+    if usuario.tipo_usuario == 'AVALIADOR':
+        return campo_prof.replace('prof_', 'aval_', 1)
+    return campo_prof
+
+
 class TCCViewSet(viewsets.ModelViewSet):
     """ViewSet para gerenciar TCCs."""
 
@@ -1114,6 +1121,48 @@ class TCCViewSet(viewsets.ModelViewSet):
                 visibilidade=Visibilidade.TODOS
             )
 
+            # Notificar avaliadores por email
+            from notificacoes.services import criar_notificacao_com_email
+            from notificacoes.constants import TipoNotificacao, PrioridadeNotificacao
+
+            for membro in avaliadores:
+                prof = membro.usuario
+                # Determinar campo de preferência conforme tipo de usuário
+                campo_pref = 'aval_participacao_banca' if prof.tipo_usuario == 'AVALIADOR' else 'prof_participacao_banca'
+
+                corpo_html = f"""
+<p>Olá, {prof.nome_completo},</p>
+
+<p>Você foi adicionado como avaliador em uma banca de avaliação de TCC.</p>
+
+<p>A monografia para avaliação já está disponível no sistema. Acesse o sistema: <a href="http://localhost:5500">http://localhost:5500</a></p>
+
+<p>---<br>
+Portal TCC<br>
+Esta é uma notificação automática. Para mais informações, acesse o sistema.</p>
+"""
+                corpo_texto = f"""Olá, {prof.nome_completo},
+
+Você foi adicionado como avaliador em uma banca de avaliação de TCC.
+
+A monografia para avaliação já está disponível no sistema. Acesse o sistema: http://localhost:5500
+
+---
+Portal TCC
+Esta é uma notificação automática. Para mais informações, acesse o sistema.
+"""
+                criar_notificacao_com_email(
+                    usuario=prof,
+                    tipo=TipoNotificacao.DOCUMENTO_ENVIADO,
+                    titulo='Participação em Banca de Avaliação',
+                    mensagem='Você foi adicionado como avaliador em uma banca de avaliação de TCC.',
+                    campo_preferencia=campo_pref,
+                    action_url='/meus-tccs',
+                    prioridade=PrioridadeNotificacao.ALTA,
+                    corpo_html_customizado=corpo_html,
+                    corpo_texto_customizado=corpo_texto
+                )
+
         return Response({
             'message': 'Banca concluída com sucesso',
             'banca': BancaFase1Serializer(banca, context={'request': request}).data,
@@ -1695,7 +1744,7 @@ Acesse o sistema: http://localhost:5500
                             tipo=TipoNotificacao.RESULTADO_FASE_1,
                             titulo='Resultado Fase I: Aprovado',
                             mensagem=f'A avaliação da Fase I do TCC "{tcc.titulo}" foi aprovada. O agendamento da defesa já pode ser realizado.',
-                            campo_preferencia='prof_resultado_fase_1',
+                            campo_preferencia=_pref(tcc.coorientador, 'prof_resultado_fase_1'),
                             action_url=f'/tccs/{tcc.id}',
                             tcc_id=tcc.id,
                             prioridade=PrioridadeNotificacao.ALTA,
@@ -1750,7 +1799,7 @@ Tema: {tcc.titulo}
                             tipo=TipoNotificacao.RESULTADO_FASE_1,
                             titulo='Resultado Fase I: Reprovado',
                             mensagem=f'O aluno {tcc.aluno.nome_completo} foi reprovado na Fase I do TCC "{tcc.titulo}".',
-                            campo_preferencia='prof_resultado_fase_1',
+                            campo_preferencia=_pref(tcc.coorientador, 'prof_resultado_fase_1'),
                             action_url=f'/tccs/{tcc.id}',
                             tcc_id=tcc.id,
                             prioridade=PrioridadeNotificacao.ALTA,
@@ -2535,28 +2584,26 @@ Tema: {tcc.titulo}
             )
 
             # Notificar orientador e coorientador COM e-mail
-            usuarios_notificar = [tcc.orientador]
-            if tcc.coorientador:
-                usuarios_notificar.append(tcc.coorientador)
-
-            criar_notificacao_em_massa_com_email(
-                usuarios=usuarios_notificar,
-                tipo=TipoNotificacao.TCC_CONCLUIDO,
-                titulo='TCC Concluído',
-                mensagem=f'O TCC "{tcc.titulo}" foi aprovado e concluído.',
-                campo_preferencia='prof_finalizacao_tcc',
-                action_url=f'/tccs/{tcc.id}',
-                tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.ALTA
-            )
+            for dest in [tcc.orientador, tcc.coorientador]:
+                if dest:
+                    criar_notificacao_com_email(
+                        usuario=dest,
+                        tipo=TipoNotificacao.TCC_CONCLUIDO,
+                        titulo='TCC Concluído',
+                        mensagem=f'O TCC "{tcc.titulo}" foi aprovado e concluído.',
+                        campo_preferencia=_pref(dest, 'prof_finalizacao_tcc'),
+                        action_url=f'/tccs/{tcc.id}',
+                        tcc_id=tcc.id,
+                        prioridade=PrioridadeNotificacao.ALTA
+                    )
 
         # Gerar Relatório de Avaliação automaticamente
         try:
-            from .relatorio_pdf import gerar_relatorio_avaliacao_pdf
+            from .relatorio_docx import gerar_relatorio_avaliacao_docx
             from django.core.files.base import ContentFile
 
-            pdf_bytes = gerar_relatorio_avaliacao_pdf(tcc)
-            nome_arquivo = f'Relatorio_Avaliacao_{tcc.aluno.nome_completo.replace(" ", "_")}.pdf'
+            docx_bytes = gerar_relatorio_avaliacao_docx(tcc)
+            nome_arquivo = f'Relatorio_Avaliacao_{tcc.aluno.nome_completo.replace(" ", "_")}.docx'
 
             # Remover relatório anterior se existir
             DocumentoTCC.objects.filter(tcc=tcc, tipo_documento=TipoDocumento.RELATORIO_AVALIACAO).delete()
@@ -2565,12 +2612,12 @@ Tema: {tcc.titulo}
                 tcc=tcc,
                 tipo_documento=TipoDocumento.RELATORIO_AVALIACAO,
                 nome_original=nome_arquivo,
-                tamanho=len(pdf_bytes),
+                tamanho=len(docx_bytes),
                 versao=1,
                 enviado_por=request.user,
                 status=StatusDocumento.APROVADO,
             )
-            doc_relatorio.arquivo.save(nome_arquivo, ContentFile(pdf_bytes), save=True)
+            doc_relatorio.arquivo.save(nome_arquivo, ContentFile(docx_bytes), save=True)
         except Exception:
             pass  # Não bloquear a conclusão se o relatório falhar
 
@@ -2588,10 +2635,10 @@ Tema: {tcc.titulo}
     def relatorio_avaliacao(self, request, pk=None):
         """
         GET /api/tccs/{id}/relatorio-avaliacao/
-        Gera (ou regenera) o Relatório de Avaliação do TCC em PDF e retorna para download.
+        Gera (ou regenera) o Relatório de Avaliação do TCC em DOCX e retorna para download.
         Também salva como DocumentoTCC para ficar disponível em Documentos do TCC.
         """
-        from .relatorio_pdf import gerar_relatorio_avaliacao_pdf
+        from .relatorio_docx import gerar_relatorio_avaliacao_docx
         from django.core.files.base import ContentFile
         from django.http import HttpResponse
 
@@ -2606,14 +2653,14 @@ Tema: {tcc.titulo}
             )
 
         try:
-            pdf_bytes = gerar_relatorio_avaliacao_pdf(tcc)
+            docx_bytes = gerar_relatorio_avaliacao_docx(tcc)
         except Exception as e:
             return Response(
                 {'detail': f'Erro ao gerar relatório: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        nome_arquivo = f'Relatorio_Avaliacao_{tcc.aluno.nome_completo.replace(" ", "_")}.pdf'
+        nome_arquivo = f'Relatorio_Avaliacao_{tcc.aluno.nome_completo.replace(" ", "_")}.docx'
 
         # Salvar/atualizar como DocumentoTCC
         DocumentoTCC.objects.filter(tcc=tcc, tipo_documento=TipoDocumento.RELATORIO_AVALIACAO).delete()
@@ -2621,15 +2668,18 @@ Tema: {tcc.titulo}
             tcc=tcc,
             tipo_documento=TipoDocumento.RELATORIO_AVALIACAO,
             nome_original=nome_arquivo,
-            tamanho=len(pdf_bytes),
+            tamanho=len(docx_bytes),
             versao=1,
             enviado_por=request.user,
             status=StatusDocumento.APROVADO,
         )
-        doc_relatorio.arquivo.save(nome_arquivo, ContentFile(pdf_bytes), save=True)
+        doc_relatorio.arquivo.save(nome_arquivo, ContentFile(docx_bytes), save=True)
 
-        # Retornar PDF para download direto
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        # Retornar DOCX para download direto
+        response = HttpResponse(
+            docx_bytes,
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
         response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
         return response
 
@@ -2815,7 +2865,7 @@ Tema: {tcc.titulo}
                         tipo=TipoNotificacao.RESULTADO_FINAL,
                         titulo='Resultado da Defesa: Aprovado',
                         mensagem=f'A avaliação da defesa do TCC "{tcc.titulo}" foi aprovada.',
-                        campo_preferencia='prof_resultado_fase_1',
+                        campo_preferencia=_pref(tcc.coorientador, 'prof_resultado_fase_1'),
                         action_url=f'/tccs/{tcc.id}',
                         tcc_id=tcc.id,
                         prioridade=PrioridadeNotificacao.ALTA,
@@ -2870,7 +2920,7 @@ Tema: {tcc.titulo}
                         tipo=TipoNotificacao.RESULTADO_FINAL,
                         titulo='Resultado da Defesa: Reprovado',
                         mensagem=f'O aluno {tcc.aluno.nome_completo} foi reprovado na defesa do TCC "{tcc.titulo}".',
-                        campo_preferencia='prof_resultado_fase_1',
+                        campo_preferencia=_pref(tcc.coorientador, 'prof_resultado_fase_1'),
                         action_url=f'/tccs/{tcc.id}',
                         tcc_id=tcc.id,
                         prioridade=PrioridadeNotificacao.ALTA,
@@ -4185,7 +4235,7 @@ Orientador: {solicitacao.professor.nome_completo}{linha_coori_texto}
                     tipo=TipoNotificacao.SOLICITACAO_APROVADA,
                     titulo='Nova Co-orientação Aprovada',
                     mensagem=f'Uma nova co-orientação foi aprovada. Tema: {tcc.titulo}. Aluno: {tcc.aluno.nome_completo}.',
-                    campo_preferencia='prof_convite_orientacao',
+                    campo_preferencia=_pref(tcc.coorientador, 'prof_convite_orientacao'),
                     action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.ALTA,
@@ -4541,7 +4591,7 @@ Prazo para submissão da monografia aprovada: {data_submissao}
                     tipo=TipoNotificacao.DOCUMENTO_ENVIADO,
                     titulo='Nova Monografia Recebida',
                     mensagem=f'Aluno {usuario.nome_completo} enviou uma nova versão da monografia (v{documento.versao}).',
-                    campo_preferencia='prof_receber_monografia',
+                    campo_preferencia=_pref(tcc.coorientador, 'prof_receber_monografia'),
                     action_url=f'/tccs/{tcc.id}',
                     tcc_id=tcc.id,
                     prioridade=PrioridadeNotificacao.ALTA,

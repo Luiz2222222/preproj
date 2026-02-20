@@ -209,6 +209,13 @@ export function PreferenciasEmailCard() {
                 disabled={salvandoPreferencia}
               />
               <PreferenciaSwitch
+                label="Participação em banca"
+                descricao="Notificar quando for adicionado a uma banca"
+                checked={preferenciasEmail.prof_participacao_banca}
+                onChange={(valor) => handleTogglePreferencia('prof_participacao_banca', valor)}
+                disabled={salvandoPreferencia}
+              />
+              <PreferenciaSwitch
                 label="Resultado Fase I"
                 descricao="Notificar quando todas avaliações da Fase I forem concluídas"
                 checked={preferenciasEmail.prof_resultado_fase_1}
@@ -220,6 +227,50 @@ export function PreferenciasEmailCard() {
                 descricao="Notificar quando TCC de orientando for finalizado"
                 checked={preferenciasEmail.prof_finalizacao_tcc}
                 onChange={(valor) => handleTogglePreferencia('prof_finalizacao_tcc', valor)}
+                disabled={salvandoPreferencia}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Preferências de Avaliador Externo */}
+        {perfil.tipo_usuario === 'AVALIADOR' && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium text-cor-texto">Notificações de Avaliador</h3>
+            <div className="space-y-3">
+              <PreferenciaSwitch
+                label="Convite de co-orientação"
+                descricao="Notificar quando co-orientação for aprovada"
+                checked={preferenciasEmail.aval_convite_orientacao}
+                onChange={(valor) => handleTogglePreferencia('aval_convite_orientacao', valor)}
+                disabled={salvandoPreferencia}
+              />
+              <PreferenciaSwitch
+                label="Recebimento de monografia"
+                descricao="Notificar quando orientando enviar monografia"
+                checked={preferenciasEmail.aval_receber_monografia}
+                onChange={(valor) => handleTogglePreferencia('aval_receber_monografia', valor)}
+                disabled={salvandoPreferencia}
+              />
+              <PreferenciaSwitch
+                label="Participação em banca"
+                descricao="Notificar quando for adicionado a uma banca"
+                checked={preferenciasEmail.aval_participacao_banca}
+                onChange={(valor) => handleTogglePreferencia('aval_participacao_banca', valor)}
+                disabled={salvandoPreferencia}
+              />
+              <PreferenciaSwitch
+                label="Resultado Fase I"
+                descricao="Notificar quando todas avaliações da Fase I forem concluídas"
+                checked={preferenciasEmail.aval_resultado_fase_1}
+                onChange={(valor) => handleTogglePreferencia('aval_resultado_fase_1', valor)}
+                disabled={salvandoPreferencia}
+              />
+              <PreferenciaSwitch
+                label="Finalização do TCC"
+                descricao="Notificar quando TCC de co-orientando for finalizado"
+                checked={preferenciasEmail.aval_finalizacao_tcc}
+                onChange={(valor) => handleTogglePreferencia('aval_finalizacao_tcc', valor)}
                 disabled={salvandoPreferencia}
               />
             </div>
@@ -260,15 +311,15 @@ export function PreferenciasEmailCard() {
                 disabled={salvandoPreferencia}
               />
               <PreferenciaSwitch
-                label="Avaliações Fase I completas"
-                descricao="Notificar quando todas avaliações da Fase I forem enviadas"
+                label="Resultado Fase I"
+                descricao="Notificar quando resultado da Fase I estiver disponível"
                 checked={preferenciasEmail.coord_avaliacoes_fase1_completas}
                 onChange={(valor) => handleTogglePreferencia('coord_avaliacoes_fase1_completas', valor)}
                 disabled={salvandoPreferencia}
               />
               <PreferenciaSwitch
-                label="Avaliações Fase II completas"
-                descricao="Notificar quando todas avaliações da Fase II forem enviadas"
+                label="Finalização do TCC"
+                descricao="Notificar quando TCC for finalizado"
                 checked={preferenciasEmail.coord_avaliacoes_fase2_completas}
                 onChange={(valor) => handleTogglePreferencia('coord_avaliacoes_fase2_completas', valor)}
                 disabled={salvandoPreferencia}
