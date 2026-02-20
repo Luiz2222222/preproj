@@ -15,6 +15,7 @@ import {
 import { useAutenticacao } from '../../autenticacao'
 import { useToast } from '../../contextos/ToastProvider'
 import { useTCCsProfessor, useCalendarioSemestre } from '../../hooks'
+import { useTCCsParaAvaliar } from '../../hooks/useTCCsParaAvaliar'
 import { EtapaTCC, TipoDocumento, StatusDocumento } from '../../types'
 import type { TCC } from '../../types'
 import { formatarDataCurta, formatarIntervalo } from '../../utils/datas'
@@ -26,6 +27,7 @@ export function DashboardProfessor() {
   const navigate = useNavigate()
 
   const { tccs, erro: erroTCCs } = useTCCsProfessor()
+  const { tccs: tccsParaAvaliar } = useTCCsParaAvaliar()
   const { calendario } = useCalendarioSemestre()
 
   // Mostrar erros via toast
@@ -189,10 +191,14 @@ export function DashboardProfessor() {
     ]
   }, [calendario])
 
+  // Total de ações pendentes
+  const totalPendentes = orientandosComMonografiaPendente.length + tccsParaAvaliar.length
+
   // Handler de navegação
   const handleAvaliarMonografia = (tccId: number) => {
     navigate(`/professor/orientacoes/meus-orientandos/${tccId}`)
   }
+
 
   // Estado do tooltip customizado
   const [tooltip, setTooltip] = useState<{ texto: string; x: number; y: number; visivel: boolean }>({
@@ -280,41 +286,67 @@ export function DashboardProfessor() {
             Ações pendentes
           </h2>
 
-          {orientandosComMonografiaPendente.length > 0 ? (
+          {totalPendentes > 0 ? (
             <>
               {/* Lista de ações pendentes */}
               <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
                 {/* Monografias Pendentes */}
-                {orientandosComMonografiaPendente.map((tcc) => {
-                  const monografia = getUltimaMonografia(tcc)
-                  return (
-                    <div
-                      key={`mono-${tcc.id}`}
-                      onClick={() => handleAvaliarMonografia(tcc.id)}
-                      className="p-3 rounded-lg border bg-[rgb(var(--cor-destaque))]/5 border-[rgb(var(--cor-destaque))]/20 hover:shadow-sm transition-all cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
-                            Monografia aguardando avaliação
-                          </p>
-                          <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
-                            {tcc.titulo}
-                          </p>
-                          <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-1">
-                            Aluno: {tcc.aluno_dados.nome_completo}
-                          </p>
-                        </div>
-                        <button
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90 pointer-events-none"
-                        >
-                          Ir
-                          <ArrowRight className="h-3 w-3" />
-                        </button>
+                {orientandosComMonografiaPendente.map((tcc) => (
+                  <div
+                    key={`mono-${tcc.id}`}
+                    onClick={() => handleAvaliarMonografia(tcc.id)}
+                    className="p-3 rounded-lg border bg-[rgb(var(--cor-destaque))]/5 border-[rgb(var(--cor-destaque))]/20 hover:shadow-sm transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
+                          Monografia aguardando avaliação
+                        </p>
+                        <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                          {tcc.titulo}
+                        </p>
+                        <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-1">
+                          Aluno: {tcc.aluno_dados.nome_completo}
+                        </p>
                       </div>
+                      <button
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90 pointer-events-none"
+                      >
+                        Ir
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
+
+                {/* Bancas para avaliar */}
+                {tccsParaAvaliar.map((tcc) => (
+                  <div
+                    key={`banca-${tcc.id}`}
+                    onClick={() => {
+                      const fase = tcc.nf1 != null ? 2 : 1;
+                      navigate(`/professor/bancas/${tcc.id}?fase=${fase}`);
+                    }}
+                    className="p-3 rounded-lg border bg-[rgb(var(--cor-destaque))]/5 border-[rgb(var(--cor-destaque))]/20 hover:shadow-sm transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
+                          Avaliação de banca pendente
+                        </p>
+                        <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                          {tcc.titulo}
+                        </p>
+                      </div>
+                      <button
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90 pointer-events-none"
+                      >
+                        Ir
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* Botão de ação principal */}
@@ -322,12 +354,16 @@ export function DashboardProfessor() {
                 onClick={() => {
                   if (orientandosComMonografiaPendente.length > 0) {
                     handleAvaliarMonografia(orientandosComMonografiaPendente[0].id)
+                  } else if (tccsParaAvaliar.length > 0) {
+                    const t = tccsParaAvaliar[0];
+                    const fase = t.nf1 != null ? 2 : 1;
+                    navigate(`/professor/bancas/${t.id}?fase=${fase}`)
                   }
                 }}
                 className="w-full px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium shadow-md transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90"
               >
                 <AlertCircle className="h-5 w-5" />
-                Ir para a primeira ação da lista ({orientandosComMonografiaPendente.length} pendentes)
+                Ir para a primeira ação da lista ({totalPendentes} {totalPendentes === 1 ? 'pendente' : 'pendentes'})
               </button>
             </>
           ) : (
@@ -342,7 +378,7 @@ export function DashboardProfessor() {
                     Sem ações pendentes
                   </p>
                   <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
-                    Nenhuma monografia aguardando análise
+                    Nenhuma ação aguardando no momento
                   </p>
                 </div>
               </div>

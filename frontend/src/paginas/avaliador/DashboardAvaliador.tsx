@@ -1,4 +1,5 @@
 import { useMemo, useState, type MouseEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle,
   Clock,
@@ -8,19 +9,23 @@ import {
   BookOpen,
   Briefcase,
   Loader2,
-  BarChart3
+  BarChart3,
+  ArrowRight
 } from 'lucide-react'
 import { useAutenticacao } from '../../autenticacao'
 import { useCalendarioSemestre, useCoOrientacoes } from '../../hooks'
+import { useTCCsParaAvaliar } from '../../hooks/useTCCsParaAvaliar'
 import { EtapaTCC } from '../../types'
 import { formatarDataCurta, formatarIntervalo } from '../../utils/datas'
 import { PainelDatasImportantes } from '../../componentes'
 
 export function DashboardAvaliador() {
   const { usuario } = useAutenticacao()
+  const navigate = useNavigate()
 
   const { calendario } = useCalendarioSemestre()
   const { tccs: coOrientacoes, carregando } = useCoOrientacoes()
+  const { tccs: tccsParaAvaliar } = useTCCsParaAvaliar()
 
   const totalCoOrientandos = coOrientacoes.length
 
@@ -255,20 +260,64 @@ export function DashboardAvaliador() {
             Ações pendentes
           </h2>
 
-          {/* Estado vazio - sem ações pendentes */}
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="flex justify-center mb-3">
-                <AlertCircle className="h-12 w-12 text-[rgb(var(--cor-borda))]" />
+          {tccsParaAvaliar.length > 0 ? (
+            <>
+              <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
+                {tccsParaAvaliar.map((tcc) => (
+                  <div
+                    key={`banca-${tcc.id}`}
+                    onClick={() => {
+                      const fase = tcc.nf1 != null ? 2 : 1;
+                      navigate(`/avaliador/bancas/${tcc.id}?fase=${fase}`);
+                    }}
+                    className="p-3 rounded-lg border bg-[rgb(var(--cor-destaque))]/5 border-[rgb(var(--cor-destaque))]/20 hover:shadow-sm transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
+                          Avaliação de banca pendente
+                        </p>
+                        <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                          {tcc.titulo}
+                        </p>
+                      </div>
+                      <button
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90 pointer-events-none"
+                      >
+                        Ir
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="text-base font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
-                Sem ações pendentes
-              </p>
-              <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
-                Nenhuma ação aguardando sua avaliação
-              </p>
+              <button
+                onClick={() => {
+                  const t = tccsParaAvaliar[0];
+                  const fase = t.nf1 != null ? 2 : 1;
+                  navigate(`/avaliador/bancas/${t.id}?fase=${fase}`);
+                }}
+                className="w-full px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium shadow-md transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90"
+              >
+                <AlertCircle className="h-5 w-5" />
+                Ir para a primeira ação da lista ({tccsParaAvaliar.length} {tccsParaAvaliar.length === 1 ? 'pendente' : 'pendentes'})
+              </button>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="flex justify-center mb-3">
+                  <AlertCircle className="h-12 w-12 text-[rgb(var(--cor-borda))]" />
+                </div>
+                <p className="text-base font-semibold text-[rgb(var(--cor-texto-primario))] mb-1">
+                  Sem ações pendentes
+                </p>
+                <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                  Nenhuma ação aguardando sua avaliação
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Datas Importantes */}

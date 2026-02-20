@@ -171,12 +171,14 @@ class TCCViewSet(viewsets.ModelViewSet):
         GET /api/tccs/avaliar/
         Retorna TCCs que o usuário (professor, coordenador ou avaliador) precisa avaliar (onde é membro de banca).
         Inclui tanto Fase I (AVALIACAO_FASE_1) quanto Fase II (APRESENTACAO_FASE_2).
+        Adiciona campos minha_avaliacao_fase1_status e minha_avaliacao_fase2_status.
         """
         usuario = request.user
 
-        # Buscar TCCs onde o usuário é membro de banca (AVALIADOR ou ORIENTADOR)
+        # Buscar TCCs onde o usuário é AVALIADOR na banca (não orientador)
         bancas_ids = MembroBanca.objects.filter(
-            usuario=usuario
+            usuario=usuario,
+            tipo='AVALIADOR'
         ).values_list('banca_id', flat=True)
 
         tccs_ids = BancaFase1.objects.filter(
@@ -184,14 +186,23 @@ class TCCViewSet(viewsets.ModelViewSet):
             status='COMPLETA'  # Apenas bancas já concluídas
         ).values_list('tcc_id', flat=True)
 
-        # Filtrar TCCs em AVALIACAO_FASE_1 ou APRESENTACAO_FASE_2
+        # Retornar todos os TCCs onde o usuário participa de banca completa
         tccs = TCC.objects.filter(
-            id__in=tccs_ids,
-            etapa_atual__in=[EtapaTCC.AVALIACAO_FASE_1, EtapaTCC.APRESENTACAO_FASE_2]
+            id__in=tccs_ids
         ).order_by('-criado_em')
 
         serializer = self.get_serializer(tccs, many=True)
-        return Response(serializer.data)
+        data = serializer.data
+
+        # Adicionar status das avaliações do usuário atual
+        for item in data:
+            tcc_id = item['id']
+            aval_f1 = AvaliacaoFase1.objects.filter(tcc_id=tcc_id, avaliador=usuario).first()
+            aval_f2 = AvaliacaoFase2.objects.filter(tcc_id=tcc_id, avaliador=usuario).first()
+            item['minha_avaliacao_fase1_status'] = aval_f1.status if aval_f1 else None
+            item['minha_avaliacao_fase2_status'] = aval_f2.status if aval_f2 else None
+
+        return Response(data)
 
     @action(detail=False, methods=['get'], url_path='minhas-coorientacoes', permission_classes=[IsProfessorCoordenadorOuAvaliador])
     def minhas_coorientacoes(self, request):
@@ -1021,6 +1032,7 @@ class TCCViewSet(viewsets.ModelViewSet):
                     if eh_word:
                         # Word: converter para PDF primeiro usando docx2pdf
                         from docx2pdf import convert
+                        import pythoncom
 
                         # Salvar Word em arquivo temporário
                         sufixo = '.docx' if nome_arquivo.endswith('.docx') else '.doc'
@@ -1031,10 +1043,12 @@ class TCCViewSet(viewsets.ModelViewSet):
                         tmp_pdf_path = tmp_word_path.rsplit('.', 1)[0] + '.pdf'
 
                         try:
+                            pythoncom.CoInitialize()
                             convert(tmp_word_path, tmp_pdf_path)
                             with open(tmp_pdf_path, 'rb') as f:
                                 pdf_bytes = f.read()
                         finally:
+                            pythoncom.CoUninitialize()
                             # Limpar arquivos temporários
                             if os.path.exists(tmp_word_path):
                                 os.unlink(tmp_word_path)

@@ -84,6 +84,10 @@ export interface TCC {
   // Permissões e calendário (novos campos do sistema de prazos)
   permissoes?: PermissoesTCC;
   calendario_semestre?: CalendarioSemestre | null;
+
+  // Status das avaliações do usuário atual (retornado pelo endpoint /tccs/avaliar/)
+  minha_avaliacao_fase1_status?: string | null;
+  minha_avaliacao_fase2_status?: string | null;
 }
 
 export interface SolicitacaoOrientacao {

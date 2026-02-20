@@ -11,7 +11,8 @@ import {
   Loader2,
   Download,
   FileText,
-  Presentation
+  Presentation,
+  CheckCircle
 } from 'lucide-react';
 import { useTCCsParaAvaliar } from '../../hooks/useTCCsParaAvaliar';
 import { useAutenticacao } from '../../autenticacao';
@@ -97,15 +98,25 @@ export function BancasProfessor() {
                 <div className="flex flex-col gap-1">
                   <button
                     onClick={() => handleAvaliar(tcc.id, 1)}
-                    className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-[rgb(var(--cor-info))] text-[rgb(var(--cor-info))] rounded-lg hover:bg-[rgb(var(--cor-info))]/10 transition-colors font-medium"
+                    className={`flex items-center justify-center gap-2 px-4 py-8 border-2 rounded-lg transition-colors font-medium ${
+                      tcc.minha_avaliacao_fase1_status === 'ENVIADO' || tcc.minha_avaliacao_fase1_status === 'BLOQUEADO'
+                        ? 'border-[rgb(var(--cor-sucesso))] bg-[rgb(var(--cor-sucesso))]/10 text-[rgb(var(--cor-sucesso))]'
+                        : 'border-[rgb(var(--cor-info))] text-[rgb(var(--cor-info))] hover:bg-[rgb(var(--cor-info))]/10'
+                    }`}
                   >
                     <FileText className="h-5 w-5" />
                     <span>Fase I – Monografia</span>
+                    {(tcc.minha_avaliacao_fase1_status === 'ENVIADO' || tcc.minha_avaliacao_fase1_status === 'BLOQUEADO') && <CheckCircle className="h-5 w-5" />}
                   </button>
-                  {tcc.avaliacao_fase1_bloqueada && (
+                  {tcc.nf1 != null ? (
+                    <div className="p-1.5 bg-[rgb(var(--cor-sucesso))]/5 border border-[rgb(var(--cor-sucesso))]/20 rounded-lg flex items-center justify-center gap-1.5 text-xs text-[rgb(var(--cor-sucesso))]">
+                      <CheckCircle className="h-3 w-3" />
+                      <span>Avaliação aprovada.</span>
+                    </div>
+                  ) : tcc.avaliacao_fase1_bloqueada && (
                     <div className="p-1.5 bg-[rgb(var(--cor-alerta))]/5 border border-[rgb(var(--cor-alerta))]/20 rounded-lg flex items-center justify-center gap-1.5 text-xs text-[rgb(var(--cor-alerta))]">
                       <Lock className="h-3 w-3" />
-                      <span>Bloqueado pelo coordenador</span>
+                      <span>Bloqueado para análise do coordenador</span>
                     </div>
                   )}
                 </div>
@@ -114,15 +125,25 @@ export function BancasProfessor() {
                 <div className="flex flex-col gap-1">
                   <button
                     onClick={() => handleAvaliar(tcc.id, 2)}
-                    className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-[rgb(var(--cor-info))] text-[rgb(var(--cor-info))] rounded-lg hover:bg-[rgb(var(--cor-info))]/10 transition-colors font-medium"
+                    className={`flex items-center justify-center gap-2 px-4 py-8 border-2 rounded-lg transition-colors font-medium ${
+                      tcc.minha_avaliacao_fase2_status === 'ENVIADO' || tcc.minha_avaliacao_fase2_status === 'BLOQUEADO'
+                        ? 'border-[rgb(var(--cor-sucesso))] bg-[rgb(var(--cor-sucesso))]/10 text-[rgb(var(--cor-sucesso))]'
+                        : 'border-[rgb(var(--cor-info))] text-[rgb(var(--cor-info))] hover:bg-[rgb(var(--cor-info))]/10'
+                    }`}
                   >
                     <Presentation className="h-5 w-5" />
                     <span>Fase II – Apresentação</span>
+                    {(tcc.minha_avaliacao_fase2_status === 'ENVIADO' || tcc.minha_avaliacao_fase2_status === 'BLOQUEADO') && <CheckCircle className="h-5 w-5" />}
                   </button>
-                  {tcc.avaliacao_fase2_bloqueada && (
+                  {tcc.nf2 != null ? (
+                    <div className="p-1.5 bg-[rgb(var(--cor-sucesso))]/5 border border-[rgb(var(--cor-sucesso))]/20 rounded-lg flex items-center justify-center gap-1.5 text-xs text-[rgb(var(--cor-sucesso))]">
+                      <CheckCircle className="h-3 w-3" />
+                      <span>Avaliação aprovada.</span>
+                    </div>
+                  ) : tcc.avaliacao_fase2_bloqueada && (
                     <div className="p-1.5 bg-[rgb(var(--cor-alerta))]/5 border border-[rgb(var(--cor-alerta))]/20 rounded-lg flex items-center justify-center gap-1.5 text-xs text-[rgb(var(--cor-alerta))]">
                       <Lock className="h-3 w-3" />
-                      <span>Bloqueado pelo coordenador</span>
+                      <span>Bloqueado para análise do coordenador</span>
                     </div>
                   )}
                 </div>

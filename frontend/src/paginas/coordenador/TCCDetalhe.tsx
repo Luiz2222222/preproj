@@ -208,7 +208,7 @@ export function TCCDetalhe() {
               <Edit className="h-4 w-4" />
               Editar
             </button>
-            {([EtapaTCC.APROVADO, EtapaTCC.ANALISE_FINAL_COORDENADOR, EtapaTCC.AGUARDANDO_AJUSTES_FINAIS, EtapaTCC.CONCLUIDO] as string[]).includes(tcc.etapa_atual) && (
+            {tcc.etapa_atual === EtapaTCC.CONCLUIDO && (
               <button
                 onClick={handleBaixarRelatorio}
                 disabled={baixandoRelatorio}
@@ -291,12 +291,7 @@ export function TCCDetalhe() {
         <FormacaoBancaFase1 tcc={tcc} />
       )}
 
-      {/* Análise das Avaliações da Fase I */}
-      {(tcc.etapa_atual === EtapaTCC.AVALIACAO_FASE_1 || tcc.etapa_atual === EtapaTCC.VALIDACAO_FASE_1) && (
-        <AnalisarAvaliacoesFase1 tcc={tcc} onAvaliacoesAtualizadas={recarregar} />
-      )}
-
-      {/* Análise das Avaliações da Fase II - apenas em APRESENTACAO_FASE_2 */}
+      {/* Análise das Avaliações da Fase II */}
       {tcc.etapa_atual === EtapaTCC.APRESENTACAO_FASE_2 && (
         <AnalisarAvaliacoesFase2 tcc={tcc} onAvaliacoesAtualizadas={recarregar} />
       )}
@@ -304,6 +299,14 @@ export function TCCDetalhe() {
       {/* Análise Final e Conclusão - card único consolidado para ANALISE_FINAL_COORDENADOR */}
       {tcc.etapa_atual === EtapaTCC.ANALISE_FINAL_COORDENADOR && (
         <AnaliseFinalCoordenador tcc={tcc} onConclusao={recarregar} />
+      )}
+
+      {/* Análise das Avaliações da Fase I */}
+      {(tcc.etapa_atual === EtapaTCC.AVALIACAO_FASE_1 || tcc.etapa_atual === EtapaTCC.VALIDACAO_FASE_1) && (
+        <AnalisarAvaliacoesFase1 tcc={tcc} onAvaliacoesAtualizadas={recarregar} />
+      )}
+      {[EtapaTCC.AGENDAMENTO_APRESENTACAO, EtapaTCC.APRESENTACAO_FASE_2, EtapaTCC.ANALISE_FINAL_COORDENADOR, EtapaTCC.AGUARDANDO_AJUSTES_FINAIS, EtapaTCC.CONCLUIDO].includes(tcc.etapa_atual as EtapaTCC) && (
+        <AnalisarAvaliacoesFase1 tcc={tcc} somenteLeitura />
       )}
 
       {/* Seção Inferior - Timeline à esquerda (2 cols), Documentos e Prazos à direita (1 col) */}

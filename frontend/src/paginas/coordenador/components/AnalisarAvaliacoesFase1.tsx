@@ -1,6 +1,6 @@
 /**
  * Componente para análise das avaliações da Fase I pelo coordenador
- * Permite bloquear, desbloquear, solicitar ajustes e aprovar avaliações
+ * Layout em colunas lado a lado para facilitar comparação entre avaliadores
  */
 
 import { useState } from 'react';
@@ -24,9 +24,17 @@ import { Modal } from '../../../componentes/Modal';
 interface AnalisarAvaliacoesFase1Props {
   tcc: TCC;
   onAvaliacoesAtualizadas?: () => void;
+  somenteLeitura?: boolean;
 }
 
-export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: AnalisarAvaliacoesFase1Props) {
+// Extrair seção do parecer estruturado
+function extractSection(parecer: string, sectionName: string): string {
+  const regex = new RegExp(`===\\s*${sectionName}\\s*===\\s*([\\s\\S]*?)(?=\\n===|$)`, 'i');
+  const match = parecer.match(regex);
+  return match ? match[1].trim() : '';
+}
+
+export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteLeitura = false }: AnalisarAvaliacoesFase1Props) {
   const { calendario } = useCalendarioSemestre();
   const {
     avaliacoes,
@@ -51,6 +59,14 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
     conclusoes: Number(calendario?.peso_conclusoes) || 1.5
   };
   const pesoTotal = pesos.resumo + pesos.introducao + pesos.revisao + pesos.desenvolvimento + pesos.conclusoes;
+
+  const criterios = [
+    { label: 'Resumo', campo: 'nota_resumo' as const, peso: pesos.resumo, secao: 'Resumo' },
+    { label: 'Introdução', campo: 'nota_introducao' as const, peso: pesos.introducao, secao: 'Introdução/Relevância' },
+    { label: 'Revisão', campo: 'nota_revisao' as const, peso: pesos.revisao, secao: 'Revisão Bibliográfica' },
+    { label: 'Desenvolvimento', campo: 'nota_desenvolvimento' as const, peso: pesos.desenvolvimento, secao: 'Desenvolvimento' },
+    { label: 'Conclusões', campo: 'nota_conclusoes' as const, peso: pesos.conclusoes, secao: 'Conclusões' },
+  ];
 
   const [avaliadoresSelecionados, setAvaliadoresSelecionados] = useState<number[]>([]);
   const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
@@ -132,7 +148,6 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
 
       const resultado = await aprovar();
 
-      // Type guard: verifica se é aprovação completa
       if (resultado.tipo === 'completa') {
         setMensagemSucesso(
           `Aprovação completa! NF1 = ${resultado.nf1.toFixed(2)}. Resultado: ${resultado.resultado}. Nova etapa: ${resultado.etapa_display}`
@@ -226,6 +241,10 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
     );
   }
 
+  // Filtrar avaliações que têm notas (enviadas ou bloqueadas)
+  const avaliacoesComNotas = avaliacoes.filter(a => a.status !== StatusAvaliacaoFase1.PENDENTE);
+  const gridCols = avaliacoes.length === 2 ? 'grid-cols-2' : avaliacoes.length >= 3 ? 'grid-cols-3' : 'grid-cols-1';
+
   return (
     <>
       <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 mb-6">
@@ -243,28 +262,8 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
           </div>
         )}
 
-        {/* Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="p-3 bg-[rgb(var(--cor-fundo))] rounded-lg">
-            <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Total</p>
-            <p className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{totalAvaliacoes}</p>
-          </div>
-          <div className="p-3 bg-[rgb(var(--cor-alerta))]/10 rounded-lg">
-            <p className="text-xs text-[rgb(var(--cor-alerta))] mb-1">Pendentes</p>
-            <p className="text-2xl font-bold text-[rgb(var(--cor-alerta))]">{avaliacoesPendentes}</p>
-          </div>
-          <div className="p-3 bg-[rgb(var(--cor-destaque))]/10 rounded-lg">
-            <p className="text-xs text-[rgb(var(--cor-destaque))] mb-1">Enviadas</p>
-            <p className="text-2xl font-bold text-[rgb(var(--cor-destaque))]">{avaliacoesEnviadas}</p>
-          </div>
-          <div className="p-3 bg-[rgb(var(--cor-fundo))] rounded-lg">
-            <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Bloqueadas</p>
-            <p className="text-2xl font-bold text-[rgb(var(--cor-texto-secundario))]">{avaliacoesBloqueadas}</p>
-          </div>
-        </div>
-
         {/* Alertas */}
-        {existemPendentes && !todasBloqueadas && (
+        {!somenteLeitura && existemPendentes && !todasBloqueadas && (
           <div className="mb-4 p-3 bg-[rgb(var(--cor-alerta))]/10 border border-[rgb(var(--cor-alerta))]/20 rounded-lg flex items-center gap-2 text-[rgb(var(--cor-alerta))]">
             <AlertCircle className="h-5 w-5" />
             <span className="text-sm">
@@ -273,7 +272,7 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
           </div>
         )}
 
-        {todasBloqueadas && (
+        {!somenteLeitura && todasBloqueadas && (
           <div className="mb-4 p-3 bg-[rgb(var(--cor-destaque))]/10 border border-[rgb(var(--cor-destaque))]/20 rounded-lg flex items-center gap-2 text-[rgb(var(--cor-destaque))]">
             <Lock className="h-5 w-5" />
             <span className="text-sm">
@@ -282,99 +281,97 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
           </div>
         )}
 
-        {/* Lista de avaliações */}
-        <div className="space-y-3 mb-6">
-          <h4 className="text-sm font-medium text-[rgb(var(--cor-texto-secundario))]">Avaliações</h4>
-          {avaliacoes.map(avaliacao => (
-            <div
-              key={avaliacao.id}
-              className="border border-[rgb(var(--cor-borda))] rounded-lg p-4 hover:bg-[rgb(var(--cor-fundo))]/50 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3 flex-1">
-                  <input
-                    type="checkbox"
-                    checked={avaliadoresSelecionados.includes(avaliacao.avaliador)}
-                    onChange={() => toggleAvaliador(avaliacao.avaliador)}
-                    className="h-4 w-4 text-[rgb(var(--cor-info))] rounded border-[rgb(var(--cor-borda))] focus:ring-[rgb(var(--cor-info))]"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-[rgb(var(--cor-texto-primario))]">
-                      {avaliacao.avaliador_dados.nome_completo}
-                    </p>
-                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">{avaliacao.avaliador_dados.email}</p>
-                  </div>
-                </div>
-                {getStatusBadge(avaliacao.status)}
-              </div>
+        {/* Colunas lado a lado */}
+        <div className={`grid ${gridCols} gap-4 mb-6`}>
+          {avaliacoes.map(avaliacao => {
+            const parecer = avaliacao.parecer || '';
+            const parecerGeral = extractSection(parecer, 'Parecer Geral') || (parecer.includes('===') ? '' : parecer);
 
-              {/* Notas */}
-              {avaliacao.status !== StatusAvaliacaoFase1.PENDENTE && (
-                <>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
-                    <div className="text-sm">
-                      <span className="text-[rgb(var(--cor-texto-secundario))]">Resumo:</span>
-                      <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_resumo != null ? Number(avaliacao.nota_resumo).toFixed(1) : '-'} / {pesos.resumo.toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-[rgb(var(--cor-texto-secundario))]">Introdução:</span>
-                      <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_introducao != null ? Number(avaliacao.nota_introducao).toFixed(1) : '-'} / {pesos.introducao.toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-[rgb(var(--cor-texto-secundario))]">Revisão:</span>
-                      <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_revisao != null ? Number(avaliacao.nota_revisao).toFixed(1) : '-'} / {pesos.revisao.toFixed(1)}
-                      </span>
+            return (
+              <div
+                key={avaliacao.id}
+                className="border border-[rgb(var(--cor-borda))] rounded-lg p-4"
+              >
+                {/* Header do avaliador */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {!somenteLeitura && (
+                      <input
+                        type="checkbox"
+                        checked={avaliadoresSelecionados.includes(avaliacao.avaliador)}
+                        onChange={() => toggleAvaliador(avaliacao.avaliador)}
+                        className="h-4 w-4 text-[rgb(var(--cor-info))] rounded border-[rgb(var(--cor-borda))] focus:ring-[rgb(var(--cor-info))] shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[rgb(var(--cor-texto-primario))] truncate">
+                        {avaliacao.avaliador_dados.nome_completo}
+                      </p>
+                      <p className="text-xs text-[rgb(var(--cor-texto-secundario))] truncate">{avaliacao.avaliador_dados.email}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-                    <div className="text-sm">
-                      <span className="text-[rgb(var(--cor-texto-secundario))]">Desenvolvimento:</span>
-                      <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_desenvolvimento != null ? Number(avaliacao.nota_desenvolvimento).toFixed(1) : '-'} / {pesos.desenvolvimento.toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-[rgb(var(--cor-texto-secundario))]">Conclusões:</span>
-                      <span className="ml-2 font-medium text-[rgb(var(--cor-texto-primario))]">
-                        {avaliacao.nota_conclusoes != null ? Number(avaliacao.nota_conclusoes).toFixed(1) : '-'} / {pesos.conclusoes.toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-[rgb(var(--cor-texto-secundario))]">Total:</span>
-                      <span className="ml-2 font-bold text-[rgb(var(--cor-info))]">
+                  {getStatusBadge(avaliacao.status)}
+                </div>
+
+                {/* Notas por critério */}
+                {avaliacao.status !== StatusAvaliacaoFase1.PENDENTE ? (
+                  <div className="space-y-2">
+                    {criterios.map(criterio => {
+                      const nota = avaliacao[criterio.campo];
+                      const comentario = extractSection(parecer, criterio.secao);
+                      return (
+                        <div key={criterio.campo}>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-[rgb(var(--cor-texto-secundario))]">{criterio.label}:</span>
+                            <span className="font-medium text-[rgb(var(--cor-texto-primario))]">
+                              {nota != null ? Number(nota).toFixed(1) : '-'} / {criterio.peso.toFixed(1)}
+                            </span>
+                          </div>
+                          {comentario && (
+                            <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-0.5 pl-2 border-l-2 border-[rgb(var(--cor-borda))] italic">
+                              {comentario}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Parecer geral */}
+                    {parecerGeral && (
+                      <div className="mt-2 pt-2 border-t border-[rgb(var(--cor-borda))]">
+                        <p className="text-xs text-[rgb(var(--cor-texto-secundario))] pl-2 border-l-2 border-[rgb(var(--cor-info))] italic">
+                          {parecerGeral}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="flex justify-between text-sm pt-2 border-t border-[rgb(var(--cor-borda))]">
+                      <span className="font-semibold text-[rgb(var(--cor-texto-primario))]">Total:</span>
+                      <span className="font-bold text-[rgb(var(--cor-info))]">
                         {avaliacao.nota_final != null ? Number(avaliacao.nota_final).toFixed(2) : '-'} / {pesoTotal.toFixed(1)}
                       </span>
                     </div>
+
+                    {/* Data envio */}
+                    {avaliacao.enviado_em && (
+                      <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">
+                        Enviado em: {formatarDataCurta(avaliacao.enviado_em)}
+                      </p>
+                    )}
                   </div>
-                </>
-              )}
-
-              {/* Parecer */}
-              {avaliacao.parecer && (
-                <div className="p-2 bg-[rgb(var(--cor-fundo))] rounded text-sm text-[rgb(var(--cor-texto-secundario))]">
-                  <p className="font-medium text-[rgb(var(--cor-texto-primario))] mb-1">Parecer:</p>
-                  <p>{avaliacao.parecer}</p>
-                </div>
-              )}
-
-              {/* Timestamps */}
-              <div className="mt-2 flex flex-wrap gap-3 text-xs text-[rgb(var(--cor-texto-secundario))]">
-                <span>Criado em: {formatarDataCurta(avaliacao.criado_em)}</span>
-                {avaliacao.enviado_em && (
-                  <span>Enviado em: {formatarDataCurta(avaliacao.enviado_em)}</span>
+                ) : (
+                  <div className="flex items-center justify-center py-6 text-sm text-[rgb(var(--cor-texto-secundario))]">
+                    Aguardando envio
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Ações */}
-        <div className="flex flex-wrap gap-3">
+        {!somenteLeitura && <div className="flex flex-wrap gap-3">
           {!todasBloqueadas && (
             <button
               onClick={() => setModalBloquear(true)}
@@ -425,7 +422,7 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas }: Analis
             <CheckCircle className="h-4 w-4" />
             <span>Aprovar completo</span>
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Modal de Solicitar Ajustes */}

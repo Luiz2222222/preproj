@@ -13,6 +13,7 @@ import {
   Presentation
 } from 'lucide-react';
 import { useAvaliacoesFase1, useAvaliacoesFase2 } from '../../hooks';
+import { useTCCsParaAvaliar } from '../../hooks/useTCCsParaAvaliar';
 import { StatusAvaliacaoFase1, StatusAvaliacaoFase2 } from '../../types/enums';
 import type { EnviarAvaliacaoFase1DTO, EnviarAvaliacaoFase2DTO } from '../../types';
 import { FormularioAvaliacaoFase1 } from '../../componentes/FormularioAvaliacaoFase1';
@@ -26,6 +27,9 @@ export function BancasAvaliacaoDetalhe() {
 
   const faseParam = searchParams.get('fase');
   const fase = faseParam === '2' ? 'fase2' : 'fase1';
+
+  const { tccs: tccsParaAvaliar } = useTCCsParaAvaliar();
+  const tccAtual = tccsParaAvaliar.find(t => t.id === tccId);
   const [mensagemSucessoFase1, setMensagemSucessoFase1] = useState<string | null>(null);
   const [mensagemSucessoFase2, setMensagemSucessoFase2] = useState<string | null>(null);
 
@@ -174,7 +178,7 @@ export function BancasAvaliacaoDetalhe() {
           )}
           <div>
             <h1 className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">
-              Trabalho #{tccId} – {fase === 'fase1' ? 'Fase I' : 'Fase II'}
+              {tccAtual?.titulo || `Trabalho #${tccId}`} – {fase === 'fase1' ? 'Fase I' : 'Fase II'}
             </h1>
             <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
               {fase === 'fase1' ? 'Avaliação da Monografia' : 'Avaliação da Apresentação'}
