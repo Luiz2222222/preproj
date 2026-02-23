@@ -88,9 +88,10 @@ export function FormularioAvaliacaoFase1({
   const podeEditarPrazo = minhaAvaliacao?.tcc_dados?.permissoes?.pode_editar_fase1 ?? true;
   const podeEditar = podeEditarAvaliacao && podeEditarPrazo;
   const estaEnviada = minhaAvaliacao?.status === StatusAvaliacaoFase1.ENVIADO;
-  const estaBloqueada = minhaAvaliacao?.status === StatusAvaliacaoFase1.BLOQUEADO;
+  const estaBloqueada = minhaAvaliacao?.status === StatusAvaliacaoFase1.BLOQUEADO || minhaAvaliacao?.status === StatusAvaliacaoFase1.CONCLUIDO;
   const bloqueadoPeloCoordenador = minhaAvaliacao?.tcc_dados?.avaliacao_fase1_bloqueada ?? false;
-  const prazosExpirado = !podeEditarPrazo && !bloqueadoPeloCoordenador;
+  const foiAprovada = minhaAvaliacao?.tcc_dados?.nf1 != null;
+  const prazosExpirado = !podeEditarPrazo && !bloqueadoPeloCoordenador && !foiAprovada;
 
   // Função para detectar se o parecer tem formato estruturado
   const isParecerEstruturado = (parecer: string): boolean => {
@@ -336,11 +337,18 @@ export function FormularioAvaliacaoFase1({
                   Enviada
                 </span>
               )}
-              {minhaAvaliacao.status === StatusAvaliacaoFase1.BLOQUEADO && (
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--cor-borda))]/20 text-[rgb(var(--cor-texto-secundario))] flex items-center gap-1">
-                  <Lock className="h-3 w-3" />
-                  Bloqueada
-                </span>
+              {(minhaAvaliacao.status === StatusAvaliacaoFase1.BLOQUEADO || minhaAvaliacao.status === StatusAvaliacaoFase1.CONCLUIDO) && (
+                minhaAvaliacao.status === StatusAvaliacaoFase1.CONCLUIDO ? (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--cor-sucesso))]/10 text-[rgb(var(--cor-sucesso))] flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Concluída
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--cor-borda))]/20 text-[rgb(var(--cor-texto-secundario))] flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    Bloqueada
+                  </span>
+                )
               )}
             </div>
             {minhaAvaliacao.enviado_em && (
@@ -350,7 +358,7 @@ export function FormularioAvaliacaoFase1({
             )}
           </div>
 
-          {!podeEditar && (
+          {!podeEditar && !foiAprovada && (
             <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-alerta))] bg-[rgb(var(--cor-alerta))]/10 p-2 rounded mt-2">
               {estaBloqueada || bloqueadoPeloCoordenador ? (
                 <>
@@ -618,7 +626,7 @@ export function FormularioAvaliacaoFase1({
           )}
         </div>
 
-        {!podeEditar && (
+        {!podeEditar && !foiAprovada && (
           <div className="p-4 bg-[rgb(var(--cor-fundo))] rounded-lg border border-[rgb(var(--cor-borda))]">
             <p className="text-sm text-[rgb(var(--cor-texto-secundario))] text-center">
               Esta avaliação não pode mais ser editada. Entre em contato com o coordenador se precisar fazer alterações.

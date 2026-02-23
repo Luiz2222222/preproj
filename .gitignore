@@ -1,0 +1,14 @@
+# Arquivos de teste/temporários
+*.pdf
+*.docx
+*.png
+modelos_email.txt
+
+# SQLite database
+backend/db.sqlite3
+
+# Claude
+.claude/
+
+# Environment
+.env

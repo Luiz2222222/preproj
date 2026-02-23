@@ -89,9 +89,10 @@ export function FormularioAvaliacaoFase2({
   const podeEditarPrazo = minhaAvaliacao?.tcc_dados?.permissoes?.pode_editar_fase2 ?? true;
   const podeEditar = podeEditarAvaliacao && podeEditarPrazo;
   const estaEnviada = minhaAvaliacao?.status === StatusAvaliacaoFase2.ENVIADO;
-  const estaBloqueada = minhaAvaliacao?.status === StatusAvaliacaoFase2.BLOQUEADO;
+  const estaBloqueada = minhaAvaliacao?.status === StatusAvaliacaoFase2.BLOQUEADO || minhaAvaliacao?.status === StatusAvaliacaoFase2.CONCLUIDO;
   const bloqueadoPeloCoordenador = minhaAvaliacao?.tcc_dados?.avaliacao_fase2_bloqueada ?? false;
-  const prazosExpirado = !podeEditarPrazo && !bloqueadoPeloCoordenador;
+  const foiAprovada = minhaAvaliacao?.tcc_dados?.etapa_atual === 'CONCLUIDO';
+  const prazosExpirado = !podeEditarPrazo && !bloqueadoPeloCoordenador && !foiAprovada;
 
   // Verificar se a defesa ainda não ocorreu
   const defesaNaoOcorreu = minhaAvaliacao?.status === StatusAvaliacaoFase2.PENDENTE && !podeEditar && !bloqueadoPeloCoordenador && !prazosExpirado;
@@ -340,11 +341,18 @@ export function FormularioAvaliacaoFase2({
                   Enviada
                 </span>
               )}
-              {minhaAvaliacao.status === StatusAvaliacaoFase2.BLOQUEADO && (
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--cor-borda))]/20 text-[rgb(var(--cor-texto-secundario))] flex items-center gap-1">
-                  <Lock className="h-3 w-3" />
-                  Bloqueada
-                </span>
+              {(minhaAvaliacao.status === StatusAvaliacaoFase2.BLOQUEADO || minhaAvaliacao.status === StatusAvaliacaoFase2.CONCLUIDO) && (
+                minhaAvaliacao.status === StatusAvaliacaoFase2.CONCLUIDO ? (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--cor-sucesso))]/10 text-[rgb(var(--cor-sucesso))] flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Concluída
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--cor-borda))]/20 text-[rgb(var(--cor-texto-secundario))] flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    Bloqueada
+                  </span>
+                )
               )}
             </div>
             {minhaAvaliacao.enviado_em && (
@@ -354,7 +362,7 @@ export function FormularioAvaliacaoFase2({
             )}
           </div>
 
-          {!podeEditar && (
+          {!podeEditar && !foiAprovada && (
             <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-alerta))] bg-[rgb(var(--cor-alerta))]/10 p-2 rounded mt-2">
               {estaBloqueada || bloqueadoPeloCoordenador ? (
                 <>
@@ -399,7 +407,7 @@ export function FormularioAvaliacaoFase2({
                       inputMode="decimal"
                       value={notaCoerencia}
                       onChange={(e) => setNotaCoerencia(clampScore(e.target.value, pesos?.peso_coerencia_conteudo ?? 2.0, notaCoerencia))}
-                      disabled={!podeEditar || processando}
+                      disabled={!podeEditar || processando || estaEnviada}
                       placeholder="–"
                       className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
                     />
@@ -409,7 +417,7 @@ export function FormularioAvaliacaoFase2({
                 <TextareaAutoResize
                   value={comentarioCoerencia}
                   onChange={(e) => setComentarioCoerencia(e.target.value)}
-                  disabled={!podeEditar || processando}
+                  disabled={!podeEditar || processando || estaEnviada}
                   rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
@@ -431,7 +439,7 @@ export function FormularioAvaliacaoFase2({
                       inputMode="decimal"
                       value={notaQualidade}
                       onChange={(e) => setNotaQualidade(clampScore(e.target.value, pesos?.peso_qualidade_apresentacao ?? 2.0, notaQualidade))}
-                      disabled={!podeEditar || processando}
+                      disabled={!podeEditar || processando || estaEnviada}
                       placeholder="–"
                       className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
                     />
@@ -441,7 +449,7 @@ export function FormularioAvaliacaoFase2({
                 <TextareaAutoResize
                   value={comentarioQualidade}
                   onChange={(e) => setComentarioQualidade(e.target.value)}
-                  disabled={!podeEditar || processando}
+                  disabled={!podeEditar || processando || estaEnviada}
                   rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
@@ -463,7 +471,7 @@ export function FormularioAvaliacaoFase2({
                       inputMode="decimal"
                       value={notaDominio}
                       onChange={(e) => setNotaDominio(clampScore(e.target.value, pesos?.peso_dominio_tema ?? 2.5, notaDominio))}
-                      disabled={!podeEditar || processando}
+                      disabled={!podeEditar || processando || estaEnviada}
                       placeholder="–"
                       className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
                     />
@@ -473,7 +481,7 @@ export function FormularioAvaliacaoFase2({
                 <TextareaAutoResize
                   value={comentarioDominio}
                   onChange={(e) => setComentarioDominio(e.target.value)}
-                  disabled={!podeEditar || processando}
+                  disabled={!podeEditar || processando || estaEnviada}
                   rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
@@ -495,7 +503,7 @@ export function FormularioAvaliacaoFase2({
                       inputMode="decimal"
                       value={notaClareza}
                       onChange={(e) => setNotaClareza(clampScore(e.target.value, pesos?.peso_clareza_fluencia ?? 2.5, notaClareza))}
-                      disabled={!podeEditar || processando}
+                      disabled={!podeEditar || processando || estaEnviada}
                       placeholder="–"
                       className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
                     />
@@ -505,7 +513,7 @@ export function FormularioAvaliacaoFase2({
                 <TextareaAutoResize
                   value={comentarioClareza}
                   onChange={(e) => setComentarioClareza(e.target.value)}
-                  disabled={!podeEditar || processando}
+                  disabled={!podeEditar || processando || estaEnviada}
                   rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
@@ -527,7 +535,7 @@ export function FormularioAvaliacaoFase2({
                       inputMode="decimal"
                       value={notaTempo}
                       onChange={(e) => setNotaTempo(clampScore(e.target.value, pesos?.peso_observancia_tempo ?? 1.0, notaTempo))}
-                      disabled={!podeEditar || processando}
+                      disabled={!podeEditar || processando || estaEnviada}
                       placeholder="–"
                       className="w-14 h-8 text-center text-sm font-semibold border border-[rgb(var(--cor-borda))] rounded-md focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed text-[rgb(var(--cor-texto-primario))] bg-[rgb(var(--cor-superficie))]"
                     />
@@ -537,7 +545,7 @@ export function FormularioAvaliacaoFase2({
                 <TextareaAutoResize
                   value={comentarioTempo}
                   onChange={(e) => setComentarioTempo(e.target.value)}
-                  disabled={!podeEditar || processando}
+                  disabled={!podeEditar || processando || estaEnviada}
                   rows={2}
                   placeholder="Comentários sobre este critério..."
                   className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
@@ -555,7 +563,7 @@ export function FormularioAvaliacaoFase2({
           <TextareaAutoResize
             value={parecerGeral}
             onChange={(e) => setParecerGeral(e.target.value)}
-            disabled={!podeEditar || processando}
+            disabled={!podeEditar || processando || estaEnviada}
             rows={4}
             placeholder="Comentários gerais sobre a apresentação..."
             className="w-full px-3 py-2 text-sm border border-[rgb(var(--cor-borda))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--cor-fase2-cabecalho))] focus:border-transparent disabled:bg-[rgb(var(--cor-superficie-hover))] disabled:cursor-not-allowed"
@@ -627,7 +635,7 @@ export function FormularioAvaliacaoFase2({
           )}
         </div>
 
-        {!podeEditar && (
+        {!podeEditar && !foiAprovada && (
           <div className="p-4 bg-[rgb(var(--cor-fundo))] rounded-lg border border-[rgb(var(--cor-borda))]">
             <p className="text-sm text-[rgb(var(--cor-texto-secundario))] text-center">
               Esta avaliação não pode mais ser editada. Entre em contato com o coordenador se precisar fazer alterações.

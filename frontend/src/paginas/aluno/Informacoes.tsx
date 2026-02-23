@@ -95,8 +95,8 @@ export function Informacoes() {
       },
       {
         id: 4,
-        titulo: 'Submissão de monografia',
-        descricao: 'Entrega da versão final para avaliação',
+        titulo: 'Submissão de monografia + termo',
+        descricao: 'Entrega da versão final + Termo',
         data: formatarDataCurta(calendario?.submissao_monografia_fim),
         icone: FileText,
         cor: 'orange',

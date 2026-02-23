@@ -13,7 +13,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { X, Save, Loader2, AlertCircle, ChevronDown, ChevronUp, CheckSquare, Square, FileText } from 'lucide-react'
 import { EtapaTCCLabels, StatusDocumento, TipoDocumento } from '../types/enums'
 import type { EtapaTCC } from '../types/enums'
-import type { TCC, AvaliacaoFase1, AvaliacaoFase2 } from '../types'
+import type { TCC, AvaliacaoFase1, AvaliacaoFase2, PesosConfigurados, PesosConfiguradosFase2 } from '../types'
 import { atualizarTCC } from '../servicos/tccs'
 import { listarProfessores, listarAvaliadores, type ProfessorListItem } from '../servicos/usuarios'
 import { obterAvaliacoesFase1, editarAvaliacaoFase1Coordenador, obterBancaFase1 } from '../servicos/fase1'
@@ -23,6 +23,57 @@ interface ModalEditarTCCProps {
   tcc: TCC
   onClose: () => void
   onSalvo: () => void
+}
+
+// Seções do parecer estruturado
+const SECOES_FASE1 = ['Resumo', 'Introdução/Relevância do Trabalho', 'Revisão Bibliográfica', 'Desenvolvimento', 'Conclusões', 'Considerações Adicionais'] as const
+const SECOES_FASE2 = ['Coerência', 'Qualidade', 'Domínio', 'Clareza', 'Tempo', 'Parecer Geral'] as const
+
+function extrairSecao(parecer: string, secao: string): string {
+  if (!parecer) return ''
+  const regex = new RegExp(`===\\s*${secao.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*===\\s*([\\s\\S]*?)(?=\\n===|$)`, 'i')
+  const match = parecer.match(regex)
+  return match ? match[1].trim() : ''
+}
+
+function combinarSecoes(secoes: readonly string[], valores: Record<string, string>): string {
+  const partes: string[] = []
+  for (const secao of secoes) {
+    const val = (valores[secao] || '').trim()
+    if (val) {
+      partes.push(`===${secao}===\n${val}`)
+    }
+  }
+  return partes.join('\n')
+}
+
+// Pesos padrão
+const PESOS_F1_DEFAULT: PesosConfigurados = { peso_resumo: 1.0, peso_introducao: 2.0, peso_revisao: 2.0, peso_desenvolvimento: 3.5, peso_conclusoes: 1.5 }
+const PESOS_F2_DEFAULT: PesosConfiguradosFase2 = { peso_coerencia_conteudo: 2.0, peso_qualidade_apresentacao: 2.0, peso_dominio_tema: 2.5, peso_clareza_fluencia: 2.5, peso_observancia_tempo: 1.0 }
+
+// Formato brasileiro de notas (vírgula como separador decimal)
+function parseBR(valor: string): number | null {
+  if (valor === '') return null
+  const num = parseFloat(valor.replace(',', '.'))
+  return isNaN(num) ? null : num
+}
+
+function numParaBR(valor: number | string | null): string {
+  if (valor === null || valor === '') return ''
+  return String(valor).replace('.', ',')
+}
+
+function clampScore(raw: string, max: number, currentValue: string): string {
+  if (raw === '') return ''
+  let cleaned = raw.replace(/[^\d,.]/g, '')
+  cleaned = cleaned.replace(/\./g, ',')
+  if ((cleaned.match(/,/g) || []).length > 1) return currentValue
+  if (!/^[0-9]{0,2}(,[0-9]{0,2})?$/.test(cleaned)) return currentValue
+  const num = parseBR(cleaned)
+  if (num !== null && !cleaned.endsWith(',')) {
+    return Math.max(0, Math.min(num, max)).toString().replace('.', ',')
+  }
+  return cleaned
 }
 
 // Estado local de uma avaliação fase 1 editável
@@ -35,6 +86,7 @@ interface AvalFase1State {
   nota_desenvolvimento: string
   nota_conclusoes: string
   parecer: string
+  comentarios: Record<string, string>
   status: string
   nota_final: number | null
   modificado: boolean
@@ -50,6 +102,7 @@ interface AvalFase2State {
   nota_clareza_fluencia: string
   nota_observancia_tempo: string
   parecer: string
+  comentarios: Record<string, string>
   status: string
   nota_final: number | null
   modificado: boolean
@@ -79,6 +132,8 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
   // Avaliações
   const [avaliacoesFase1, setAvaliacoesFase1] = useState<AvalFase1State[]>([])
   const [avaliacoesFase2, setAvaliacoesFase2] = useState<AvalFase2State[]>([])
+  const [pesosF1, setPesosF1] = useState<PesosConfigurados>(PESOS_F1_DEFAULT)
+  const [pesosF2, setPesosF2] = useState<PesosConfiguradosFase2>(PESOS_F2_DEFAULT)
   const [carregandoAvaliacoes, setCarregandoAvaliacoes] = useState(true)
 
   // UI state
@@ -113,19 +168,31 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
 
       // Fase 1: usar avaliações existentes, ou criar cards vazios a partir dos membros da banca
       if (f1.length > 0) {
-        setAvaliacoesFase1(f1.map((a: AvaliacaoFase1) => ({
-          avaliadorId: a.avaliador,
-          avaliadorNome: a.avaliador_dados?.nome_completo || `Avaliador #${a.avaliador}`,
-          nota_resumo: a.nota_resumo !== null ? String(a.nota_resumo) : '',
-          nota_introducao: a.nota_introducao !== null ? String(a.nota_introducao) : '',
-          nota_revisao: a.nota_revisao !== null ? String(a.nota_revisao) : '',
-          nota_desenvolvimento: a.nota_desenvolvimento !== null ? String(a.nota_desenvolvimento) : '',
-          nota_conclusoes: a.nota_conclusoes !== null ? String(a.nota_conclusoes) : '',
-          parecer: a.parecer || '',
-          status: a.status,
-          nota_final: a.nota_final,
-          modificado: false
-        })))
+        const p1 = f1.find((a: AvaliacaoFase1) => a.pesos_configurados)?.pesos_configurados
+        if (p1) setPesosF1(p1)
+        setAvaliacoesFase1(f1.map((a: AvaliacaoFase1) => {
+          const p = a.parecer || ''
+          const comentarios: Record<string, string> = {}
+          for (const s of SECOES_FASE1) comentarios[s] = extrairSecao(p, s)
+          // Se nenhum formato estruturado, colocar tudo em Considerações Adicionais
+          if (!Object.values(comentarios).some(v => v) && p.trim()) {
+            comentarios['Considerações Adicionais'] = p.trim()
+          }
+          return {
+            avaliadorId: a.avaliador,
+            avaliadorNome: a.avaliador_dados?.nome_completo || `Avaliador #${a.avaliador}`,
+            nota_resumo: numParaBR(a.nota_resumo),
+            nota_introducao: numParaBR(a.nota_introducao),
+            nota_revisao: numParaBR(a.nota_revisao),
+            nota_desenvolvimento: numParaBR(a.nota_desenvolvimento),
+            nota_conclusoes: numParaBR(a.nota_conclusoes),
+            parecer: p,
+            comentarios,
+            status: a.status,
+            nota_final: a.nota_final,
+            modificado: false
+          }
+        }))
       } else if (banca?.membros && banca.membros.length > 0) {
         // Criar cards vazios para cada membro da banca
         setAvaliacoesFase1(banca.membros
@@ -135,25 +202,37 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
             avaliadorNome: m.usuario_dados?.nome_completo || `Avaliador #${m.usuario}`,
             nota_resumo: '', nota_introducao: '', nota_revisao: '',
             nota_desenvolvimento: '', nota_conclusoes: '',
-            parecer: '', status: 'PENDENTE', nota_final: null, modificado: false
+            parecer: '', comentarios: {},
+            status: 'PENDENTE', nota_final: null, modificado: false
           })))
       }
 
       // Fase 2: usar avaliações existentes ou criar cards vazios
       if (f2.length > 0) {
-        setAvaliacoesFase2(f2.map((a: AvaliacaoFase2) => ({
-          avaliadorId: a.avaliador,
-          avaliadorNome: a.avaliador_dados?.nome_completo || `Avaliador #${a.avaliador}`,
-          nota_coerencia_conteudo: a.nota_coerencia_conteudo !== null ? String(a.nota_coerencia_conteudo) : '',
-          nota_qualidade_apresentacao: a.nota_qualidade_apresentacao !== null ? String(a.nota_qualidade_apresentacao) : '',
-          nota_dominio_tema: a.nota_dominio_tema !== null ? String(a.nota_dominio_tema) : '',
-          nota_clareza_fluencia: a.nota_clareza_fluencia !== null ? String(a.nota_clareza_fluencia) : '',
-          nota_observancia_tempo: a.nota_observancia_tempo !== null ? String(a.nota_observancia_tempo) : '',
-          parecer: a.parecer || '',
-          status: a.status,
-          nota_final: a.nota_final,
-          modificado: false
-        })))
+        const p2 = f2.find((a: AvaliacaoFase2) => a.pesos_configurados)?.pesos_configurados
+        if (p2) setPesosF2(p2)
+        setAvaliacoesFase2(f2.map((a: AvaliacaoFase2) => {
+          const p = a.parecer || ''
+          const comentarios: Record<string, string> = {}
+          for (const s of SECOES_FASE2) comentarios[s] = extrairSecao(p, s)
+          if (!Object.values(comentarios).some(v => v) && p.trim()) {
+            comentarios['Parecer Geral'] = p.trim()
+          }
+          return {
+            avaliadorId: a.avaliador,
+            avaliadorNome: a.avaliador_dados?.nome_completo || `Avaliador #${a.avaliador}`,
+            nota_coerencia_conteudo: numParaBR(a.nota_coerencia_conteudo),
+            nota_qualidade_apresentacao: numParaBR(a.nota_qualidade_apresentacao),
+            nota_dominio_tema: numParaBR(a.nota_dominio_tema),
+            nota_clareza_fluencia: numParaBR(a.nota_clareza_fluencia),
+            nota_observancia_tempo: numParaBR(a.nota_observancia_tempo),
+            parecer: p,
+            comentarios,
+            status: a.status,
+            nota_final: a.nota_final,
+            modificado: false
+          }
+        }))
       } else if (banca?.membros && banca.membros.length > 0) {
         // Fase 2: todos os membros da banca (incluindo orientador)
         setAvaliacoesFase2(banca.membros.map(m => ({
@@ -161,7 +240,8 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
           avaliadorNome: m.usuario_dados?.nome_completo || `Membro #${m.usuario}`,
           nota_coerencia_conteudo: '', nota_qualidade_apresentacao: '',
           nota_dominio_tema: '', nota_clareza_fluencia: '', nota_observancia_tempo: '',
-          parecer: '', status: 'PENDENTE', nota_final: null, modificado: false
+          parecer: '', comentarios: {},
+          status: 'PENDENTE', nota_final: null, modificado: false
         })))
       }
     } catch {
@@ -189,8 +269,24 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
     setAvaliacoesFase1(prev => prev.map((a, i) => i === idx ? { ...a, [campo]: valor, modificado: true } : a))
   }
 
+  const atualizarComentarioFase1 = (idx: number, secao: string, valor: string) => {
+    setAvaliacoesFase1(prev => prev.map((a, i) => i === idx ? {
+      ...a,
+      comentarios: { ...a.comentarios, [secao]: valor },
+      modificado: true
+    } : a))
+  }
+
   const atualizarFase2 = (idx: number, campo: string, valor: string) => {
     setAvaliacoesFase2(prev => prev.map((a, i) => i === idx ? { ...a, [campo]: valor, modificado: true } : a))
+  }
+
+  const atualizarComentarioFase2 = (idx: number, secao: string, valor: string) => {
+    setAvaliacoesFase2(prev => prev.map((a, i) => i === idx ? {
+      ...a,
+      comentarios: { ...a.comentarios, [secao]: valor },
+      modificado: true
+    } : a))
   }
 
   // Documentos relevantes para o checklist (os 3 do dashboard do aluno + termo de solicitação)
@@ -202,12 +298,14 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
   ]
 
   // Verificar quais documentos o TCC possui
+  // Monografia requer aprovação explícita; demais são considerados "OK" ao existirem
+  const tiposComAprovacao = new Set([TipoDocumento.MONOGRAFIA])
   const documentosPostados = new Set<string>()
   const documentosExistentes = new Set<string>()
   if (tcc.documentos) {
     for (const doc of tcc.documentos) {
       documentosExistentes.add(doc.tipo_documento)
-      if (doc.status === StatusDocumento.APROVADO) {
+      if (doc.status === StatusDocumento.APROVADO || !tiposComAprovacao.has(doc.tipo_documento as any)) {
         documentosPostados.add(doc.tipo_documento)
       }
     }
@@ -245,15 +343,17 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
       }
 
       // 2. Salvar avaliações Fase 1 modificadas
+      const clamp = (v: number, max: number) => Math.max(0, Math.min(v, max))
       const f1Modificadas = avaliacoesFase1.filter(a => a.modificado)
       for (const a of f1Modificadas) {
         const payload: Record<string, any> = {}
-        if (a.nota_resumo) payload.nota_resumo = parseFloat(a.nota_resumo)
-        if (a.nota_introducao) payload.nota_introducao = parseFloat(a.nota_introducao)
-        if (a.nota_revisao) payload.nota_revisao = parseFloat(a.nota_revisao)
-        if (a.nota_desenvolvimento) payload.nota_desenvolvimento = parseFloat(a.nota_desenvolvimento)
-        if (a.nota_conclusoes) payload.nota_conclusoes = parseFloat(a.nota_conclusoes)
-        if (a.parecer) payload.parecer = a.parecer
+        const r = parseBR(a.nota_resumo); if (r !== null) payload.nota_resumo = clamp(r, pesosF1.peso_resumo)
+        const i = parseBR(a.nota_introducao); if (i !== null) payload.nota_introducao = clamp(i, pesosF1.peso_introducao)
+        const rv = parseBR(a.nota_revisao); if (rv !== null) payload.nota_revisao = clamp(rv, pesosF1.peso_revisao)
+        const d = parseBR(a.nota_desenvolvimento); if (d !== null) payload.nota_desenvolvimento = clamp(d, pesosF1.peso_desenvolvimento)
+        const c = parseBR(a.nota_conclusoes); if (c !== null) payload.nota_conclusoes = clamp(c, pesosF1.peso_conclusoes)
+        const parecerCombinado = combinarSecoes(SECOES_FASE1, a.comentarios)
+        payload.parecer = parecerCombinado
         if (a.status) payload.status = a.status
         await editarAvaliacaoFase1Coordenador(tcc.id, a.avaliadorId, payload)
       }
@@ -262,12 +362,13 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
       const f2Modificadas = avaliacoesFase2.filter(a => a.modificado)
       for (const a of f2Modificadas) {
         const payload: Record<string, any> = {}
-        if (a.nota_coerencia_conteudo) payload.nota_coerencia_conteudo = parseFloat(a.nota_coerencia_conteudo)
-        if (a.nota_qualidade_apresentacao) payload.nota_qualidade_apresentacao = parseFloat(a.nota_qualidade_apresentacao)
-        if (a.nota_dominio_tema) payload.nota_dominio_tema = parseFloat(a.nota_dominio_tema)
-        if (a.nota_clareza_fluencia) payload.nota_clareza_fluencia = parseFloat(a.nota_clareza_fluencia)
-        if (a.nota_observancia_tempo) payload.nota_observancia_tempo = parseFloat(a.nota_observancia_tempo)
-        if (a.parecer) payload.parecer = a.parecer
+        const co = parseBR(a.nota_coerencia_conteudo); if (co !== null) payload.nota_coerencia_conteudo = clamp(co, pesosF2.peso_coerencia_conteudo)
+        const qa = parseBR(a.nota_qualidade_apresentacao); if (qa !== null) payload.nota_qualidade_apresentacao = clamp(qa, pesosF2.peso_qualidade_apresentacao)
+        const dt = parseBR(a.nota_dominio_tema); if (dt !== null) payload.nota_dominio_tema = clamp(dt, pesosF2.peso_dominio_tema)
+        const cf = parseBR(a.nota_clareza_fluencia); if (cf !== null) payload.nota_clareza_fluencia = clamp(cf, pesosF2.peso_clareza_fluencia)
+        const ot = parseBR(a.nota_observancia_tempo); if (ot !== null) payload.nota_observancia_tempo = clamp(ot, pesosF2.peso_observancia_tempo)
+        const parecerCombinado = combinarSecoes(SECOES_FASE2, a.comentarios)
+        payload.parecer = parecerCombinado
         if (a.status) payload.status = a.status
         await editarAvaliacaoFase2Coordenador(tcc.id, a.avaliadorId, payload)
       }
@@ -279,6 +380,8 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
       setSalvando(false)
     }
   }
+
+  const fmtPeso = (v: number) => v.toFixed(1).replace('.', ',')
 
   const inputClass = "w-full px-3 py-2 bg-[rgb(var(--cor-fundo))] border border-[rgb(var(--cor-borda-forte))] rounded-lg text-[rgb(var(--cor-texto-primario))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] text-sm"
   const labelClass = "block text-sm font-medium text-[rgb(var(--cor-texto-primario))] mb-1"
@@ -503,52 +606,58 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
                             <span className="text-xs font-medium text-[rgb(var(--cor-destaque))]">Nota: {aval.nota_final}</span>
                           )}
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            aval.status === 'ENVIADO' ? 'bg-[rgb(var(--cor-sucesso))]/20 text-[rgb(var(--cor-sucesso))]' :
+                            aval.status === 'CONCLUIDO' ? 'bg-[rgb(var(--cor-sucesso))]/20 text-[rgb(var(--cor-sucesso))]' :
+                            aval.status === 'ENVIADO' ? 'bg-[rgb(var(--cor-destaque))]/20 text-[rgb(var(--cor-destaque))]' :
                             aval.status === 'BLOQUEADO' ? 'bg-[rgb(var(--cor-erro))]/20 text-[rgb(var(--cor-erro))]' :
                             'bg-[rgb(var(--cor-alerta))]/20 text-[rgb(var(--cor-alerta))]'
-                          }`}>{aval.status}</span>
+                          }`}>{aval.status === 'CONCLUIDO' ? 'CONCLUÍDO' : aval.status}</span>
                         </div>
                       </div>
                       <div className="grid grid-cols-5 gap-2">
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Resumo</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_resumo}
-                            onChange={(e) => atualizarFase1(idx, 'nota_resumo', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Resumo <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF1.peso_resumo)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_resumo}
+                            onChange={(e) => atualizarFase1(idx, 'nota_resumo', clampScore(e.target.value, pesosF1.peso_resumo, aval.nota_resumo))}
                             className={notaInputClass} />
                         </div>
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Introdução</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_introducao}
-                            onChange={(e) => atualizarFase1(idx, 'nota_introducao', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Introdução <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF1.peso_introducao)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_introducao}
+                            onChange={(e) => atualizarFase1(idx, 'nota_introducao', clampScore(e.target.value, pesosF1.peso_introducao, aval.nota_introducao))}
                             className={notaInputClass} />
                         </div>
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Revisão</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_revisao}
-                            onChange={(e) => atualizarFase1(idx, 'nota_revisao', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Revisão <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF1.peso_revisao)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_revisao}
+                            onChange={(e) => atualizarFase1(idx, 'nota_revisao', clampScore(e.target.value, pesosF1.peso_revisao, aval.nota_revisao))}
                             className={notaInputClass} />
                         </div>
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Desenvolvimento</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_desenvolvimento}
-                            onChange={(e) => atualizarFase1(idx, 'nota_desenvolvimento', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Desenv. <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF1.peso_desenvolvimento)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_desenvolvimento}
+                            onChange={(e) => atualizarFase1(idx, 'nota_desenvolvimento', clampScore(e.target.value, pesosF1.peso_desenvolvimento, aval.nota_desenvolvimento))}
                             className={notaInputClass} />
                         </div>
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Conclusões</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_conclusoes}
-                            onChange={(e) => atualizarFase1(idx, 'nota_conclusoes', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Conclusões <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF1.peso_conclusoes)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_conclusoes}
+                            onChange={(e) => atualizarFase1(idx, 'nota_conclusoes', clampScore(e.target.value, pesosF1.peso_conclusoes, aval.nota_conclusoes))}
                             className={notaInputClass} />
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Parecer</label>
-                        <textarea
-                          value={aval.parecer}
-                          onChange={(e) => atualizarFase1(idx, 'parecer', e.target.value)}
-                          rows={2}
-                          className="w-full px-3 py-2 bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-borda-forte))] rounded-lg text-[rgb(var(--cor-texto-primario))] text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] resize-y"
-                        />
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-[rgb(var(--cor-texto-secundario))]">Comentários por critério</p>
+                        {SECOES_FASE1.map(secao => (
+                          <div key={secao}>
+                            <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-0.5">{secao}</label>
+                            <textarea
+                              value={aval.comentarios[secao] || ''}
+                              onChange={(e) => atualizarComentarioFase1(idx, secao, e.target.value)}
+                              rows={1}
+                              className="w-full px-3 py-1.5 bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-borda-forte))] rounded-lg text-[rgb(var(--cor-texto-primario))] text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] resize-y"
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))
@@ -587,52 +696,58 @@ export function ModalEditarTCC({ tcc, onClose, onSalvo }: ModalEditarTCCProps) {
                             <span className="text-xs font-medium text-[rgb(var(--cor-destaque))]">Nota: {aval.nota_final}</span>
                           )}
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            aval.status === 'ENVIADO' ? 'bg-[rgb(var(--cor-sucesso))]/20 text-[rgb(var(--cor-sucesso))]' :
+                            aval.status === 'CONCLUIDO' ? 'bg-[rgb(var(--cor-sucesso))]/20 text-[rgb(var(--cor-sucesso))]' :
+                            aval.status === 'ENVIADO' ? 'bg-[rgb(var(--cor-destaque))]/20 text-[rgb(var(--cor-destaque))]' :
                             aval.status === 'BLOQUEADO' ? 'bg-[rgb(var(--cor-erro))]/20 text-[rgb(var(--cor-erro))]' :
                             'bg-[rgb(var(--cor-alerta))]/20 text-[rgb(var(--cor-alerta))]'
-                          }`}>{aval.status}</span>
+                          }`}>{aval.status === 'CONCLUIDO' ? 'CONCLUÍDO' : aval.status}</span>
                         </div>
                       </div>
                       <div className="grid grid-cols-5 gap-2">
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Coerência</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_coerencia_conteudo}
-                            onChange={(e) => atualizarFase2(idx, 'nota_coerencia_conteudo', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Coerência <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF2.peso_coerencia_conteudo)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_coerencia_conteudo}
+                            onChange={(e) => atualizarFase2(idx, 'nota_coerencia_conteudo', clampScore(e.target.value, pesosF2.peso_coerencia_conteudo, aval.nota_coerencia_conteudo))}
                             className={notaInputClass} />
                         </div>
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Apresentação</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_qualidade_apresentacao}
-                            onChange={(e) => atualizarFase2(idx, 'nota_qualidade_apresentacao', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Apresentação <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF2.peso_qualidade_apresentacao)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_qualidade_apresentacao}
+                            onChange={(e) => atualizarFase2(idx, 'nota_qualidade_apresentacao', clampScore(e.target.value, pesosF2.peso_qualidade_apresentacao, aval.nota_qualidade_apresentacao))}
                             className={notaInputClass} />
                         </div>
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Domínio</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_dominio_tema}
-                            onChange={(e) => atualizarFase2(idx, 'nota_dominio_tema', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Domínio <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF2.peso_dominio_tema)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_dominio_tema}
+                            onChange={(e) => atualizarFase2(idx, 'nota_dominio_tema', clampScore(e.target.value, pesosF2.peso_dominio_tema, aval.nota_dominio_tema))}
                             className={notaInputClass} />
                         </div>
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Clareza</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_clareza_fluencia}
-                            onChange={(e) => atualizarFase2(idx, 'nota_clareza_fluencia', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Clareza <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF2.peso_clareza_fluencia)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_clareza_fluencia}
+                            onChange={(e) => atualizarFase2(idx, 'nota_clareza_fluencia', clampScore(e.target.value, pesosF2.peso_clareza_fluencia, aval.nota_clareza_fluencia))}
                             className={notaInputClass} />
                         </div>
                         <div>
-                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Tempo</label>
-                          <input type="number" step="0.01" min="0" value={aval.nota_observancia_tempo}
-                            onChange={(e) => atualizarFase2(idx, 'nota_observancia_tempo', e.target.value)}
+                          <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Tempo <span className="text-[rgb(var(--cor-texto-terciario))]">/ {fmtPeso(pesosF2.peso_observancia_tempo)}</span></label>
+                          <input type="text" inputMode="decimal" placeholder="–" value={aval.nota_observancia_tempo}
+                            onChange={(e) => atualizarFase2(idx, 'nota_observancia_tempo', clampScore(e.target.value, pesosF2.peso_observancia_tempo, aval.nota_observancia_tempo))}
                             className={notaInputClass} />
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Parecer</label>
-                        <textarea
-                          value={aval.parecer}
-                          onChange={(e) => atualizarFase2(idx, 'parecer', e.target.value)}
-                          rows={2}
-                          className="w-full px-3 py-2 bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-borda-forte))] rounded-lg text-[rgb(var(--cor-texto-primario))] text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] resize-y"
-                        />
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-[rgb(var(--cor-texto-secundario))]">Comentários por critério</p>
+                        {SECOES_FASE2.map(secao => (
+                          <div key={secao}>
+                            <label className="block text-xs text-[rgb(var(--cor-texto-secundario))] mb-0.5">{secao}</label>
+                            <textarea
+                              value={aval.comentarios[secao] || ''}
+                              onChange={(e) => atualizarComentarioFase2(idx, secao, e.target.value)}
+                              rows={1}
+                              className="w-full px-3 py-1.5 bg-[rgb(var(--cor-superficie))] border border-[rgb(var(--cor-borda-forte))] rounded-lg text-[rgb(var(--cor-texto-primario))] text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--cor-destaque))] resize-y"
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))

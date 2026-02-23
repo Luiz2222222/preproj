@@ -572,6 +572,7 @@ class AvaliacaoFase1(models.Model):
         ('PENDENTE', 'Pendente'),
         ('ENVIADO', 'Enviado'),
         ('BLOQUEADO', 'Bloqueado'),
+        ('CONCLUIDO', 'Concluído'),
     ]
 
     tcc = models.ForeignKey(
@@ -742,6 +743,7 @@ class AvaliacaoFase2(models.Model):
         ('PENDENTE', 'Pendente'),
         ('ENVIADO', 'Enviado'),
         ('BLOQUEADO', 'Bloqueado'),
+        ('CONCLUIDO', 'Concluído'),
     ]
 
     tcc = models.ForeignKey(

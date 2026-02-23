@@ -27,6 +27,13 @@ export function DashboardAvaliador() {
   const { tccs: coOrientacoes, carregando } = useCoOrientacoes()
   const { tccs: tccsParaAvaliar } = useTCCsParaAvaliar()
 
+  // Filtrar bancas que ainda têm avaliação pendente
+  const tccsComAvaliacaoPendente = tccsParaAvaliar.filter(tcc => {
+    const fase1Pendente = tcc.minha_avaliacao_fase1_status !== 'ENVIADO' && tcc.minha_avaliacao_fase1_status !== 'BLOQUEADO' && tcc.minha_avaliacao_fase1_status !== 'CONCLUIDO' && tcc.nf1 == null;
+    const fase2Pendente = tcc.minha_avaliacao_fase2_status !== 'ENVIADO' && tcc.minha_avaliacao_fase2_status !== 'BLOQUEADO' && tcc.minha_avaliacao_fase2_status !== 'CONCLUIDO' && tcc.etapa_atual !== 'CONCLUIDO';
+    return fase1Pendente || fase2Pendente;
+  });
+
   const totalCoOrientandos = coOrientacoes.length
 
   // Estatísticas baseadas nas co-orientações
@@ -179,8 +186,8 @@ export function DashboardAvaliador() {
       },
       {
         id: 4,
-        titulo: 'Submissão de monografia',
-        descricao: 'Entrega da versão final para avaliação',
+        titulo: 'Submissão de monografia + termo',
+        descricao: 'Entrega da versão final + Termo',
         data: formatarDataCurta(calendario?.submissao_monografia_fim),
         icone: FileText,
         cor: 'orange',
@@ -260,10 +267,10 @@ export function DashboardAvaliador() {
             Ações pendentes
           </h2>
 
-          {tccsParaAvaliar.length > 0 ? (
+          {tccsComAvaliacaoPendente.length > 0 ? (
             <>
               <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
-                {tccsParaAvaliar.map((tcc) => (
+                {tccsComAvaliacaoPendente.map((tcc) => (
                   <div
                     key={`banca-${tcc.id}`}
                     onClick={() => {
@@ -293,14 +300,14 @@ export function DashboardAvaliador() {
               </div>
               <button
                 onClick={() => {
-                  const t = tccsParaAvaliar[0];
+                  const t = tccsComAvaliacaoPendente[0];
                   const fase = t.nf1 != null ? 2 : 1;
                   navigate(`/avaliador/bancas/${t.id}?fase=${fase}`);
                 }}
                 className="w-full px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium shadow-md transition-all bg-[rgb(var(--cor-destaque))] text-white hover:bg-[rgb(var(--cor-destaque))]/90"
               >
                 <AlertCircle className="h-5 w-5" />
-                Ir para a primeira ação da lista ({tccsParaAvaliar.length} {tccsParaAvaliar.length === 1 ? 'pendente' : 'pendentes'})
+                Ir para a primeira ação da lista ({tccsComAvaliacaoPendente.length} {tccsComAvaliacaoPendente.length === 1 ? 'pendente' : 'pendentes'})
               </button>
             </>
           ) : (

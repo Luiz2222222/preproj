@@ -1,21 +1,13 @@
 """
 Geração do Relatório de Avaliação do TCC em DOCX.
-Formato baseado no modelo oficial UFPE/DEE (Relatorio de Avaliação do TCC).
-Usa o template DOCX como base para preservar header (logo) e estilos.
+Abordagem: copia o template oficial e substitui apenas os dados (mala direta).
+Preserva toda a formatação original: cores, bordas, fontes, header, assinatura.
 """
 
 import io
 import os
 import re
 from docx import Document
-from docx.shared import Pt, Cm, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
-from docx.oxml.ns import qn, nsdecls
-from docx.oxml import parse_xml
-
-
-# Cor roxa do modelo UFPE
-COR_ROXA = RGBColor(0x70, 0x30, 0xA0)
 
 # Caminho do template
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'templates', 'relatorio_template.docx')
@@ -27,14 +19,14 @@ MESES_PT = {
     9: 'setembro', 10: 'outubro', 11: 'novembro', 12: 'dezembro',
 }
 
-# Labels dos critérios do apêndice
-CRITERIOS_LABELS = [
-    '1) RESUMO',
-    '2) INTRODUÇÃO/RELEVÂNCIA DO TRABALHO',
-    '3) REVISÃO BIBLIOGRÁFICA',
-    '4) DESENVOLVIMENTO',
-    '5) CONCLUSÕES',
-    '6) CONSIDERAÇÕES ADICIONAIS',
+# Seções do parecer estruturado
+SECOES_PARECER = [
+    'Resumo',
+    'Introdução/Relevância do Trabalho',
+    'Revisão Bibliográfica',
+    'Desenvolvimento',
+    'Conclusões',
+    'Considerações Adicionais',
 ]
 
 
@@ -59,158 +51,56 @@ def _data_por_extenso(data):
     return f'{data.day} de {MESES_PT[data.month]} de {data.year}'
 
 
-def _limpar_body(doc):
-    """Remove todos os elementos do body exceto sectPr (section properties)."""
-    body = doc.element.body
-    sect_pr = body.find(qn('w:sectPr'))
-    for child in list(body):
-        if child.tag != qn('w:sectPr'):
-            body.remove(child)
-
-
-def _add_paragraph(doc, text='', style=None):
-    """Adiciona parágrafo ao documento."""
-    p = doc.add_paragraph(text, style=style)
-    return p
-
-
-def _add_run(paragraph, text, bold=False, italic=False, size=None, color=None, font_name=None):
-    """Adiciona run a um parágrafo com formatação."""
-    run = paragraph.add_run(text)
-    if bold:
-        run.bold = True
-    if italic:
-        run.italic = True
-    if size:
-        run.font.size = size
-    if color:
-        run.font.color.rgb = color
-    if font_name:
-        run.font.name = font_name
-    return run
-
-
-def _set_cell_text(cell, text, bold=False, size=None, font_name='Arial', alignment=WD_ALIGN_PARAGRAPH.CENTER):
-    """Define texto de uma célula com formatação."""
-    cell.text = ''
-    p = cell.paragraphs[0]
-    p.alignment = alignment
-    run = p.add_run(text)
-    if bold:
-        run.bold = True
-    if size:
-        run.font.size = size
-    if font_name:
-        run.font.name = font_name
-    # Vertical alignment
-    tc = cell._tc
-    tcPr = tc.get_or_add_tcPr()
-    vAlign = parse_xml(f'<w:vAlign {nsdecls("w")} w:val="center"/>')
-    tcPr.append(vAlign)
-
-
-def _set_cell_shading(cell, color_hex):
-    """Define cor de fundo de uma célula."""
-    shading = parse_xml(
-        f'<w:shd {nsdecls("w")} w:fill="{color_hex}" w:val="clear"/>'
-    )
-    cell._tc.get_or_add_tcPr().append(shading)
-
-
-def _set_table_borders(table):
-    """Define bordas para toda a tabela (estilo Table Grid)."""
-    tbl = table._tbl
-    tblPr = tbl.tblPr if tbl.tblPr is not None else parse_xml(f'<w:tblPr {nsdecls("w")}/>')
-    borders = parse_xml(
-        f'<w:tblBorders {nsdecls("w")}>'
-        '  <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
-        '  <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
-        '  <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
-        '  <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
-        '  <w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
-        '  <w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
-        '</w:tblBorders>'
-    )
-    # Remove existing borders if any
-    existing = tblPr.find(qn('w:tblBorders'))
-    if existing is not None:
-        tblPr.remove(existing)
-    tblPr.append(borders)
-
-
-def _criar_tabela_notas(doc, headers, pesos, avaliacoes_data, label_media, media_valor, col_widths):
+def _replace_cell_value(cell, new_text):
     """
-    Cria tabela de notas (Fase I ou Fase II).
-    headers: lista de strings para cabeçalho
-    pesos: lista de strings para linha de pesos ("0 a X,X")
-    avaliacoes_data: lista de listas [['#1', nota1, nota2, ..., total], ...]
-    label_media: string para label da média
-    media_valor: string formatada da média
-    col_widths: lista de larguras das colunas
+    Substitui o valor de uma célula preservando toda a formatação.
+    Encontra o run que contém texto e substitui; limpa runs vazios extras.
     """
-    n_rows = 2 + len(avaliacoes_data) + 1  # header + pesos + avaliadores + média
-    n_cols = len(headers)
+    for p in cell.paragraphs:
+        found = False
+        for run in p.runs:
+            if run.text.strip() and not found:
+                run.text = new_text
+                found = True
+            elif found:
+                run.text = ''
+        if found:
+            return
+    # Se nenhum run tinha texto, colocar no primeiro run disponível
+    if cell.paragraphs and cell.paragraphs[0].runs:
+        cell.paragraphs[0].runs[0].text = new_text
+    elif cell.paragraphs:
+        cell.paragraphs[0].text = new_text
 
-    table = doc.add_table(rows=n_rows, cols=n_cols)
-    _set_table_borders(table)
 
-    # Row 0: Headers
-    for i, header in enumerate(headers):
-        cell = table.rows[0].cells[i]
-        _set_cell_text(cell, header, bold=True, size=Pt(7), font_name='Arial')
-
-    # "Nota" column header larger
-    _set_cell_text(table.rows[0].cells[-1], 'Nota', bold=True, size=Pt(10), font_name='Arial')
-
-    # Row 1: Pesos
-    for i, peso in enumerate(pesos):
-        cell = table.rows[1].cells[i]
-        _set_cell_text(cell, peso, bold=True, size=Pt(8), font_name='Arial')
-
-    # "Nota" on pesos row
-    _set_cell_text(table.rows[1].cells[-1], 'Nota', bold=True, size=Pt(10), font_name='Arial')
-
-    # Rows 2+: Avaliadores
-    for row_idx, av_data in enumerate(avaliacoes_data):
-        for col_idx, val in enumerate(av_data):
-            cell = table.rows[2 + row_idx].cells[col_idx]
-            _set_cell_text(cell, val, bold=False, size=Pt(8), font_name='Arial')
-
-    # Last row: Média
-    last_row = n_rows - 1
-    # Merge empty cells on the left
-    merge_end = n_cols - 3  # merge from col 0 to col (n-3)
-    if merge_end > 0:
-        table.rows[last_row].cells[0].merge(table.rows[last_row].cells[merge_end])
-    _set_cell_text(table.rows[last_row].cells[0], '', size=Pt(8), font_name='Arial')
-    _set_cell_text(table.rows[last_row].cells[-2], label_media, bold=False, size=Pt(8), font_name='Arial')
-    _set_cell_text(table.rows[last_row].cells[-1], media_valor, bold=False, size=Pt(8), font_name='Arial')
-
-    # Set column widths
-    for row in table.rows:
-        for i, width in enumerate(col_widths):
-            row.cells[i].width = width
-
-    return table
+def _extract_section(parecer, secao):
+    """Extrai texto de uma seção do parecer estruturado (formato ===Seção===)."""
+    if not parecer:
+        return ''
+    pattern = rf'===\s*{re.escape(secao)}\s*===\s*(.*?)(?====|$)'
+    match = re.search(pattern, parecer, re.DOTALL | re.IGNORECASE)
+    return match.group(1).strip() if match else ''
 
 
 def gerar_relatorio_avaliacao_docx(tcc):
     """
     Gera o Relatório de Avaliação do TCC em DOCX.
+    Copia o template oficial e substitui os dados (mala direta).
     Retorna bytes do DOCX gerado.
     """
     from .models import AvaliacaoFase1, AvaliacaoFase2, AgendamentoDefesa
-    from definicoes.models import CalendarioSemestre
     from users.models import Usuario
 
     # ===== BUSCAR DADOS =====
     avaliacoes_f1 = list(
-        AvaliacaoFase1.objects.filter(tcc=tcc, status='BLOQUEADO')
+        AvaliacaoFase1.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO', 'PENDENTE'])
         .select_related('avaliador')
         .order_by('id')
     )
+    # Filtrar apenas avaliações que têm notas preenchidas
+    avaliacoes_f1 = [a for a in avaliacoes_f1 if a.calcular_nota_total() is not None]
     avaliacoes_f2 = list(
-        AvaliacaoFase2.objects.filter(tcc=tcc, status='BLOQUEADO')
+        AvaliacaoFase2.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO'])
         .select_related('avaliador')
         .order_by('id')
     )
@@ -219,44 +109,22 @@ def gerar_relatorio_avaliacao_docx(tcc):
     try:
         agendamento = AgendamentoDefesa.objects.get(tcc=tcc)
         data_defesa = agendamento.data
-        data_defesa_fmt = data_defesa.strftime('%d/%m/%Y')
-        data_defesa_extenso = _data_por_extenso(data_defesa)
     except AgendamentoDefesa.DoesNotExist:
         from django.utils import timezone
         data_defesa = timezone.localdate()
-        data_defesa_fmt = data_defesa.strftime('%d/%m/%Y')
-        data_defesa_extenso = _data_por_extenso(data_defesa)
 
-    # Pesos do calendário
-    calendario = CalendarioSemestre.obter_calendario_atual(tcc.semestre)
-    if calendario:
-        peso_resumo = float(calendario.peso_resumo)
-        peso_introducao = float(calendario.peso_introducao)
-        peso_revisao = float(calendario.peso_revisao)
-        peso_desenvolvimento = float(calendario.peso_desenvolvimento)
-        peso_conclusoes = float(calendario.peso_conclusoes)
-        peso_coerencia = float(calendario.peso_coerencia_conteudo)
-        peso_qualidade = float(calendario.peso_qualidade_apresentacao)
-        peso_dominio = float(calendario.peso_dominio_tema)
-        peso_clareza = float(calendario.peso_clareza_fluencia)
-        peso_tempo = float(calendario.peso_observancia_tempo)
-    else:
-        peso_resumo, peso_introducao, peso_revisao = 1.0, 2.0, 2.0
-        peso_desenvolvimento, peso_conclusoes = 3.5, 1.5
-        peso_coerencia, peso_qualidade = 2.0, 2.0
-        peso_dominio, peso_clareza, peso_tempo = 2.5, 2.5, 1.0
+    data_defesa_fmt = data_defesa.strftime('%d/%m/%Y')
+    data_extenso = _data_por_extenso(data_defesa)
 
-    # Calcular NF1 e NF2
+    # Calcular notas
     notas_f1 = [float(a.calcular_nota_total()) for a in avaliacoes_f1] if avaliacoes_f1 else []
     nf1 = sum(notas_f1) / len(notas_f1) if notas_f1 else (float(tcc.nf1) if tcc.nf1 else 0)
 
     notas_f2 = [float(a.calcular_nota_total()) for a in avaliacoes_f2] if avaliacoes_f2 else []
     nf2_media = sum(notas_f2) / len(notas_f2) if notas_f2 else 0
 
-    peso_fase1 = 0.6
-    peso_fase2 = 0.4
-    nf1_ponderado = peso_fase1 * nf1
-    nf2_ponderado = peso_fase2 * nf2_media
+    nf1_ponderado = 0.6 * nf1
+    nf2_ponderado = 0.4 * nf2_media
     nota_final = nf1_ponderado + nf2_ponderado
 
     resultado = tcc.resultado_final or ('APROVADO' if nota_final >= 6 else 'REPROVADO')
@@ -265,317 +133,126 @@ def gerar_relatorio_avaliacao_docx(tcc):
     aluno = tcc.aluno
     curso_label = _obter_label_curso(aluno.curso)
 
-    # Coordenador
-    try:
-        coordenador = Usuario.objects.filter(tipo_usuario='COORDENADOR').first()
-        coord_tratamento = coordenador.tratamento or '' if coordenador else ''
-        coord_nome = f'{coord_tratamento} {coordenador.nome_completo}'.strip() if coordenador else 'Coordenador do TCC'
-    except Exception:
-        coord_nome = 'Coordenador do TCC'
-
-    # ===== ABRIR TEMPLATE E LIMPAR =====
+    # ===== ABRIR TEMPLATE (cópia em memória) =====
     doc = Document(TEMPLATE_PATH)
-    _limpar_body(doc)
 
-    # ===== TÍTULO =====
-    p_titulo = doc.add_paragraph()
-    p_titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run1 = p_titulo.add_run('RELATÓRIO DE AVALIAÇÃO ')
-    run1.font.size = Pt(16)
-    run1.font.color.rgb = COR_ROXA
-    run1.font.name = 'Tisa Offc Serif Pro'
-    # Quebra de linha dentro do mesmo parágrafo
-    run_br = p_titulo.add_run('\n')
-    run_br.font.size = Pt(16)
-    run2 = p_titulo.add_run('TRABALHO DE CONCLUSÃO DE CURSO')
-    run2.font.size = Pt(16)
-    run2.font.color.rgb = COR_ROXA
-    run2.font.name = 'Tisa Offc Serif Pro'
+    # ===== 1. TABELA 0 — Informações =====
+    t0 = doc.tables[0]
+    _replace_cell_value(t0.rows[0].cells[1], tcc.titulo.upper())
+    _replace_cell_value(t0.rows[1].cells[1], curso_label)
+    _replace_cell_value(t0.rows[2].cells[1], data_defesa_fmt)
+    _replace_cell_value(t0.rows[3].cells[1], aluno.nome_completo)
 
-    # Linhas em branco
-    doc.add_paragraph()
-    doc.add_paragraph()
+    # ===== 2. TABELA 1 — Notas Fase I =====
+    t1 = doc.tables[1]
+    for idx, av in enumerate(avaliacoes_f1[:2]):
+        row = t1.rows[2 + idx]
+        nota_total = av.calcular_nota_total()
+        notas = [
+            _fmt(av.nota_resumo), _fmt(av.nota_introducao),
+            _fmt(av.nota_revisao), _fmt(av.nota_desenvolvimento),
+            _fmt(av.nota_conclusoes), _fmt(nota_total),
+        ]
+        for col, nota in enumerate(notas, start=1):
+            _replace_cell_value(row.cells[col], nota)
 
-    # ===== TEXTO INTRODUTÓRIO =====
-    p_saudacao = doc.add_paragraph()
-    _add_run(p_saudacao, 'Prezado(a) aluno(a),', size=Pt(10))
+    # NF1
+    _replace_cell_value(t1.rows[4].cells[6], _fmt(nf1))
 
-    doc.add_paragraph()
+    # ===== 3. TABELA 2 — Notas Fase II =====
+    t2 = doc.tables[2]
+    for idx, av in enumerate(avaliacoes_f2[:3]):
+        row = t2.rows[2 + idx]
+        nota_total = av.calcular_nota_total()
+        notas = [
+            _fmt(av.nota_coerencia_conteudo), _fmt(av.nota_qualidade_apresentacao),
+            _fmt(av.nota_dominio_tema), _fmt(av.nota_clareza_fluencia),
+            _fmt(av.nota_observancia_tempo), _fmt(nota_total),
+        ]
+        for col, nota in enumerate(notas, start=1):
+            _replace_cell_value(row.cells[col], nota)
 
-    # Corpo do texto
-    p_corpo = doc.add_paragraph()
-    p_corpo.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    pf = p_corpo.paragraph_format
-    pf.space_after = Pt(0)
+    # NF2
+    _replace_cell_value(t2.rows[5].cells[6], _fmt(nf2_media))
 
-    _add_run(p_corpo,
-             'Seu Trabalho de Conclusão de Curso foi avaliado pelas bancas examinadoras '
-             'na fase I e na fase II, de acordo com o que estabelece o Regulamento de TCC '
-             'do Departamento de Engenharia Elétrica da UFPE. As notas atribuídas ao trabalho, '
-             'por quesito, são apresentadas na Tabela 1 (fase I) e na Tabela 2 (fase II). '
-             'As notas, considerando os pesos associados a cada fase, são apresentadas na '
-             'Tabela 4, onde, também, verifica-se que a ',
-             size=Pt(10))
-    _add_run(p_corpo, 'nota final', bold=True, size=Pt(10))
-    _add_run(p_corpo, ' atribuída ao ', bold=True, size=Pt(10))
-    _add_run(p_corpo, 'seu ', bold=True, size=Pt(10))
-    _add_run(p_corpo, 'trabalho ', bold=True, size=Pt(10))
-    _add_run(p_corpo, 'é', bold=True, size=Pt(10))
-    _add_run(p_corpo, ' ', size=Pt(10))
-    _add_run(p_corpo, _fmt(nota_final), bold=True, size=Pt(10))
-    _add_run(p_corpo, '. Assim, seu TCC está ', size=Pt(10))
-    _add_run(p_corpo, resultado, bold=True, size=Pt(10))
-    _add_run(p_corpo, '.', size=Pt(10))
+    # ===== 4. TABELA 3 — Avaliadores Fase II =====
+    t3 = doc.tables[3]
+    for idx, av in enumerate(avaliacoes_f2[:3]):
+        avaliador = av.avaliador
+        tratamento = avaliador.tratamento or ''
+        if tratamento == 'Outro' and avaliador.tratamento_customizado:
+            tratamento = avaliador.tratamento_customizado
+        nome = f'{tratamento} {avaliador.nome_completo}'.strip()
+        _replace_cell_value(t3.rows[idx].cells[1], nome)
 
-    if resultado == 'APROVADO':
-        _add_run(p_corpo,
-                 ' Com isso, você deve proceder com as correções apontadas pela Banca. '
-                 'Além dos comentários feitos no dia da apresentação, veja, também, as observações '
-                 'apontadas pela banca na Fase I (APÊNDICES). Após os devidos ajustes e/ou '
-                 'correções e a anuência do seu orientador, seu trabalho passará a ter o status '
-                 'de versão final. Na versão final, é imprescindível incluir a Ficha Eletrônica '
-                 'gerada pela biblioteca.',
-                 size=Pt(10))
+    # ===== 5. TABELA 4 — Apuração =====
+    t4 = doc.tables[4]
+    _replace_cell_value(t4.rows[1].cells[0], _fmt(nf1_ponderado))
+    _replace_cell_value(t4.rows[1].cells[1], _fmt(nf2_ponderado))
+    _replace_cell_value(t4.rows[1].cells[2], _fmt(nota_final))
 
-    doc.add_paragraph()
+    # ===== 6. PARÁGRAFO 5 — Corpo do texto (nota e resultado) =====
+    p_corpo = doc.paragraphs[5]
+    # Substituir a nota final (run que contém valor numérico como "8,3")
+    for run in p_corpo.runs:
+        text = run.text.strip()
+        # Encontrar o run com a nota (formato N,N)
+        if re.match(r'^\d+,\d+$', text):
+            run.text = _fmt(nota_final)
+        # Encontrar o run com o resultado
+        elif text in ('APROVADO', 'REPROVADO'):
+            run.text = resultado
 
-    # Data
-    p_data = doc.add_paragraph()
-    p_data.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    _add_run(p_data, f'Recife, {data_defesa_extenso}.', size=Pt(10))
+    # ===== 7. PARÁGRAFO 7 — Data =====
+    # Template: run "Recife, " + runs vazios + run "30 de janeiro de 2026" + run "."
+    # Substituir apenas o run que contém a data (formato "DD de mês de AAAA")
+    p_data = doc.paragraphs[7]
+    for run in p_data.runs:
+        if re.match(r'\d+ de \w+ de \d{4}', run.text.strip()):
+            run.text = data_extenso
+            break
 
-    doc.add_paragraph()
-    doc.add_paragraph()
-
-    # ===== TABELA INFO (Título, Curso, Data Defesa, Aluno) =====
-    info_table = doc.add_table(rows=4, cols=2)
-    _set_table_borders(info_table)
-
-    info_data = [
-        ('Título do Trabalho', tcc.titulo.upper()),
-        ('Curso', curso_label),
-        ('Data Defesa', data_defesa_fmt),
-        ('Aluno', aluno.nome_completo),
+    # ===== 8. APÊNDICE A — Comentários Fase I =====
+    # Posições fixas dos parágrafos de comentário para cada avaliador
+    # Avaliador #1: comentários em [22, 25, 28, 31, 34, 37]
+    # Avaliador #2: comentários em [42, 45, 48, 51, 54, 57] (ou vazios pois podem não ter)
+    comentarios_indices = [
+        [22, 25, 28, 31, 34, 37],  # Avaliador #1
+        [42, 45, 48, 51, 54, 57],  # Avaliador #2
     ]
-    for i, (label, valor) in enumerate(info_data):
-        _set_cell_text(info_table.rows[i].cells[0], label, bold=True, size=Pt(10),
-                       font_name=None, alignment=WD_ALIGN_PARAGRAPH.RIGHT)
-        _set_cell_text(info_table.rows[i].cells[1], valor, bold=False, size=Pt(10),
-                       font_name=None, alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
-    # Column widths for info table
-    for row in info_table.rows:
-        row.cells[0].width = Cm(4)
-        row.cells[1].width = Cm(13)
+    for av_idx, av in enumerate(avaliacoes_f1[:2]):
+        if av_idx >= len(comentarios_indices):
+            break
 
-    doc.add_paragraph()
+        indices = comentarios_indices[av_idx]
+        parecer = av.parecer or ''
 
-    # ===== TABELA 1 — Notas Fase I =====
-    p_cap1 = doc.add_paragraph()
-    run_cap1 = p_cap1.add_run('Tabela 1 – Notas atribuídas ao trabalho escrito (Fase I)')
-    run_cap1.italic = True
-    run_cap1.font.size = Pt(9)
+        for sec_idx, secao in enumerate(SECOES_PARECER):
+            if sec_idx >= len(indices):
+                break
 
-    n_av_f1 = len(avaliacoes_f1)
-    rows_t1 = 2 + n_av_f1 + 1  # header + pesos + avaliadores + NF1
-    table1 = doc.add_table(rows=rows_t1, cols=7)
-    _set_table_borders(table1)
+            p_idx = indices[sec_idx]
+            if p_idx >= len(doc.paragraphs):
+                break
 
-    # Header row
-    h1_labels = ['', 'Resumo', 'Introdução\nRelevância do trabalho', 'Revisão \nBibliográfica',
-                 'Desenvolvimento', 'Conclusões', 'Nota']
-    for i, label in enumerate(h1_labels):
-        _set_cell_text(table1.rows[0].cells[i], label, bold=True, size=Pt(7), font_name='Arial')
-    _set_cell_text(table1.rows[0].cells[6], 'Nota', bold=True, size=Pt(10), font_name='Arial')
+            # Extrair comentário da seção
+            comentario = _extract_section(parecer, secao)
 
-    # Pesos row
-    p1_pesos = ['Avaliador', f'0 a {_fmt(peso_resumo)}', f'0 a {_fmt(peso_introducao)}',
-                f'0 a {_fmt(peso_revisao)}', f'0 a {_fmt(peso_desenvolvimento)}',
-                f'0 a {_fmt(peso_conclusoes)}', 'Nota']
-    for i, peso in enumerate(p1_pesos):
-        _set_cell_text(table1.rows[1].cells[i], peso, bold=True, size=Pt(8), font_name='Arial')
-    _set_cell_text(table1.rows[1].cells[6], 'Nota', bold=True, size=Pt(10), font_name='Arial')
+            # Se não tem formato estruturado, colocar tudo em "Considerações Adicionais"
+            if not comentario and sec_idx == 5 and not any(
+                _extract_section(parecer, s) for s in SECOES_PARECER[:5]
+            ):
+                comentario = parecer.strip()
 
-    # Avaliadores rows
-    for idx, av in enumerate(avaliacoes_f1):
-        row = table1.rows[2 + idx]
-        nota_total = av.calcular_nota_total()
-        vals = [f'#{idx + 1}', _fmt(av.nota_resumo), _fmt(av.nota_introducao),
-                _fmt(av.nota_revisao), _fmt(av.nota_desenvolvimento),
-                _fmt(av.nota_conclusoes), _fmt(nota_total)]
-        for i, val in enumerate(vals):
-            _set_cell_text(row.cells[i], val, bold=False, size=Pt(8), font_name='Arial')
-
-    # NF1 row
-    last_r1 = rows_t1 - 1
-    # Merge cols 0-4 (empty)
-    table1.rows[last_r1].cells[0].merge(table1.rows[last_r1].cells[4])
-    _set_cell_text(table1.rows[last_r1].cells[0], '', size=Pt(8), font_name='Arial')
-    _set_cell_text(table1.rows[last_r1].cells[5], f'Nota Fase I\n(média – NF1)', bold=False, size=Pt(8), font_name='Arial')
-    _set_cell_text(table1.rows[last_r1].cells[6], _fmt(nf1), bold=False, size=Pt(8), font_name='Arial')
-
-    # ===== TABELA 2 — Notas Fase II =====
-    p_cap2 = doc.add_paragraph()
-    run_cap2 = p_cap2.add_run('Tabela 2 – Notas atribuídas a apresentação (Fase II)')
-    run_cap2.italic = True
-    run_cap2.font.size = Pt(9)
-
-    n_av_f2 = len(avaliacoes_f2)
-    rows_t2 = 2 + n_av_f2 + 1
-    table2 = doc.add_table(rows=rows_t2, cols=7)
-    _set_table_borders(table2)
-
-    h2_labels = ['', 'Coerência do conteúdo da apresentação oral com o documento textual',
-                 'Qualidade e estrutura do material de apresentação',
-                 'Domínio e conhecimento do tema',
-                 'Clareza e fluência verbal na exposição de ideias',
-                 'Observância do tempo de apresentação (de 20 a 25 minutos ou definido pela banca)',
-                 'Nota']
-    for i, label in enumerate(h2_labels):
-        _set_cell_text(table2.rows[0].cells[i], label, bold=True, size=Pt(7), font_name='Arial')
-    _set_cell_text(table2.rows[0].cells[6], 'Nota', bold=True, size=Pt(10), font_name='Arial')
-
-    p2_pesos = ['Avaliador', f'0 a {_fmt(peso_coerencia)}', f'0 a {_fmt(peso_qualidade)}',
-                f'0 a {_fmt(peso_dominio)}', f'0 a {_fmt(peso_clareza)}',
-                f'0 a {_fmt(peso_tempo)}', 'Nota']
-    for i, peso in enumerate(p2_pesos):
-        _set_cell_text(table2.rows[1].cells[i], peso, bold=True, size=Pt(8), font_name='Arial')
-    _set_cell_text(table2.rows[1].cells[6], 'Nota', bold=True, size=Pt(10), font_name='Arial')
-
-    for idx, av in enumerate(avaliacoes_f2):
-        row = table2.rows[2 + idx]
-        nota_total = av.calcular_nota_total()
-        vals = [f'#{idx + 1}', _fmt(av.nota_coerencia_conteudo), _fmt(av.nota_qualidade_apresentacao),
-                _fmt(av.nota_dominio_tema), _fmt(av.nota_clareza_fluencia),
-                _fmt(av.nota_observancia_tempo), _fmt(nota_total)]
-        for i, val in enumerate(vals):
-            _set_cell_text(row.cells[i], val, bold=False, size=Pt(8), font_name='Arial')
-
-    # NF2 row
-    last_r2 = rows_t2 - 1
-    table2.rows[last_r2].cells[0].merge(table2.rows[last_r2].cells[4])
-    _set_cell_text(table2.rows[last_r2].cells[0], '', size=Pt(8), font_name='Arial')
-    _set_cell_text(table2.rows[last_r2].cells[5], f'Nota Fase II\n(média – NF2)', bold=False, size=Pt(8), font_name='Arial')
-    _set_cell_text(table2.rows[last_r2].cells[6], _fmt(nf2_media), bold=False, size=Pt(8), font_name='Arial')
-
-    # ===== TABELA 3 — Avaliadores da Banca Fase II =====
-    p_cap3 = doc.add_paragraph()
-    run_cap3 = p_cap3.add_run('Tabela 3 – Avaliadores da Banca Examinadora da Fase II (apresentação)')
-    run_cap3.italic = True
-    run_cap3.font.size = Pt(9)
-
-    if avaliacoes_f2:
-        table3 = doc.add_table(rows=len(avaliacoes_f2), cols=2)
-        _set_table_borders(table3)
-
-        for idx, av in enumerate(avaliacoes_f2):
-            avaliador = av.avaliador
-            tratamento = avaliador.tratamento or ''
-            if tratamento == 'Outro' and avaliador.tratamento_customizado:
-                tratamento = avaliador.tratamento_customizado
-            nome = f'{tratamento} {avaliador.nome_completo}'.strip()
-            _set_cell_text(table3.rows[idx].cells[0], f'#{idx + 1}', bold=False, size=Pt(10),
-                           font_name=None, alignment=WD_ALIGN_PARAGRAPH.CENTER)
-            _set_cell_text(table3.rows[idx].cells[1], nome, bold=False, size=Pt(10),
-                           font_name=None, alignment=WD_ALIGN_PARAGRAPH.LEFT)
-
-        for row in table3.rows:
-            row.cells[0].width = Cm(1.5)
-            row.cells[1].width = Cm(15.5)
-
-    doc.add_paragraph()
-
-    # ===== TABELA 4 — Apuração da nota final =====
-    p_cap4 = doc.add_paragraph()
-    run_cap4 = p_cap4.add_run('Tabela 4 – Apuração da nota final do trabalho (NF).')
-    run_cap4.italic = True
-    run_cap4.font.size = Pt(9)
-
-    table4 = doc.add_table(rows=2, cols=3)
-    _set_table_borders(table4)
-
-    # Header row
-    _set_cell_text(table4.rows[0].cells[0], 'NF1 × 0,6', bold=True, size=Pt(10), font_name='Arial')
-    _set_cell_text(table4.rows[0].cells[1], 'NF2 × 0,4', bold=True, size=Pt(10), font_name='Arial')
-    _set_cell_text(table4.rows[0].cells[2], 'Nota Final', bold=True, size=Pt(10), font_name='Arial')
-
-    # Values row
-    _set_cell_text(table4.rows[1].cells[0], _fmt(nf1_ponderado), bold=False, size=Pt(8), font_name='Arial')
-    _set_cell_text(table4.rows[1].cells[1], _fmt(nf2_ponderado), bold=False, size=Pt(8), font_name='Arial')
-    _set_cell_text(table4.rows[1].cells[2], _fmt(nota_final), bold=False, size=Pt(8), font_name='Arial')
-
-    doc.add_paragraph()
-
-    # ===== APÊNDICE A — Comentários Fase I =====
-    pareceres_f1 = [(i, av) for i, av in enumerate(avaliacoes_f1, 1) if av.parecer and av.parecer.strip()]
-
-    if pareceres_f1:
-        # Page break
-        p_break = doc.add_paragraph()
-        run_break = p_break.add_run()
-        run_break.add_break(WD_BREAK.PAGE)
-
-        # Título do apêndice
-        p_ap_titulo = doc.add_paragraph()
-        p_ap_titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run_ap = p_ap_titulo.add_run('APÊNDICE A')
-        run_ap.font.size = Pt(16)
-        run_ap.font.color.rgb = COR_ROXA
-        run_ap.font.name = 'Tisa Offc Serif Pro'
-
-        p_ap_sub = doc.add_paragraph()
-        p_ap_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run_ap_sub = p_ap_sub.add_run('COMENTÁRIOS RELATIVOS AO TRABALHO ESCRITO')
-        run_ap_sub.font.size = Pt(16)
-        run_ap_sub.font.color.rgb = COR_ROXA
-        run_ap_sub.font.name = 'Tisa Offc Serif Pro'
-
-        doc.add_paragraph()
-        doc.add_paragraph()
-
-        for idx, av in pareceres_f1:
-            # Título do avaliador
-            p_avaliador = doc.add_paragraph()
-            p_avaliador.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            run_av = p_avaliador.add_run(f'Avaliador #{idx}')
-            run_av.font.size = Pt(16)
-
-            parecer_texto = av.parecer.strip()
-
-            # Verificar se o parecer tem seções numeradas
-            has_sections = any(f'{n})' in parecer_texto for n in range(1, 7))
-
-            if has_sections:
-                # Dividir por seções
-                secoes = re.split(r'(\d\))', parecer_texto)
-                secao_atual = None
-                for parte in secoes:
-                    parte = parte.strip()
-                    if re.match(r'^\d\)$', parte):
-                        secao_atual = int(parte[0])
-                        if 1 <= secao_atual <= 6:
-                            p_crit = doc.add_paragraph()
-                            run_crit = p_crit.add_run(CRITERIOS_LABELS[secao_atual - 1])
-                            run_crit.font.size = Pt(14)
-                    elif parte and secao_atual:
-                        p_texto = doc.add_paragraph()
-                        run_texto = p_texto.add_run(parte)
-                        run_texto.font.size = Pt(10)
-                        doc.add_paragraph()
-            else:
-                # Mostrar todos os critérios, texto sob "Considerações Adicionais"
-                for label in CRITERIOS_LABELS:
-                    p_crit = doc.add_paragraph()
-                    run_crit = p_crit.add_run(label)
-                    run_crit.font.size = Pt(14)
-
-                    if label == '6) CONSIDERAÇÕES ADICIONAIS':
-                        p_texto = doc.add_paragraph()
-                        run_texto = p_texto.add_run(parecer_texto)
-                        run_texto.font.size = Pt(10)
-                    doc.add_paragraph()
-
-            doc.add_paragraph()
+            # Substituir o parágrafo de comentário
+            p = doc.paragraphs[p_idx]
+            if p.runs:
+                p.runs[0].text = comentario
+                for run in p.runs[1:]:
+                    run.text = ''
+            elif comentario:
+                p.text = comentario
 
     # ===== GERAR BYTES =====
     buffer = io.BytesIO()

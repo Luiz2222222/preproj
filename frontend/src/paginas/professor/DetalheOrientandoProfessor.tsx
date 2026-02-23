@@ -424,6 +424,8 @@ export function DetalheOrientandoProfessor() {
                     className={`text-xs px-3 py-1 rounded-full font-medium ${
                       minhaAvaliacaoFase2.status === StatusAvaliacaoFase2.ENVIADO
                         ? 'bg-[rgb(var(--cor-destaque))]/10 text-[rgb(var(--cor-destaque))]'
+                        : minhaAvaliacaoFase2.status === StatusAvaliacaoFase2.CONCLUIDO
+                        ? 'bg-[rgb(var(--cor-sucesso))]/10 text-[rgb(var(--cor-sucesso))]'
                         : minhaAvaliacaoFase2.status === StatusAvaliacaoFase2.BLOQUEADO
                         ? 'bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-secundario))]'
                         : 'bg-[rgb(var(--cor-alerta))]/10 text-[rgb(var(--cor-alerta))]'
@@ -431,6 +433,8 @@ export function DetalheOrientandoProfessor() {
                   >
                     {minhaAvaliacaoFase2.status === StatusAvaliacaoFase2.ENVIADO
                       ? 'Enviada'
+                      : minhaAvaliacaoFase2.status === StatusAvaliacaoFase2.CONCLUIDO
+                      ? 'Concluída'
                       : minhaAvaliacaoFase2.status === StatusAvaliacaoFase2.BLOQUEADO
                       ? 'Bloqueada'
                       : 'Rascunho'}

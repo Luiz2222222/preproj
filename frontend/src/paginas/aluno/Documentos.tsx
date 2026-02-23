@@ -30,6 +30,7 @@ import { Badge, type BadgeVariant } from '../../componentes/Badge'
 import { SkeletonList } from '../../componentes/Skeleton'
 import { useToast } from '../../contextos/ToastProvider'
 import { ModalEnviarDocumento } from '../../componentes'
+import { estaBloqueado } from '../../utils/permissoes'
 
 const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8111/media'
 
@@ -101,9 +102,11 @@ export function Documentos() {
   }
 
   const ultimaMonografia = getUltimaMonografia()
+  const permiteEnvioMonografia = !estaBloqueado(tcc?.permissoes, 'pode_enviar_monografia')
   const podeEnviarMonografia =
     tcc?.etapa_atual === EtapaTCC.DESENVOLVIMENTO &&
-    (!ultimaMonografia || ultimaMonografia.status === StatusDocumento.REJEITADO)
+    (!ultimaMonografia || ultimaMonografia.status === StatusDocumento.REJEITADO) &&
+    permiteEnvioMonografia
 
   // Aplicar filtros
   const documentosFiltrados = documentos.filter((doc) => {

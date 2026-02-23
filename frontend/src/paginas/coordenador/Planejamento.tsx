@@ -655,11 +655,11 @@ export function Planejamento() {
             />
           </div>
 
-          {/* Submissão monografia */}
+          {/* Submissão da monografia + Termo */}
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--cor-texto-medio))] mb-2">
-              Submissão monografia
-              <span className="text-xs text-[rgb(var(--cor-texto-terciario))] ml-2">(Entrega da versão final para avaliação)</span>
+              Submissão da monografia + Termo
+              <span className="text-xs text-[rgb(var(--cor-texto-terciario))] ml-2">(Entrega da versão final + Termo)</span>
             </label>
             <input
               type="date"

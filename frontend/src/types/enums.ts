@@ -109,7 +109,8 @@ export type TipoMembroBanca = (typeof TipoMembroBanca)[keyof typeof TipoMembroBa
 export const StatusAvaliacaoFase1 = {
   PENDENTE: 'PENDENTE',
   ENVIADO: 'ENVIADO',
-  BLOQUEADO: 'BLOQUEADO'
+  BLOQUEADO: 'BLOQUEADO',
+  CONCLUIDO: 'CONCLUIDO'
 } as const;
 
 export type StatusAvaliacaoFase1 = (typeof StatusAvaliacaoFase1)[keyof typeof StatusAvaliacaoFase1];
@@ -125,7 +126,8 @@ export type IndicadoPor = (typeof IndicadoPor)[keyof typeof IndicadoPor];
 export const StatusAvaliacaoFase2 = {
   PENDENTE: 'PENDENTE',
   ENVIADO: 'ENVIADO',
-  BLOQUEADO: 'BLOQUEADO'
+  BLOQUEADO: 'BLOQUEADO',
+  CONCLUIDO: 'CONCLUIDO'
 } as const;
 
 export type StatusAvaliacaoFase2 = (typeof StatusAvaliacaoFase2)[keyof typeof StatusAvaliacaoFase2];

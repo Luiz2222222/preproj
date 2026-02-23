@@ -1237,7 +1237,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
             )
 
         # Verificar se pode editar
-        if avaliacao.status == 'BLOQUEADO':
+        if avaliacao.status in ['BLOQUEADO', 'CONCLUIDO']:
             return Response(
                 {'detail': 'Esta avaliação está bloqueada pelo coordenador'},
                 status=status.HTTP_403_FORBIDDEN
@@ -1298,7 +1298,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                 total_avaliacoes = AvaliacaoFase1.objects.filter(tcc=tcc).count()
                 avaliacoes_finalizadas = AvaliacaoFase1.objects.filter(
                     tcc=tcc,
-                    status__in=['ENVIADO', 'BLOQUEADO']
+                    status__in=['ENVIADO', 'BLOQUEADO', 'CONCLUIDO']
                 ).count()
 
                 # Se todas foram finalizadas E TCC está em AVALIACAO_FASE_1, mover para VALIDACAO_FASE_1
@@ -1412,8 +1412,8 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
             tcc.avaliacao_fase1_bloqueada = False
             tcc.save()
 
-            # Atualizar avaliações BLOQUEADO para ENVIADO
-            avaliacoes_bloqueadas = AvaliacaoFase1.objects.filter(tcc=tcc, status='BLOQUEADO')
+            # Atualizar avaliações BLOQUEADO/CONCLUIDO para ENVIADO
+            avaliacoes_bloqueadas = AvaliacaoFase1.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO'])
             count = avaliacoes_bloqueadas.update(status='ENVIADO')
 
             # Criar evento
@@ -1470,8 +1470,8 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
 
         # Usar transação atômica
         with transaction.atomic():
-            # Reabrir avaliações (BLOQUEADO → PENDENTE e limpar enviado_em)
-            avaliacoes_bloqueadas = avaliacoes.filter(status='BLOQUEADO')
+            # Reabrir avaliações (BLOQUEADO/CONCLUIDO → PENDENTE e limpar enviado_em)
+            avaliacoes_bloqueadas = avaliacoes.filter(status__in=['BLOQUEADO', 'CONCLUIDO'])
             count = avaliacoes_bloqueadas.count()
 
             # Atualizar cada avaliação individualmente para limpar enviado_em
@@ -1634,7 +1634,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                 # APROVAÇÃO COMPLETA
                 # Verificar se todas as avaliações foram enviadas ou bloqueadas
                 total_avaliacoes = AvaliacaoFase1.objects.filter(tcc=tcc).count()
-                avaliacoes_prontas = AvaliacaoFase1.objects.filter(tcc=tcc, status__in=['ENVIADO', 'BLOQUEADO'])
+                avaliacoes_prontas = AvaliacaoFase1.objects.filter(tcc=tcc, status__in=['ENVIADO', 'BLOQUEADO', 'CONCLUIDO'])
 
                 if avaliacoes_prontas.count() != total_avaliacoes:
                     pendentes = total_avaliacoes - avaliacoes_prontas.count()
@@ -1663,8 +1663,8 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                 nf1 = sum(notas_finais) / len(notas_finais)
                 nf1_arredondado = round(nf1, 2)
 
-                # Bloquear todas as avaliações que ainda estão ENVIADO
-                avaliacoes_prontas.filter(status='ENVIADO').update(status='BLOQUEADO')
+                # Concluir todas as avaliações (ENVIADO/BLOQUEADO → CONCLUIDO)
+                avaliacoes_prontas.update(status='CONCLUIDO')
 
                 # Salvar NF1 no TCC
                 tcc.nf1 = Decimal(str(nf1_arredondado))
@@ -1918,8 +1918,8 @@ Tema: {tcc.titulo}
             from .models import AvaliacaoFase2
             from datetime import datetime
 
-            # Verificar se todas as avaliações Fase II estão bloqueadas
-            todas_bloqueadas = AvaliacaoFase2.objects.filter(tcc=tcc, status='BLOQUEADO').count() == 3
+            # Verificar se todas as avaliações Fase II estão bloqueadas/concluídas
+            todas_bloqueadas = AvaliacaoFase2.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO']).count() == 3
 
             # Verificar se prazo expirou (data/hora da defesa já passou)
             agendamento_atual = AgendamentoDefesa.objects.get(tcc=tcc)
@@ -2135,7 +2135,7 @@ Tema: {tcc.titulo}
         )
 
         # Verificar se pode editar
-        if avaliacao.status == 'BLOQUEADO':
+        if avaliacao.status in ['BLOQUEADO', 'CONCLUIDO']:
             return Response(
                 {'detail': 'Esta avaliação está bloqueada pelo coordenador'},
                 status=status.HTTP_403_FORBIDDEN
@@ -2254,8 +2254,8 @@ Tema: {tcc.titulo}
             tcc.avaliacao_fase2_bloqueada = False
             tcc.save()
 
-            # Atualizar avaliações BLOQUEADO para ENVIADO
-            avaliacoes_bloqueadas = AvaliacaoFase2.objects.filter(tcc=tcc, status='BLOQUEADO')
+            # Atualizar avaliações BLOQUEADO/CONCLUIDO para ENVIADO
+            avaliacoes_bloqueadas = AvaliacaoFase2.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO'])
             count = avaliacoes_bloqueadas.update(status='ENVIADO')
 
             # Criar evento
@@ -2305,11 +2305,11 @@ Tema: {tcc.titulo}
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validar que os avaliadores têm avaliações bloqueadas
+        # Validar que os avaliadores têm avaliações bloqueadas/concluídas
         avaliacoes = AvaliacaoFase2.objects.filter(
             tcc=tcc,
             avaliador_id__in=avaliadores_ids,
-            status='BLOQUEADO'
+            status__in=['BLOQUEADO', 'CONCLUIDO']
         )
 
         if not avaliacoes.exists():
@@ -2403,11 +2403,11 @@ Tema: {tcc.titulo}
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validar que os avaliadores têm avaliações bloqueadas na Fase II
+        # Validar que os avaliadores têm avaliações bloqueadas/concluídas na Fase II
         avaliacoes_fase2 = AvaliacaoFase2.objects.filter(
             tcc=tcc,
             avaliador_id__in=avaliadores_ids,
-            status='BLOQUEADO'
+            status__in=['BLOQUEADO', 'CONCLUIDO']
         )
 
         if not avaliacoes_fase2.exists():
@@ -2436,11 +2436,11 @@ Tema: {tcc.titulo}
 
                     # Se não é orientador nem coorientador, é avaliador externo da banca
                     if not eh_orientador and not eh_coorientador:
-                        # Verificar se tem avaliação Fase I bloqueada
+                        # Verificar se tem avaliação Fase I bloqueada/concluída
                         avaliacao_fase1 = AvaliacaoFase1.objects.filter(
                             tcc=tcc,
                             avaliador_id=avaliador_id,
-                            status='BLOQUEADO'
+                            status__in=['BLOQUEADO', 'CONCLUIDO']
                         ).first()
 
                         if avaliacao_fase1:
@@ -2457,6 +2457,9 @@ Tema: {tcc.titulo}
             tcc.etapa_atual = EtapaTCC.AGUARDANDO_AJUSTES_FINAIS
             tcc.avaliacao_fase2_bloqueada = False
             tcc.save()
+
+            # Remover relatório de avaliação gerado anteriormente (será regenerado na aprovação final)
+            DocumentoTCC.objects.filter(tcc=tcc, tipo_documento=TipoDocumento.RELATORIO_AVALIACAO).delete()
 
             # Criar evento na timeline
             avaliadores_nomes = ', '.join([av.avaliador.nome_completo for av in avaliacoes_fase2])
@@ -2546,9 +2549,9 @@ Tema: {tcc.titulo}
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validar que todas as 3 avaliações da Fase II estão BLOQUEADAS
+        # Validar que todas as 3 avaliações da Fase II estão BLOQUEADAS/CONCLUIDAS
         total_avaliacoes = AvaliacaoFase2.objects.filter(tcc=tcc).count()
-        avaliacoes_bloqueadas = AvaliacaoFase2.objects.filter(tcc=tcc, status='BLOQUEADO').count()
+        avaliacoes_bloqueadas = AvaliacaoFase2.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO']).count()
 
         if total_avaliacoes != 3:
             return Response(
@@ -2659,7 +2662,7 @@ Tema: {tcc.titulo}
         tcc = self.get_object()
 
         # Validar que o TCC tem avaliações suficientes
-        avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc, status='BLOQUEADO').count()
+        avaliacoes_f1 = AvaliacaoFase1.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO']).count()
         if avaliacoes_f1 == 0:
             return Response(
                 {'detail': 'O TCC não possui avaliações da Fase I bloqueadas para gerar o relatório.'},
@@ -2762,8 +2765,8 @@ Tema: {tcc.titulo}
             # Média das notas da Fase II
             media_fase2 = sum(notas_fase2) / len(notas_fase2)
 
-            # Calcular NF1 (média das avaliações da Fase I bloqueadas)
-            avaliacoes_fase1 = AvaliacaoFase1.objects.filter(tcc=tcc, status='BLOQUEADO')
+            # Calcular NF1 (média das avaliações da Fase I concluídas/bloqueadas)
+            avaliacoes_fase1 = AvaliacaoFase1.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO'])
             if avaliacoes_fase1.count() == 0:
                 return Response(
                     {'detail': 'Não há avaliações da Fase I aprovadas. A aprovação da Fase I deve ser feita primeiro.'},
@@ -2781,8 +2784,8 @@ Tema: {tcc.titulo}
             nf2 = (Decimal('0.4') * Decimal(str(nf1))) + (Decimal('0.6') * Decimal(str(media_fase2)))
             nf2_arredondado = round(nf2, 2)
 
-            # Bloquear todas as avaliações da Fase II
-            avaliacoes_enviadas.update(status='BLOQUEADO')
+            # Concluir todas as avaliações da Fase II (ENVIADO → CONCLUIDO)
+            avaliacoes_enviadas.update(status='CONCLUIDO')
 
             # Definir próxima etapa
             if nf2_arredondado >= 6:
@@ -3354,7 +3357,7 @@ Tema: {tcc.titulo}
                 L.append(f"    Avaliador #{i}: {nome}")
                 L.append(f"    {'─' * (len(nome) + 16)}")
 
-                if av.status in ['ENVIADO', 'BLOQUEADO']:
+                if av.status in ['ENVIADO', 'BLOQUEADO', 'CONCLUIDO']:
                     L.append(self._linha_nota("Resumo", av.nota_resumo, p_res))
                     L.append(self._linha_nota("Introdução/Relevância", av.nota_introducao, p_int))
                     L.append(self._linha_nota("Revisão Bibliográfica", av.nota_revisao, p_rev))
@@ -3398,7 +3401,7 @@ Tema: {tcc.titulo}
                 L.append(f"    Avaliador #{i}: {nome}")
                 L.append(f"    {'─' * (len(nome) + 16)}")
 
-                if av.status in ['ENVIADO', 'BLOQUEADO']:
+                if av.status in ['ENVIADO', 'BLOQUEADO', 'CONCLUIDO']:
                     L.append(self._linha_nota("Coerência do Conteúdo", av.nota_coerencia_conteudo, p_coe))
                     L.append(self._linha_nota("Qualidade e Estrutura", av.nota_qualidade_apresentacao, p_qua))
                     L.append(self._linha_nota("Domínio e Conhecimento", av.nota_dominio_tema, p_dom))
@@ -3761,7 +3764,7 @@ Tema: {tcc.titulo}
                         nota_num(aval.nota_revisao) if aval else None,
                         nota_num(aval.nota_desenvolvimento) if aval else None,
                         nota_num(aval.nota_conclusoes) if aval else None,
-                        nota_num(aval.calcular_nota_total()) if aval and aval.status in ['ENVIADO', 'BLOQUEADO'] else None,
+                        nota_num(aval.calcular_nota_total()) if aval and aval.status in ['ENVIADO', 'BLOQUEADO', 'CONCLUIDO'] else None,
                     ])
 
         # === ABA 3: Avaliações Fase II ===
@@ -3801,7 +3804,7 @@ Tema: {tcc.titulo}
                     nota_num(aval.nota_dominio_tema) if aval else None,
                     nota_num(aval.nota_clareza_fluencia) if aval else None,
                     nota_num(aval.nota_observancia_tempo) if aval else None,
-                    nota_num(aval.calcular_nota_total()) if aval and aval.status in ['ENVIADO', 'BLOQUEADO'] else None,
+                    nota_num(aval.calcular_nota_total()) if aval and aval.status in ['ENVIADO', 'BLOQUEADO', 'CONCLUIDO'] else None,
                 ])
 
         # === ABA 4: Apuração Final ===
@@ -3814,7 +3817,7 @@ Tema: {tcc.titulo}
 
         for tcc in tccs:
             avals_f1 = avaliacoes_f1_map.get(tcc.id, [])
-            notas_f1 = [nota_num(a.calcular_nota_total()) for a in avals_f1 if a.status in ['ENVIADO', 'BLOQUEADO']]
+            notas_f1 = [nota_num(a.calcular_nota_total()) for a in avals_f1 if a.status in ['ENVIADO', 'BLOQUEADO', 'CONCLUIDO']]
             n1f1 = notas_f1[0] if len(notas_f1) > 0 else None
             n2f1 = notas_f1[1] if len(notas_f1) > 1 else None
             media_f1 = round((n1f1 + n2f1) / 2, 2) if n1f1 is not None and n2f1 is not None else None
@@ -3823,16 +3826,16 @@ Tema: {tcc.titulo}
             avals_f2 = avaliacoes_f2_map.get(tcc.id, [])
             nota_orient = None
             for a in avals_f2:
-                if a.avaliador_id == (tcc.orientador_id or -1) and a.status in ['ENVIADO', 'BLOQUEADO']:
+                if a.avaliador_id == (tcc.orientador_id or -1) and a.status in ['ENVIADO', 'BLOQUEADO', 'CONCLUIDO']:
                     nota_orient = nota_num(a.calcular_nota_total())
                     break
             if nota_orient is None and tcc.coorientador_id:
                 for a in avals_f2:
-                    if a.avaliador_id == tcc.coorientador_id and a.status in ['ENVIADO', 'BLOQUEADO']:
+                    if a.avaliador_id == tcc.coorientador_id and a.status in ['ENVIADO', 'BLOQUEADO', 'CONCLUIDO']:
                         nota_orient = nota_num(a.calcular_nota_total())
                         break
 
-            outros_f2 = [a for a in avals_f2 if a.avaliador_id != (tcc.orientador_id or -1) and a.status in ['ENVIADO', 'BLOQUEADO']]
+            outros_f2 = [a for a in avals_f2 if a.avaliador_id != (tcc.orientador_id or -1) and a.status in ['ENVIADO', 'BLOQUEADO', 'CONCLUIDO']]
             outros_f2.sort(key=lambda a: a.id)
             n1f2 = nota_num(outros_f2[0].calcular_nota_total()) if len(outros_f2) > 0 else None
             n2f2 = nota_num(outros_f2[1].calcular_nota_total()) if len(outros_f2) > 1 else None
@@ -4746,12 +4749,21 @@ Prazo para submissão da monografia aprovada: {data_submissao}
         nome_arquivo = documento.nome_original or os.path.basename(documento.arquivo.name)
         nome_codificado = quote(nome_arquivo)
 
+        # Determinar content-type baseado na extensão do arquivo
+        import mimetypes
+        content_type, _ = mimetypes.guess_type(nome_arquivo)
+        if not content_type:
+            content_type = 'application/octet-stream'
+
+        # PDFs abrem inline no navegador, outros tipos fazem download direto
+        eh_pdf = content_type == 'application/pdf'
+        disposition = 'inline' if eh_pdf else 'attachment'
+
         response = FileResponse(
             documento.arquivo.open('rb'),
-            content_type='application/pdf'
+            content_type=content_type
         )
-        # Header para exibir no navegador (inline) com nome correto
-        response['Content-Disposition'] = f"inline; filename*=UTF-8''{nome_codificado}"
+        response['Content-Disposition'] = f"{disposition}; filename*=UTF-8''{nome_codificado}"
 
         return response
 

@@ -573,8 +573,8 @@ class AtualizarBancaFase1Serializer(serializers.Serializer):
         for avaliador_id in value:
             try:
                 usuario = Usuario.objects.get(id=avaliador_id)
-                if usuario.tipo_usuario not in ['PROFESSOR', 'COORDENADOR']:
-                    raise serializers.ValidationError(f'Usuário {avaliador_id} não é professor')
+                if usuario.tipo_usuario not in ['PROFESSOR', 'COORDENADOR', 'AVALIADOR']:
+                    raise serializers.ValidationError(f'Usuário {avaliador_id} não é professor nem avaliador')
             except Usuario.DoesNotExist:
                 raise serializers.ValidationError(f'Professor {avaliador_id} não encontrado')
 
@@ -633,7 +633,10 @@ class AvaliacaoFase1Serializer(serializers.ModelSerializer):
         read_only_fields = ['criado_em', 'atualizado_em', 'enviado_em']
 
     def get_nota_final(self, obj):
-        """Calcula nota final como soma dos 5 critérios."""
+        """Calcula nota final como soma dos 5 critérios. Retorna None se nenhuma nota foi preenchida."""
+        campos = [getattr(obj, f.name) for f in obj._meta.get_fields() if f.name.startswith('nota_')]
+        if all(n is None for n in campos):
+            return None
         return obj.calcular_nota_total()
 
     def get_pesos_configurados(self, obj):
@@ -814,7 +817,10 @@ class AvaliacaoFase2Serializer(serializers.ModelSerializer):
         read_only_fields = ['criado_em', 'atualizado_em', 'enviado_em']
 
     def get_nota_final(self, obj):
-        """Calcula nota final como soma dos 5 critérios."""
+        """Calcula nota final como soma dos 5 critérios. Retorna None se nenhuma nota foi preenchida."""
+        campos = [getattr(obj, f.name) for f in obj._meta.get_fields() if f.name.startswith('nota_')]
+        if all(n is None for n in campos):
+            return None
         return obj.calcular_nota_total()
 
     def get_pesos_configurados(self, obj):

@@ -302,11 +302,11 @@ class TokenRefreshView(BaseTokenRefreshView):
             # Limpar JSON
             response.data = {'detail': 'Token renovado'}
 
-            # Atualizar access token
+            # Atualizar access token (60 min = ACCESS_TOKEN_LIFETIME)
             response.set_cookie(
                 key='access_token',
                 value=new_access,
-                max_age=600,
+                max_age=3600,
                 httponly=True,
                 secure=not settings.DEBUG,
                 samesite='Lax',

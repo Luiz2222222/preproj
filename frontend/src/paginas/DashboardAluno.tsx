@@ -93,7 +93,7 @@ export function DashboardAluno() {
     const candidatos: Array<[string, string | null | undefined]> = [
       ['Envio de documentos', calendario.envio_documentos_fim],
       ['Avaliação de continuidade', calendario.avaliacao_continuidade_fim],
-      ['Submissão de monografia', calendario.submissao_monografia_fim],
+      ['Submissão de monografia + termo', calendario.submissao_monografia_fim],
       ['Avaliação - Fase I', calendario.avaliacao_fase1_fim],
       ['Período de defesas', calendario.defesas_fim],
       ['Ajustes finais', calendario.ajustes_finais_fim],

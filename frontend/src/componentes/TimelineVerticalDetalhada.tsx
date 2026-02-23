@@ -40,13 +40,94 @@ interface TimelineVerticalDetalhadaProps {
   carregando?: boolean
 }
 
-export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carregando }: TimelineVerticalDetalhadaProps) {
+// Mapear eventos da timeline para datas dos sub-estados
+function mapearDatasEventos(eventos: EventoTimeline[]): Map<SubEstadoVisual, string> {
+  const datas = new Map<SubEstadoVisual, string>()
+  const sorted = [...eventos].sort((a, b) =>
+    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  )
+
+  for (const ev of sorted) {
+    const detalhes = ev.detalhes_json || {}
+
+    switch (ev.tipo_evento) {
+      case 'CRIACAO_TCC':
+      case 'SOLICITACAO_ENVIADA':
+        datas.set(SubEstadoVisual.ENVIO_SOLICITACAO, ev.timestamp)
+        break
+      case 'SOLICITACAO_ACEITA':
+        datas.set(SubEstadoVisual.ACEITE_SOLICITACAO, ev.timestamp)
+        break
+      case 'UPLOAD_DOCUMENTO':
+        if (detalhes.tipo === 'MONOGRAFIA') {
+          datas.set(SubEstadoVisual.ENVIO_TCC, ev.timestamp)
+        } else if (detalhes.tipo === 'TERMO_SOLICITACAO_AVALIACAO') {
+          datas.set(SubEstadoVisual.ENVIO_TERMO_AVALIACAO, ev.timestamp)
+        } else if (!datas.has(SubEstadoVisual.ENVIO_TCC)) {
+          datas.set(SubEstadoVisual.ENVIO_TCC, ev.timestamp)
+        }
+        break
+      case 'DOCUMENTO_APROVADO':
+        if (detalhes.tipo === 'MONOGRAFIA') {
+          datas.set(SubEstadoVisual.TCC_APROVADO, ev.timestamp)
+        }
+        break
+      case 'FEEDBACK_ORIENTADOR':
+        if (!datas.has(SubEstadoVisual.TCC_APROVADO)) {
+          datas.set(SubEstadoVisual.TCC_APROVADO, ev.timestamp)
+        }
+        break
+      case 'APROVACAO_CONTINUIDADE':
+        datas.set(SubEstadoVisual.CONFIRMACAO_CONTINUIDADE, ev.timestamp)
+        break
+      case 'LIBERACAO_AVALIACAO':
+        datas.set(SubEstadoVisual.ENVIO_TERMO_AVALIACAO, ev.timestamp)
+        break
+      case 'FORMACAO_BANCA':
+        datas.set(SubEstadoVisual.FORMACAO_BANCA, ev.timestamp)
+        break
+      case 'BLOQUEIO_AVALIACOES':
+        if (!datas.has(SubEstadoVisual.AVALIACAO_BANCA)) {
+          datas.set(SubEstadoVisual.AVALIACAO_BANCA, ev.timestamp)
+        } else {
+          datas.set(SubEstadoVisual.AVALIACAO_BANCA_FASE2, ev.timestamp)
+        }
+        break
+      case 'RESULTADO_FASE_1':
+        datas.set(SubEstadoVisual.ANALISE_COORDENADOR, ev.timestamp)
+        break
+      case 'AGENDAMENTO_DEFESA':
+        datas.set(SubEstadoVisual.AGENDAMENTO_DEFESA, ev.timestamp)
+        break
+      case 'RESULTADO_FINAL':
+      case 'FASE2_CONCLUIDA':
+        datas.set(SubEstadoVisual.ANALISE_COORDENADOR_FINAL, ev.timestamp)
+        break
+      case 'AJUSTES_SOLICITADOS':
+        datas.set(SubEstadoVisual.AJUSTES_FINAIS, ev.timestamp)
+        break
+      case 'CONCLUSAO':
+        datas.set(SubEstadoVisual.CONCLUIDO, ev.timestamp)
+        break
+    }
+  }
+
+  return datas
+}
+
+function formatarDataTimeline(timestamp: string): string {
+  const d = new Date(timestamp)
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+export function TimelineVerticalDetalhada({ tcc, eventos = [], carregando }: TimelineVerticalDetalhadaProps) {
   const [gruposExpandidos, setGruposExpandidos] = useState<Set<GrupoTimelineDetalhada>>(new Set())
 
   // Determinar estado atual baseado no TCC
   const dadosTCC = useMemo(() => extrairDadosTCC(tcc), [tcc])
   const estadoAtual = useMemo(() => determinarEstadoAtual(dadosTCC), [dadosTCC])
   const finalizado = useMemo(() => isTCCFinalizado(estadoAtual), [estadoAtual])
+  const datasEventos = useMemo(() => mapearDatasEventos(eventos), [eventos])
 
   // Toggle expansão de grupo
   const toggleGrupo = (grupoId: GrupoTimelineDetalhada) => {
@@ -281,6 +362,7 @@ export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carrega
                         {grupo.subEstados.map((subEstado) => {
                           const isCompleto = isSubEstadoCompleto(grupo.id, subEstado.id)
                           const isSubAtual = isSubEstadoAtual(grupo.id, subEstado.id)
+                          const dataEvento = datasEventos.get(subEstado.id)
 
                           return (
                             <div
@@ -303,6 +385,9 @@ export function TimelineVerticalDetalhada({ tcc, eventos: _eventos = [], carrega
                                   isCompleto ? 'text-green-700' : 'text-gray-600'
                                 }`}>
                                   {subEstado.label}
+                                  {dataEvento && (isCompleto || isSubAtual) && (
+                                    <span className="text-xs text-gray-500"> - {formatarDataTimeline(dataEvento)}</span>
+                                  )}
                                 </p>
                               </div>
 

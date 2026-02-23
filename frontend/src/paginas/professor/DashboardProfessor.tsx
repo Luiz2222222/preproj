@@ -136,8 +136,8 @@ export function DashboardProfessor() {
       },
       {
         id: 4,
-        titulo: 'Submissão de monografia',
-        descricao: 'Entrega da versão final para avaliação',
+        titulo: 'Submissão de monografia + termo',
+        descricao: 'Entrega da versão final + Termo',
         data: formatarDataCurta(calendario?.submissao_monografia_fim),
         icone: FileText,
         cor: 'orange',
@@ -191,8 +191,15 @@ export function DashboardProfessor() {
     ]
   }, [calendario])
 
+  // Filtrar bancas que ainda têm avaliação pendente
+  const tccsComAvaliacaoPendente = tccsParaAvaliar.filter(tcc => {
+    const fase1Pendente = tcc.minha_avaliacao_fase1_status !== 'ENVIADO' && tcc.minha_avaliacao_fase1_status !== 'BLOQUEADO' && tcc.minha_avaliacao_fase1_status !== 'CONCLUIDO' && tcc.nf1 == null;
+    const fase2Pendente = tcc.minha_avaliacao_fase2_status !== 'ENVIADO' && tcc.minha_avaliacao_fase2_status !== 'BLOQUEADO' && tcc.minha_avaliacao_fase2_status !== 'CONCLUIDO' && tcc.etapa_atual !== 'CONCLUIDO';
+    return fase1Pendente || fase2Pendente;
+  });
+
   // Total de ações pendentes
-  const totalPendentes = orientandosComMonografiaPendente.length + tccsParaAvaliar.length
+  const totalPendentes = orientandosComMonografiaPendente.length + tccsComAvaliacaoPendente.length
 
   // Handler de navegação
   const handleAvaliarMonografia = (tccId: number) => {
@@ -320,7 +327,7 @@ export function DashboardProfessor() {
                 ))}
 
                 {/* Bancas para avaliar */}
-                {tccsParaAvaliar.map((tcc) => (
+                {tccsComAvaliacaoPendente.map((tcc) => (
                   <div
                     key={`banca-${tcc.id}`}
                     onClick={() => {
@@ -354,8 +361,8 @@ export function DashboardProfessor() {
                 onClick={() => {
                   if (orientandosComMonografiaPendente.length > 0) {
                     handleAvaliarMonografia(orientandosComMonografiaPendente[0].id)
-                  } else if (tccsParaAvaliar.length > 0) {
-                    const t = tccsParaAvaliar[0];
+                  } else if (tccsComAvaliacaoPendente.length > 0) {
+                    const t = tccsComAvaliacaoPendente[0];
                     const fase = t.nf1 != null ? 2 : 1;
                     navigate(`/professor/bancas/${t.id}?fase=${fase}`)
                   }

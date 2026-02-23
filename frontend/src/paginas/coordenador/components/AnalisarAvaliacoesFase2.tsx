@@ -59,7 +59,7 @@ export function AnalisarAvaliacoesFase2({ tcc, onAvaliacoesAtualizadas }: Analis
   const totalAvaliacoes = avaliacoes.length;
   const avaliacoesPendentes = avaliacoes.filter(a => a.status === StatusAvaliacaoFase2.PENDENTE).length;
   const avaliacoesEnviadas = avaliacoes.filter(a => a.status === StatusAvaliacaoFase2.ENVIADO).length;
-  const avaliacoesBloqueadas = avaliacoes.filter(a => a.status === StatusAvaliacaoFase2.BLOQUEADO).length;
+  const avaliacoesBloqueadas = avaliacoes.filter(a => a.status === StatusAvaliacaoFase2.BLOQUEADO || a.status === StatusAvaliacaoFase2.CONCLUIDO).length;
   const todasBloqueadas = totalAvaliacoes > 0 && avaliacoesBloqueadas === totalAvaliacoes;
   const existemPendentes = avaliacoesPendentes > 0;
 
@@ -110,6 +110,12 @@ export function AnalisarAvaliacoesFase2({ tcc, onAvaliacoesAtualizadas }: Analis
         text: 'text-[rgb(var(--cor-texto-secundario))]',
         icon: Lock,
         label: 'Bloqueado'
+      },
+      [StatusAvaliacaoFase2.CONCLUIDO]: {
+        bg: 'bg-[rgb(var(--cor-sucesso))]/10',
+        text: 'text-[rgb(var(--cor-sucesso))]',
+        icon: CheckCircle,
+        label: 'Concluído'
       }
     };
 

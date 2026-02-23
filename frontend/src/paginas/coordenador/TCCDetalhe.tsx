@@ -18,7 +18,9 @@ import {
   FileCheck,
   FileQuestion,
   FileX,
-  FilePenLine
+  FilePenLine,
+  TrendingUp,
+  Award
 } from 'lucide-react'
 import { useTCCsCoordenador, useTimelineTCC } from '../../hooks'
 import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, TipoDocumentoLabels, CursoLabels } from '../../types/enums'
@@ -222,6 +224,55 @@ export function TCCDetalhe() {
         </div>
       </div>
 
+      {/* Card de Notas Finais - visível apenas quando CONCLUIDO */}
+      {tcc.etapa_atual === EtapaTCC.CONCLUIDO && (() => {
+        const nf1 = tcc.nf1 ? Number(tcc.nf1) : null;
+        const nf2 = tcc.nf2 ? Number(tcc.nf2) : null;
+        const notaFinal = nf1 != null && nf2 != null ? nf1 * 0.6 + nf2 * 0.4 : null;
+        const resultado = tcc.resultado_final;
+        const fmt = (v: number | null) => v === null ? '-' : v.toFixed(2).replace('.', ',');
+        return (
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-sm border border-[rgb(var(--cor-borda))] p-6 mb-6">
+            <h3 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))] mb-4 flex items-center gap-2">
+              <Award className="h-5 w-5 text-[rgb(var(--cor-info))]" />
+              Notas Finais
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-[rgb(var(--cor-destaque))]/5 rounded-lg border border-[rgb(var(--cor-destaque))]/20">
+                <p className="text-xs text-[rgb(var(--cor-destaque))] mb-1">Média - Fase I</p>
+                <p className="text-3xl font-bold text-[rgb(var(--cor-destaque))]">{fmt(nf1)}</p>
+              </div>
+              <div className="p-4 bg-[rgb(var(--cor-info))]/5 rounded-lg border border-[rgb(var(--cor-info))]/20">
+                <p className="text-xs text-[rgb(var(--cor-info))] mb-1">Média - Fase II</p>
+                <p className="text-3xl font-bold text-[rgb(var(--cor-info))]">{fmt(nf2)}</p>
+              </div>
+              <div className="p-4 bg-[rgb(var(--cor-info))]/10 rounded-lg border border-[rgb(var(--cor-info))]/30">
+                <p className="text-xs text-[rgb(var(--cor-info))] mb-1">Nota Final</p>
+                <p className="text-3xl font-bold text-[rgb(var(--cor-info))]">{fmt(notaFinal)}</p>
+              </div>
+              <div className={`p-4 rounded-lg border-2 ${
+                resultado === 'APROVADO'
+                  ? 'bg-[rgb(var(--cor-sucesso))]/5 border-[rgb(var(--cor-sucesso))]/30'
+                  : resultado === 'REPROVADO'
+                  ? 'bg-[rgb(var(--cor-erro))]/5 border-[rgb(var(--cor-erro))]/30'
+                  : 'bg-[rgb(var(--cor-fundo))] border-[rgb(var(--cor-borda))]'
+              }`}>
+                <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mb-1">Resultado</p>
+                <p className={`text-2xl font-bold ${
+                  resultado === 'APROVADO'
+                    ? 'text-[rgb(var(--cor-sucesso))]'
+                    : resultado === 'REPROVADO'
+                    ? 'text-[rgb(var(--cor-erro))]'
+                    : 'text-[rgb(var(--cor-texto-secundario))]'
+                }`}>
+                  {resultado || '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Informações Gerais - Topo - Grid de 2 colunas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Informações do Aluno */}
@@ -299,6 +350,9 @@ export function TCCDetalhe() {
       {/* Análise Final e Conclusão - card único consolidado para ANALISE_FINAL_COORDENADOR */}
       {tcc.etapa_atual === EtapaTCC.ANALISE_FINAL_COORDENADOR && (
         <AnaliseFinalCoordenador tcc={tcc} onConclusao={recarregar} />
+      )}
+      {tcc.etapa_atual === EtapaTCC.CONCLUIDO && (
+        <AnaliseFinalCoordenador tcc={tcc} somenteLeitura />
       )}
 
       {/* Análise das Avaliações da Fase I */}

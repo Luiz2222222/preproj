@@ -314,6 +314,7 @@ export function IniciarTCC() {
           )}
 
           <form onSubmit={handleSubmit}>
+          <fieldset disabled={prazoCadastroExpirado} className={prazoCadastroExpirado ? 'opacity-60' : ''}>
             {/* Erro Geral */}
             {erros.geral && (
               <div className="bg-[rgb(var(--cor-erro))]/10 border-l-4 border-[rgb(var(--cor-erro))] p-4 rounded mb-6">
@@ -644,6 +645,7 @@ export function IniciarTCC() {
                       onChange={(e) => setPlanoDesenvolvimento(e.target.files?.[0] || null)}
                       accept=".pdf"
                       className="hidden"
+                      disabled={prazoCadastroExpirado}
                     />
                     {planoDesenvolvimento ? (
                       <div className="flex items-center justify-between w-full h-24 border-2 border-cor-borda border-dashed rounded-lg bg-cor-superficie px-4 py-3">
@@ -670,7 +672,9 @@ export function IniciarTCC() {
                     ) : (
                       <label
                         htmlFor="plano-desenvolvimento"
-                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-cor-borda/60 border-dashed rounded-lg cursor-pointer hover:border-cor-destaque transition-colors bg-cor-superficie py-3 gap-1"
+                        className={`flex flex-col items-center justify-center w-full h-24 border-2 border-cor-borda/60 border-dashed rounded-lg bg-cor-superficie py-3 gap-1 ${
+                          prazoCadastroExpirado ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-cor-destaque'
+                        } transition-colors`}
                       >
                         <Upload className="w-6 h-6 text-cor-texto/50" />
                         <p className="text-xs text-cor-texto/60">
@@ -696,6 +700,7 @@ export function IniciarTCC() {
                       onChange={(e) => setTermoAceite(e.target.files?.[0] || null)}
                       accept=".pdf"
                       className="hidden"
+                      disabled={prazoCadastroExpirado}
                     />
                     {termoAceite ? (
                       <div className="flex items-center justify-between w-full h-24 border-2 border-cor-borda border-dashed rounded-lg bg-cor-superficie px-4 py-3">
@@ -722,7 +727,9 @@ export function IniciarTCC() {
                     ) : (
                       <label
                         htmlFor="termo-aceite"
-                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-cor-borda/60 border-dashed rounded-lg cursor-pointer hover:border-cor-destaque transition-colors bg-cor-superficie py-3 gap-1"
+                        className={`flex flex-col items-center justify-center w-full h-24 border-2 border-cor-borda/60 border-dashed rounded-lg bg-cor-superficie py-3 gap-1 ${
+                          prazoCadastroExpirado ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-cor-destaque'
+                        } transition-colors`}
                       >
                         <Upload className="w-6 h-6 text-cor-texto/50" />
                         <p className="text-xs text-cor-texto/60">
@@ -755,6 +762,7 @@ export function IniciarTCC() {
                 {enviando ? 'Enviando...' : prazoCadastroExpirado ? 'Prazo expirado' : 'Enviar solicitação'}
               </button>
             </div>
+          </fieldset>
           </form>
         </div>
       </div>

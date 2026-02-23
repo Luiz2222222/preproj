@@ -83,7 +83,7 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
   const totalAvaliacoes = avaliacoes.length;
   const avaliacoesPendentes = avaliacoes.filter(a => a.status === StatusAvaliacaoFase1.PENDENTE).length;
   const avaliacoesEnviadas = avaliacoes.filter(a => a.status === StatusAvaliacaoFase1.ENVIADO).length;
-  const avaliacoesBloqueadas = avaliacoes.filter(a => a.status === StatusAvaliacaoFase1.BLOQUEADO).length;
+  const avaliacoesBloqueadas = avaliacoes.filter(a => a.status === StatusAvaliacaoFase1.BLOQUEADO || a.status === StatusAvaliacaoFase1.CONCLUIDO).length;
   const todasBloqueadas = totalAvaliacoes > 0 && avaliacoesBloqueadas === totalAvaliacoes;
   const existemPendentes = avaliacoesPendentes > 0;
 
@@ -175,6 +175,8 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
     );
   };
 
+  const foiAprovadaFase1 = tcc.nf1 != null;
+
   const getStatusBadge = (status: string) => {
     const config = {
       [StatusAvaliacaoFase1.PENDENTE]: {
@@ -194,6 +196,12 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
         text: 'text-[rgb(var(--cor-texto-secundario))]',
         icon: Lock,
         label: 'Bloqueado'
+      },
+      [StatusAvaliacaoFase1.CONCLUIDO]: {
+        bg: 'bg-[rgb(var(--cor-sucesso))]/10',
+        text: 'text-[rgb(var(--cor-sucesso))]',
+        icon: CheckCircle,
+        label: 'Concluído'
       }
     };
 
@@ -314,19 +322,16 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
                 </div>
 
                 {/* Notas por critério */}
-                {avaliacao.status !== StatusAvaliacaoFase1.PENDENTE ? (
+                {avaliacao.status !== StatusAvaliacaoFase1.PENDENTE || avaliacao.nota_final != null ? (
                   <div className="space-y-2">
                     {criterios.map(criterio => {
                       const nota = avaliacao[criterio.campo];
                       const comentario = extractSection(parecer, criterio.secao);
                       return (
                         <div key={criterio.campo}>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-[rgb(var(--cor-texto-secundario))]">{criterio.label}:</span>
-                            <span className="font-medium text-[rgb(var(--cor-texto-primario))]">
-                              {nota != null ? Number(nota).toFixed(1) : '-'} / {criterio.peso.toFixed(1)}
-                            </span>
-                          </div>
+                          <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                            {criterio.label}: <span className="font-medium text-[rgb(var(--cor-texto-primario))]">{nota != null ? Number(nota).toFixed(1) : '-'} / {criterio.peso.toFixed(1)}</span>
+                          </p>
                           {comentario && (
                             <p className="text-xs text-[rgb(var(--cor-texto-secundario))] mt-0.5 pl-2 border-l-2 border-[rgb(var(--cor-borda))] italic">
                               {comentario}
@@ -423,6 +428,39 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
             <span>Aprovar completo</span>
           </button>
         </div>}
+
+        {/* Resumo de Notas - Fase I */}
+        {(() => {
+          const todasComNota = avaliacoes.length > 0 && avaliacoes.every(a => a.nota_final != null);
+          const fmt = (v: number) => v.toFixed(2).replace('.', ',');
+          const media = todasComNota ? avaliacoes.reduce((s, a) => s + Number(a.nota_final), 0) / avaliacoes.length : null;
+          const comPeso = media != null ? media * 0.6 : null;
+          const aprovada = media != null && media >= 6;
+          return (
+            <div className="mt-6 pt-4 border-t border-[rgb(var(--cor-borda))]">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {avaliacoes.map(a => (
+                  <div key={a.id} className="p-3 bg-[rgb(var(--cor-fundo))] rounded-lg">
+                    <p className="text-xs text-[rgb(var(--cor-texto-secundario))] truncate">{a.avaliador_dados.nome_completo}</p>
+                    <p className="text-2xl font-bold text-[rgb(var(--cor-texto-primario))]">{a.nota_final != null ? fmt(Number(a.nota_final)) : '-'}</p>
+                  </div>
+                ))}
+                <div className="p-3 bg-[rgb(var(--cor-destaque))]/5 rounded-lg border border-[rgb(var(--cor-destaque))]/20">
+                  <p className="text-xs text-[rgb(var(--cor-destaque))]">Média</p>
+                  <p className="text-2xl font-bold text-[rgb(var(--cor-destaque))]">{media != null ? fmt(media) : '-'}</p>
+                </div>
+                <div className="p-3 bg-[rgb(var(--cor-info))]/5 rounded-lg border border-[rgb(var(--cor-info))]/20">
+                  <p className="text-xs text-[rgb(var(--cor-info))]">Nota com peso (x0,6)</p>
+                  <p className="text-2xl font-bold text-[rgb(var(--cor-info))]">{comPeso != null ? fmt(comPeso) : '-'}</p>
+                </div>
+                <div className={`p-3 rounded-lg border ${!todasComNota ? 'bg-[rgb(var(--cor-fundo))] border-[rgb(var(--cor-borda))]' : aprovada ? 'bg-[rgb(var(--cor-sucesso))]/5 border-[rgb(var(--cor-sucesso))]/20' : 'bg-[rgb(var(--cor-erro))]/5 border-[rgb(var(--cor-erro))]/20'}`}>
+                  <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">Fase I</p>
+                  <p className={`text-2xl font-bold ${!todasComNota ? 'text-[rgb(var(--cor-texto-secundario))]' : aprovada ? 'text-[rgb(var(--cor-sucesso))]' : 'text-[rgb(var(--cor-erro))]'}`}>{!todasComNota ? '-' : aprovada ? 'Aprovado' : 'Reprovado'}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Modal de Solicitar Ajustes */}
