@@ -125,6 +125,14 @@ export function TCCDetalhe() {
     }
   }
 
+  const etapasLeituraAvaliacaoFase1: EtapaTCC[] = [
+    EtapaTCC.AGENDAMENTO_APRESENTACAO,
+    EtapaTCC.APRESENTACAO_FASE_2,
+    EtapaTCC.ANALISE_FINAL_COORDENADOR,
+    EtapaTCC.AGUARDANDO_AJUSTES_FINAIS,
+    EtapaTCC.CONCLUIDO,
+  ]
+
   // Estados de carregamento e erro
   if (carregando) {
     return (
@@ -359,7 +367,7 @@ export function TCCDetalhe() {
       {(tcc.etapa_atual === EtapaTCC.AVALIACAO_FASE_1 || tcc.etapa_atual === EtapaTCC.VALIDACAO_FASE_1) && (
         <AnalisarAvaliacoesFase1 tcc={tcc} onAvaliacoesAtualizadas={recarregar} />
       )}
-      {[EtapaTCC.AGENDAMENTO_APRESENTACAO, EtapaTCC.APRESENTACAO_FASE_2, EtapaTCC.ANALISE_FINAL_COORDENADOR, EtapaTCC.AGUARDANDO_AJUSTES_FINAIS, EtapaTCC.CONCLUIDO].includes(tcc.etapa_atual as EtapaTCC) && (
+      {etapasLeituraAvaliacaoFase1.includes(tcc.etapa_atual) && (
         <AnalisarAvaliacoesFase1 tcc={tcc} somenteLeitura />
       )}
 

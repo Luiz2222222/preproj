@@ -32,7 +32,9 @@ import { useToast } from '../../contextos/ToastProvider'
 import { ModalEnviarDocumento } from '../../componentes'
 import { estaBloqueado } from '../../utils/permissoes'
 
-const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || 'http://localhost:8111/media'
+const MEDIA_URL =
+  import.meta.env.VITE_MEDIA_URL ||
+  (import.meta.env.DEV ? 'http://localhost:8500/media' : '/media')
 
 // Ícones para cada tipo de documento
 const iconesPorTipo: Record<TipoDocumento, typeof FileText> = {
@@ -43,6 +45,7 @@ const iconesPorTipo: Record<TipoDocumento, typeof FileText> = {
   [TipoDocumento.TERMO_SOLICITACAO_AVALIACAO]: FileCheck,
   [TipoDocumento.APRESENTACAO]: FileSliders,
   [TipoDocumento.ATA]: FileCheck,
+  [TipoDocumento.RELATORIO_AVALIACAO]: FileText,
   [TipoDocumento.OUTRO]: File,
 }
 

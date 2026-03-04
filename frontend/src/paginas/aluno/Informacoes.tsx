@@ -206,7 +206,13 @@ export function Informacoes() {
                 </div>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => window.open(doc.arquivo_url, '_blank')}
+                    onClick={() => {
+                      if (!doc.arquivo_url) {
+                        mostrarErro('Documento sem URL disponível')
+                        return
+                      }
+                      window.open(doc.arquivo_url, '_blank')
+                    }}
                     className="p-2 text-cor-texto-secundario hover:text-cor-destaque hover:bg-cor-destaque/10 rounded-lg transition-colors"
                     title="Visualizar"
                   >
@@ -214,6 +220,10 @@ export function Informacoes() {
                   </button>
                   <button
                     onClick={async () => {
+                      if (!doc.arquivo_url) {
+                        mostrarErro('Documento sem URL disponível')
+                        return
+                      }
                       try {
                         const response = await fetch(doc.arquivo_url)
                         const blob = await response.blob()

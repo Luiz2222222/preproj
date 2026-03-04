@@ -32,7 +32,8 @@ import { exportarDadosTCC, baixarArquivoZip, type OpcoesBaixar } from '../../ser
 
 export function TCCs() {
   const navigate = useNavigate()
-  const location = useLocation<{ filtroEtapa?: string; filtroEtapas?: string[] }>()
+  const location = useLocation()
+  const locationState = location.state as { filtroEtapa?: string; filtroEtapas?: string[] } | null
   const { tccs, carregando, erro, recarregar } = useTCCsCoordenador()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -70,14 +71,14 @@ export function TCCs() {
 
   // Aplicar filtro inicial do state (quando vem do dashboard)
   useEffect(() => {
-    if (location.state?.filtroEtapas) {
-      setFiltroEtapas(location.state.filtroEtapas)
+    if (locationState?.filtroEtapas) {
+      setFiltroEtapas(locationState.filtroEtapas)
       setFiltroEtapa('todas')
-    } else if (location.state?.filtroEtapa) {
-      setFiltroEtapa(location.state.filtroEtapa)
+    } else if (locationState?.filtroEtapa) {
+      setFiltroEtapa(locationState.filtroEtapa)
       setFiltroEtapas(null)
     }
-  }, [location.state])
+  }, [locationState])
 
   // Estatísticas calculadas
   const estatisticas = useMemo(() => {
