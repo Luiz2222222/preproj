@@ -147,17 +147,6 @@ export function FormacaoBancaFase1({ tcc, onBancaConcluida }: FormacaoBancaFase1
     }
   };
 
-  const adicionarAvaliador = (profId: number) => {
-    if (!avaliadoresSelecionados.includes(profId)) {
-      setAvaliadoresSelecionados(prev => [...prev, profId]);
-    }
-  };
-
-  const removerAvaliador = (profId: number) => {
-    setAvaliadoresSelecionados(prev => prev.filter(id => id !== profId));
-  };
-
-
   // Filtrar professores disponíveis (excluir orientador e co-orientador)
   const professoresDisponiveis = professores.filter(p =>
     p.id !== tcc.orientador && p.id !== tcc.coorientador

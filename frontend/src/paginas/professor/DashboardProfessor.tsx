@@ -9,7 +9,6 @@ import {
   CheckCircle,
   BookOpen,
   BarChart3,
-  Calendar,
   Briefcase
 } from 'lucide-react'
 import { useAutenticacao } from '../../autenticacao'

@@ -12,27 +12,29 @@ export interface Notificacao {
   lido_em: string | null;
 }
 
-export enum TipoNotificacao {
-  DOCUMENTO_ENVIADO = 'documento_enviado',
-  SOLICITACAO_APROVADA = 'solicitacao_aprovada',
-  SOLICITACAO_RECUSADA = 'solicitacao_recusada',
-  BANCA_DEFINIDA = 'banca_definida',
-  AVALIACAO_ENVIADA = 'avaliacao_enviada',
-  AVALIACAO_APROVADA = 'avaliacao_aprovada',
-  RESULTADO_FASE_1 = 'resultado_fase_1',
-  DEFESA_AGENDADA = 'defesa_agendada',
-  RESULTADO_FINAL = 'resultado_final',
-  TCC_CONCLUIDO = 'tcc_concluido',
-  PRAZO_PROXIMO = 'prazo_proximo',
-  MUDANCA_ETAPA = 'mudanca_etapa',
-}
+export const TipoNotificacao = {
+  DOCUMENTO_ENVIADO: 'documento_enviado',
+  SOLICITACAO_APROVADA: 'solicitacao_aprovada',
+  SOLICITACAO_RECUSADA: 'solicitacao_recusada',
+  BANCA_DEFINIDA: 'banca_definida',
+  AVALIACAO_ENVIADA: 'avaliacao_enviada',
+  AVALIACAO_APROVADA: 'avaliacao_aprovada',
+  RESULTADO_FASE_1: 'resultado_fase_1',
+  DEFESA_AGENDADA: 'defesa_agendada',
+  RESULTADO_FINAL: 'resultado_final',
+  TCC_CONCLUIDO: 'tcc_concluido',
+  PRAZO_PROXIMO: 'prazo_proximo',
+  MUDANCA_ETAPA: 'mudanca_etapa',
+} as const;
+export type TipoNotificacao = (typeof TipoNotificacao)[keyof typeof TipoNotificacao];
 
-export enum PrioridadeNotificacao {
-  BAIXA = 'baixa',
-  NORMAL = 'normal',
-  ALTA = 'alta',
-  URGENTE = 'urgente',
-}
+export const PrioridadeNotificacao = {
+  BAIXA: 'baixa',
+  NORMAL: 'normal',
+  ALTA: 'alta',
+  URGENTE: 'urgente',
+} as const;
+export type PrioridadeNotificacao = (typeof PrioridadeNotificacao)[keyof typeof PrioridadeNotificacao];
 
 export interface NotificacaoResponse {
   count: number;

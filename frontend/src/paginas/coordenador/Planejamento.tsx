@@ -107,7 +107,7 @@ export function Planejamento() {
   const [arquivosRemovidos, setArquivosRemovidos] = useState<Record<string, boolean>>({})
 
   // Estados para configuração de e-mail
-  const [configEmail, setConfigEmail] = useState<ConfiguracaoEmail | null>(null)
+  const [, setConfigEmail] = useState<ConfiguracaoEmail | null>(null)
   const [emailEnabled, setEmailEnabled] = useState(false)
   const [emailHost, setEmailHost] = useState('smtp.gmail.com')
   const [emailPort, setEmailPort] = useState(587)

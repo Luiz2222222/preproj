@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users,
   FileText,
-  CheckCircle,
   Clock,
   Download,
   ArrowRight,

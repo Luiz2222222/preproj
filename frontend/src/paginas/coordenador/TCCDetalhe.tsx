@@ -19,7 +19,6 @@ import {
   FileQuestion,
   FileX,
   FilePenLine,
-  TrendingUp,
   Award
 } from 'lucide-react'
 import { useTCCsCoordenador, useTimelineTCC } from '../../hooks'
@@ -359,7 +358,7 @@ export function TCCDetalhe() {
       {(tcc.etapa_atual === EtapaTCC.AVALIACAO_FASE_1 || tcc.etapa_atual === EtapaTCC.VALIDACAO_FASE_1) && (
         <AnalisarAvaliacoesFase1 tcc={tcc} onAvaliacoesAtualizadas={recarregar} />
       )}
-      {[EtapaTCC.AGENDAMENTO_APRESENTACAO, EtapaTCC.APRESENTACAO_FASE_2, EtapaTCC.ANALISE_FINAL_COORDENADOR, EtapaTCC.AGUARDANDO_AJUSTES_FINAIS, EtapaTCC.CONCLUIDO].includes(tcc.etapa_atual as EtapaTCC) && (
+      {([EtapaTCC.AGENDAMENTO_APRESENTACAO, EtapaTCC.APRESENTACAO_FASE_2, EtapaTCC.ANALISE_FINAL_COORDENADOR, EtapaTCC.AGUARDANDO_AJUSTES_FINAIS, EtapaTCC.CONCLUIDO] as readonly string[]).includes(tcc.etapa_atual) && (
         <AnalisarAvaliacoesFase1 tcc={tcc} somenteLeitura />
       )}
 

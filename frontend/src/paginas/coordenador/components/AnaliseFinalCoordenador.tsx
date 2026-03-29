@@ -6,7 +6,6 @@
 import { useState } from 'react';
 import {
   CheckCircle,
-  Award,
   TrendingUp,
   FileCheck,
   Loader2,
@@ -207,8 +206,6 @@ export function AnaliseFinalCoordenador({ tcc, onConclusao, somenteLeitura = fal
   };
 
   // Badge de status da avaliação
-  const foiAprovadaFase2 = tcc.etapa_atual === 'CONCLUIDO';
-
   const getStatusBadge = (status: string) => {
     const config = {
       [StatusAvaliacaoFase2.PENDENTE]: {

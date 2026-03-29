@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
-import { Calendar, FileText, Clock, BookOpen, Users, CheckCircle, Briefcase, Download, Loader2, Eye } from 'lucide-react'
+import { FileText, Clock, BookOpen, Users, CheckCircle, Briefcase, Download, Loader2, Eye } from 'lucide-react'
 import { useCalendarioSemestre } from '../../hooks'
 import { PainelDatasImportantes } from '../../componentes'
 import { formatarDataCurta, formatarIntervalo } from '../../utils/datas'
@@ -206,7 +206,7 @@ export function Informacoes() {
                 </div>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => window.open(doc.arquivo_url, '_blank')}
+                    onClick={() => doc.arquivo_url && window.open(doc.arquivo_url, '_blank')}
                     className="p-2 text-cor-texto-secundario hover:text-cor-destaque hover:bg-cor-destaque/10 rounded-lg transition-colors"
                     title="Visualizar"
                   >
@@ -215,7 +215,7 @@ export function Informacoes() {
                   <button
                     onClick={async () => {
                       try {
-                        const response = await fetch(doc.arquivo_url)
+                        const response = await fetch(doc.arquivo_url!)
                         const blob = await response.blob()
                         const blobUrl = URL.createObjectURL(blob)
                         const link = document.createElement('a')

@@ -7,16 +7,9 @@ import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search,
-  Filter,
   FileText,
-  Clock,
-  CheckCircle,
   AlertCircle,
   User,
-  Calendar,
-  TrendingUp,
-  BarChart3,
-  Users,
   Loader2,
   RefreshCw,
   XCircle,
@@ -28,11 +21,11 @@ import { EtapaTCC, EtapaTCCLabels, EtapaTCCColors, CursoLabels } from '../../typ
 import type { TCC } from '../../types'
 import { TimelineHorizontalDetalhado } from '../../componentes/TimelineHorizontalDetalhado'
 import { ModalEditarTCC } from '../../componentes/ModalEditarTCC'
-import { exportarDadosTCC, baixarArquivoZip, type OpcoesBaixar } from '../../servicos/tccs'
+import { exportarDadosTCC, baixarArquivoZip } from '../../servicos/tccs'
 
 export function TCCs() {
   const navigate = useNavigate()
-  const location = useLocation<{ filtroEtapa?: string; filtroEtapas?: string[] }>()
+  const location = useLocation()
   const { tccs, carregando, erro, recarregar } = useTCCsCoordenador()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -165,22 +158,6 @@ export function TCCs() {
       return matchSearch && matchEtapa && matchCurso
     })
   }, [tccs, searchTerm, filtroEtapa, filtroEtapas, filtroCurso])
-
-  // Função para determinar status do TCC
-  const getStatus = (tcc: TCC): 'normal' | 'atencao' | 'urgente' => {
-    // Lógica simplificada - pode ser expandida conforme regras de negócio
-    if (tcc.etapa_atual === EtapaTCC.INICIALIZACAO) return 'urgente'
-    if (tcc.etapa_atual === EtapaTCC.FORMACAO_BANCA_FASE_1 || tcc.etapa_atual === EtapaTCC.VALIDACAO_FASE_1) return 'atencao'
-    return 'normal'
-  }
-
-  const getStatusColor = (status: 'normal' | 'atencao' | 'urgente') => {
-    switch (status) {
-      case 'urgente': return 'text-[rgb(var(--cor-erro))] bg-[rgb(var(--cor-erro))]/10'
-      case 'atencao': return 'text-[rgb(var(--cor-alerta))] bg-[rgb(var(--cor-alerta))]/10'
-      default: return 'text-[rgb(var(--cor-sucesso))] bg-[rgb(var(--cor-sucesso))]/10'
-    }
-  }
 
   const getEtapaColor = (etapa: EtapaTCC) => {
     return EtapaTCCColors[etapa] || 'bg-[rgb(var(--cor-fundo))] text-[rgb(var(--cor-texto-secundario))]'
@@ -317,8 +294,6 @@ export function TCCs() {
           </div>
         ) : (
           tccsFiltrados.map((tcc) => {
-            const status = getStatus(tcc)
-
             return (
               <div
                 key={tcc.id}

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Mail } from 'lucide-react';
 import { obterPreferenciasEmail, atualizarPreferenciasEmail, type PreferenciasEmail } from '../servicos/preferencias';
 import { obterPerfil, type PerfilUsuario } from '../servicos/usuarios';
 import { useToast } from '../contextos/ToastProvider';

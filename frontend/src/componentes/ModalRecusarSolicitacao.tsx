@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { XCircle, X, AlertCircle } from 'lucide-react'
+import { XCircle, X } from 'lucide-react'
 import type { SolicitacaoOrientacao } from '../types'
 
 interface ModalRecusarSolicitacaoProps {

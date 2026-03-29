@@ -4,7 +4,6 @@ import {
   Bell,
   User,
   LogOut,
-  Settings,
   ChevronDown,
   Menu,
   X

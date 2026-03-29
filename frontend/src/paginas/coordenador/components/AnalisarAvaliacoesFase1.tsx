@@ -175,8 +175,6 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
     );
   };
 
-  const foiAprovadaFase1 = tcc.nf1 != null;
-
   const getStatusBadge = (status: string) => {
     const config = {
       [StatusAvaliacaoFase1.PENDENTE]: {
@@ -250,7 +248,6 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
   }
 
   // Filtrar avaliações que têm notas (enviadas ou bloqueadas)
-  const avaliacoesComNotas = avaliacoes.filter(a => a.status !== StatusAvaliacaoFase1.PENDENTE);
   const gridCols = avaliacoes.length === 2 ? 'grid-cols-2' : avaliacoes.length >= 3 ? 'grid-cols-3' : 'grid-cols-1';
 
   return (

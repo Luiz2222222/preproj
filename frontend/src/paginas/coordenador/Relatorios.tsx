@@ -942,9 +942,6 @@ function AvaliacoesFase1Tabela({
                 ? notasFinais.reduce((acc, n) => acc + n, 0) / notasFinais.length
                 : null
 
-              // F1NF seria o mesmo que F1NP (peso 1.0)
-              const f1nf = f1np
-
               return (
                 <tr key={tcc.id} className="hover:bg-cor-fundo transition-colors">
                   <td className="px-3 py-3 whitespace-nowrap text-cor-texto border-r border-cor-borda">{tcc.id}</td>
@@ -1499,8 +1496,6 @@ function RelatorioAvaliacaoTabela({
                 .sort((a, b) => a.ordem - b.ordem) || []
 
               // Verificar se há pelo menos 2 avaliadores na banca
-              const temBancaCompleta = avaliadoresFase1.length >= 2
-
               // IDs esperados para Fase I (2 avaliadores)
               const idsEsperadosF1 = [
                 avaliadoresFase1[0]?.usuario,

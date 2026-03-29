@@ -250,14 +250,6 @@ export const TimelineHorizontalDetalhado = (props: TimelineHorizontalDetalhadoPr
   const finalizado = isTCCFinalizado(tcc.etapa_atual);
   const statusFinal = getStatusFinal(tcc.etapa_atual);
 
-  // Verificar status da monografia e permissão de continuidade
-  const monografias = documentos.filter(d => d.tipo_documento === TipoDocumento.MONOGRAFIA);
-  const ultimaMonografia = monografias.length > 0
-    ? monografias.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())[0]
-    : null;
-  const monografiaAprovada = ultimaMonografia?.status === StatusDocumento.APROVADO;
-  const monografiaAvaliada = ultimaMonografia?.status === StatusDocumento.APROVADO || ultimaMonografia?.status === StatusDocumento.REJEITADO;
-
   // Flag de continuidade pendente:
   // Mostra quando backend libera (data chegou ou monografia aprovada) E não confirmou
   // Só some quando confirmar - não depende de status da monografia

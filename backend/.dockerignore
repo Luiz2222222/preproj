@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+*.log
+.git/
+.vscode/
+.idea/
+diagnostico_tcc*.py
+teste_*.py
+run_server.py

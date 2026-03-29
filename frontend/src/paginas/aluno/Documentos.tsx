@@ -43,6 +43,7 @@ const iconesPorTipo: Record<TipoDocumento, typeof FileText> = {
   [TipoDocumento.TERMO_SOLICITACAO_AVALIACAO]: FileCheck,
   [TipoDocumento.APRESENTACAO]: FileSliders,
   [TipoDocumento.ATA]: FileCheck,
+  [TipoDocumento.RELATORIO_AVALIACAO]: FileCheck,
   [TipoDocumento.OUTRO]: File,
 }
 
