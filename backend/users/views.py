@@ -59,6 +59,7 @@ class RegistroAlunoView(generics.CreateAPIView):
 
     serializer_class = RegistroAlunoSerializer
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -79,6 +80,7 @@ class RegistroProfessorView(generics.CreateAPIView):
 
     serializer_class = RegistroProfessorSerializer
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -99,6 +101,7 @@ class RegistroAvaliadorView(generics.CreateAPIView):
 
     serializer_class = RegistroAvaliadorSerializer
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
