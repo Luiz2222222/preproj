@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(
             sql="""
                 CREATE TABLE tccs_avaliacaofase2_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id BIGSERIAL PRIMARY KEY,
                     tcc_id BIGINT NOT NULL REFERENCES tccs_tcc(id) ON DELETE CASCADE,
                     avaliador_id BIGINT NOT NULL REFERENCES users_usuario(id) ON DELETE CASCADE,
                     nota_coerencia_conteudo DECIMAL(4, 2),
@@ -27,9 +27,9 @@ class Migration(migrations.Migration):
                     nota_observancia_tempo DECIMAL(4, 2),
                     parecer TEXT,
                     status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
-                    criado_em DATETIME NOT NULL,
-                    atualizado_em DATETIME NOT NULL,
-                    enviado_em DATETIME
+                    criado_em TIMESTAMP WITH TIME ZONE NOT NULL,
+                    atualizado_em TIMESTAMP WITH TIME ZONE NOT NULL,
+                    enviado_em TIMESTAMP WITH TIME ZONE
                 );
 
                 -- Copiar dados da tabela antiga para a nova (renomeando as colunas)
