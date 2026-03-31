@@ -225,7 +225,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     value=refresh_token,
                     max_age=max_age_refresh,
                     httponly=True,
-                    secure=not settings.DEBUG,  # HTTPS em produção
+                    secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
                     samesite='Lax',
                     path='/'
                 )
@@ -237,7 +237,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     value=access_token,
                     max_age=max_age_access,
                     httponly=True,
-                    secure=not settings.DEBUG,
+                    secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
                     samesite='Lax',
                     path='/'
                 )
@@ -308,7 +308,7 @@ class TokenRefreshView(BaseTokenRefreshView):
                 value=new_access,
                 max_age=3600,
                 httponly=True,
-                secure=not settings.DEBUG,
+                secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
                 samesite='Lax',
                 path='/'
             )
@@ -320,7 +320,7 @@ class TokenRefreshView(BaseTokenRefreshView):
                     value=new_refresh,
                     max_age=604800,
                     httponly=True,
-                    secure=not settings.DEBUG,
+                    secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
                     samesite='Lax',
                     path='/'
                 )
