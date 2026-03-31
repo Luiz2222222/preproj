@@ -204,7 +204,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 CSRF_COOKIE_HTTPONLY = False  # Frontend precisa ler o token
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SECURE = not DEBUG  # HTTPS obrigatório em produção
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)  # True apenas com HTTPS
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 
@@ -217,7 +217,7 @@ CSRF_TRUSTED_ORIGINS = config(
 # Session/Cookie Configuration
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)  # True apenas com HTTPS
 
 # Email Configuration
 EMAIL_ENABLED = config('EMAIL_ENABLED', default=False, cast=bool)
