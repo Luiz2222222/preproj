@@ -5,6 +5,64 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def migrate_forward(apps, schema_editor):
+    with schema_editor.connection.cursor() as cursor:
+        # Check which columns currently exist
+        cursor.execute("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name='tccs_avaliacaofase2'
+        """)
+        columns = [row[0] for row in cursor.fetchall()]
+
+        # If table already has new column names, nothing to do
+        if 'nota_qualidade_apresentacao' in columns and 'nota_clareza_fluencia' in columns:
+            # Just ensure parecer column exists
+            if 'parecer' not in columns:
+                cursor.execute("""
+                    ALTER TABLE tccs_avaliacaofase2 ADD COLUMN parecer TEXT
+                """)
+            return
+
+        # Old database: need to rename columns and add parecer
+        if 'nota_qualidade_material' in columns:
+            cursor.execute("""
+                ALTER TABLE tccs_avaliacaofase2
+                RENAME COLUMN nota_qualidade_material TO nota_qualidade_apresentacao
+            """)
+
+        if 'nota_clareza_verbal' in columns:
+            cursor.execute("""
+                ALTER TABLE tccs_avaliacaofase2
+                RENAME COLUMN nota_clareza_verbal TO nota_clareza_fluencia
+            """)
+
+        if 'parecer' not in columns:
+            cursor.execute("""
+                ALTER TABLE tccs_avaliacaofase2 ADD COLUMN parecer TEXT
+            """)
+
+
+def migrate_backward(apps, schema_editor):
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name='tccs_avaliacaofase2'
+        """)
+        columns = [row[0] for row in cursor.fetchall()]
+
+        if 'nota_qualidade_apresentacao' in columns:
+            cursor.execute("""
+                ALTER TABLE tccs_avaliacaofase2
+                RENAME COLUMN nota_qualidade_apresentacao TO nota_qualidade_material
+            """)
+
+        if 'nota_clareza_fluencia' in columns:
+            cursor.execute("""
+                ALTER TABLE tccs_avaliacaofase2
+                RENAME COLUMN nota_clareza_fluencia TO nota_clareza_verbal
+            """)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -13,70 +71,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Passo 1: Criar nova tabela com schema correto
-        migrations.RunSQL(
-            sql="""
-                CREATE TABLE tccs_avaliacaofase2_new (
-                    id BIGSERIAL PRIMARY KEY,
-                    tcc_id BIGINT NOT NULL REFERENCES tccs_tcc(id) ON DELETE CASCADE,
-                    avaliador_id BIGINT NOT NULL REFERENCES users_usuario(id) ON DELETE CASCADE,
-                    nota_coerencia_conteudo DECIMAL(4, 2),
-                    nota_qualidade_apresentacao DECIMAL(4, 2),
-                    nota_dominio_tema DECIMAL(4, 2),
-                    nota_clareza_fluencia DECIMAL(4, 2),
-                    nota_observancia_tempo DECIMAL(4, 2),
-                    parecer TEXT,
-                    status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
-                    criado_em TIMESTAMP WITH TIME ZONE NOT NULL,
-                    atualizado_em TIMESTAMP WITH TIME ZONE NOT NULL,
-                    enviado_em TIMESTAMP WITH TIME ZONE
-                );
-
-                -- Copiar dados da tabela antiga para a nova (renomeando as colunas)
-                INSERT INTO tccs_avaliacaofase2_new (
-                    id, tcc_id, avaliador_id,
-                    nota_coerencia_conteudo,
-                    nota_qualidade_apresentacao,
-                    nota_dominio_tema,
-                    nota_clareza_fluencia,
-                    nota_observancia_tempo,
-                    parecer,
-                    status,
-                    criado_em,
-                    atualizado_em,
-                    enviado_em
-                )
-                SELECT
-                    id, tcc_id, avaliador_id,
-                    nota_coerencia_conteudo,
-                    nota_qualidade_material,  -- renomear
-                    nota_dominio_tema,
-                    nota_clareza_verbal,  -- renomear
-                    nota_observancia_tempo,
-                    NULL,  -- parecer não existia antes
-                    status,
-                    criado_em,
-                    atualizado_em,
-                    enviado_em
-                FROM tccs_avaliacaofase2;
-
-                -- Remover tabela antiga
-                DROP TABLE tccs_avaliacaofase2;
-
-                -- Renomear nova tabela
-                ALTER TABLE tccs_avaliacaofase2_new RENAME TO tccs_avaliacaofase2;
-
-                -- Recriar índices
-                CREATE UNIQUE INDEX tccs_avaliacaofase2_tcc_id_avaliador_id_unique
-                    ON tccs_avaliacaofase2(tcc_id, avaliador_id);
-                CREATE INDEX tccs_avaliacaofase2_tcc_id_idx
-                    ON tccs_avaliacaofase2(tcc_id);
-                CREATE INDEX tccs_avaliacaofase2_avaliador_id_idx
-                    ON tccs_avaliacaofase2(avaliador_id);
-            """,
-            reverse_sql="""
-                -- Reverter não é trivial, então vamos apenas alertar
-                SELECT 'Reverse migration not supported for this operation';
-            """
-        ),
+        migrations.RunPython(migrate_forward, migrate_backward),
     ]
