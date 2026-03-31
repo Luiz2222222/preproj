@@ -52,7 +52,7 @@ services:
         VITE_MEDIA_URL: /media
     restart: unless-stopped
     ports:
-      - "${PORT:-80}:80"
+      - "${PORT:-8081}:80"
     depends_on:
       - backend
     volumes:
