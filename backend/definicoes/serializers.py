@@ -108,18 +108,18 @@ class DocumentoReferenciaSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'atualizado_em', 'atualizado_por', 'arquivo_url', 'arquivo_nome']
 
     def get_arquivo_url(self, obj):
-        """Retorna a URL do arquivo se existir."""
+        """Retorna a URL do endpoint de download."""
         if obj.arquivo:
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.arquivo.url)
-            return obj.arquivo.url
+                return request.build_absolute_uri(f'/api/config/documentos/{obj.id}/download/')
+            return f'/api/config/documentos/{obj.id}/download/'
         return None
 
     def get_arquivo_nome(self, obj):
-        """Retorna o nome do arquivo se existir."""
+        """Retorna o nome original do arquivo."""
         if obj.arquivo:
-            return obj.arquivo.name.split('/')[-1]
+            return obj.nome_original or obj.arquivo.name.split('/')[-1]
         return None
 
     def validate_arquivo(self, value):

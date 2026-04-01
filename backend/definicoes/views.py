@@ -81,12 +81,42 @@ class DocumentoReferenciaViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'put', 'patch', 'delete']
 
     def perform_create(self, serializer):
-        """Registra quem criou o documento."""
-        serializer.save(atualizado_por=self.request.user)
+        """Registra quem criou o documento e salva nome original."""
+        arquivo = self.request.FILES.get('arquivo')
+        nome_original = arquivo.name if arquivo else ''
+        serializer.save(atualizado_por=self.request.user, nome_original=nome_original)
 
     def perform_update(self, serializer):
-        """Registra quem atualizou o documento."""
-        serializer.save(atualizado_por=self.request.user)
+        """Registra quem atualizou o documento e salva nome original."""
+        arquivo = self.request.FILES.get('arquivo')
+        if arquivo:
+            serializer.save(atualizado_por=self.request.user, nome_original=arquivo.name)
+        else:
+            serializer.save(atualizado_por=self.request.user)
+
+    @action(detail=True, methods=['get'], permission_classes=[])
+    def download(self, request, pk=None):
+        """GET /api/config/documentos/{id}/download/ - Serve o arquivo com nome original."""
+        from django.http import FileResponse
+        from urllib.parse import quote
+        import mimetypes
+
+        doc = self.get_object()
+        if not doc.arquivo:
+            from rest_framework.response import Response
+            from rest_framework import status
+            return Response({'detail': 'Arquivo não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        nome = doc.nome_original or doc.arquivo.name.split('/')[-1]
+        nome_codificado = quote(nome)
+        content_type, _ = mimetypes.guess_type(nome)
+        content_type = content_type or 'application/octet-stream'
+        eh_pdf = content_type == 'application/pdf'
+        disposition = 'inline' if eh_pdf else 'attachment'
+
+        response = FileResponse(doc.arquivo.open('rb'), content_type=content_type)
+        response['Content-Disposition'] = f"{disposition}; filename*=UTF-8''{nome_codificado}"
+        return response
 
 
 class ConfiguracaoEmailViewSet(viewsets.ViewSet):

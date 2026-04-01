@@ -111,6 +111,7 @@ class DocumentoReferencia(models.Model):
 
     tipo = models.CharField('Tipo de Documento', max_length=50, choices=TIPO_DOCUMENTO_CHOICES, unique=True)
     arquivo = models.FileField('Arquivo', upload_to='documentos_referencia/')
+    nome_original = models.CharField('Nome original do arquivo', max_length=255, blank=True, default='')
     atualizado_em = models.DateTimeField('Atualizado em', auto_now=True)
     atualizado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
