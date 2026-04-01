@@ -271,8 +271,8 @@ class LogoutView(APIView):
             'message': 'Logout realizado com sucesso'
         }, status=status.HTTP_200_OK)
 
-        response.delete_cookie('access_token', path='/')
-        response.delete_cookie('refresh_token', path='/')
+        response.set_cookie('access_token', '', max_age=0, httponly=True, samesite='Lax', path='/')
+        response.set_cookie('refresh_token', '', max_age=0, httponly=True, samesite='Lax', path='/')
 
         return response
 
