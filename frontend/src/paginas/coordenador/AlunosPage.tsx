@@ -11,11 +11,12 @@ import {
   FileX,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2
 } from 'lucide-react';
 import { MiniTimelineTCC } from '../../componentes/MiniTimelineTCC';
 import { useAlunosEstatisticas, type AlunoEstatisticas } from '../../hooks/useAlunosEstatisticas';
-import { editarUsuario, resetarSenhaUsuario } from '../../servicos/usuarios';
+import { editarUsuario, resetarSenhaUsuario, excluirUsuario } from '../../servicos/usuarios';
 
 const CURSOS = [
   { value: 'ENGENHARIA_ELETRICA', label: 'Engenharia Elétrica' },
@@ -42,6 +43,11 @@ export function AlunosPage() {
   const [erroEdicao, setErroEdicao] = useState('');
   const [sucessoEdicao, setSucessoEdicao] = useState('');
 
+  // Modal de exclusão
+  const [excluindoAluno, setExcluindoAluno] = useState<AlunoEstatisticas | null>(null);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState('');
+
   // Modal de reset de senha
   const [resetandoAluno, setResetandoAluno] = useState<AlunoEstatisticas | null>(null);
   const [novaSenha, setNovaSenha] = useState('');
@@ -50,6 +56,21 @@ export function AlunosPage() {
   const [salvandoReset, setSalvandoReset] = useState(false);
   const [erroReset, setErroReset] = useState('');
   const [sucessoReset, setSucessoReset] = useState('');
+
+  const confirmarExclusao = async () => {
+    if (!excluindoAluno) return;
+    setConfirmandoExclusao(true);
+    setErroExclusao('');
+    try {
+      await excluirUsuario(excluindoAluno.id);
+      setExcluindoAluno(null);
+      await recarregar();
+    } catch (err: any) {
+      setErroExclusao(err.message || 'Erro ao excluir usuário.');
+    } finally {
+      setConfirmandoExclusao(false);
+    }
+  };
 
   const abrirModalEdicao = (aluno: AlunoEstatisticas) => {
     setEditandoAluno(aluno);
@@ -366,10 +387,17 @@ export function AlunosPage() {
                       </button>
                       <button
                         onClick={() => abrirModalReset(aluno)}
-                        className="text-[rgb(var(--cor-alerta))] hover:text-[rgb(var(--cor-alerta))]/80"
+                        className="text-[rgb(var(--cor-alerta))] hover:text-[rgb(var(--cor-alerta))]/80 mr-3"
                         title="Resetar Senha"
                       >
                         <Key className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => { setExcluindoAluno(aluno); setErroExclusao(''); }}
+                        className="text-[rgb(var(--cor-erro))] hover:text-[rgb(var(--cor-erro))]/80"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -402,6 +430,44 @@ export function AlunosPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Exclusão */}
+      {excluindoAluno && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--cor-borda))]">
+              <h2 className="text-lg font-semibold text-[rgb(var(--cor-texto-primario))]">Excluir aluno</h2>
+              <button onClick={() => setExcluindoAluno(null)} className="text-[rgb(var(--cor-icone))] hover:text-[rgb(var(--cor-texto-primario))]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                Tem certeza que deseja excluir <strong className="text-[rgb(var(--cor-texto-primario))]">{excluindoAluno.nome_completo}</strong>? Esta ação não pode ser desfeita.
+              </p>
+              {erroExclusao && (
+                <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-erro))] mt-3">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{erroExclusao}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-[rgb(var(--cor-borda))]">
+              <button onClick={() => setExcluindoAluno(null)} className="px-4 py-2 text-sm font-medium text-[rgb(var(--cor-texto-secundario))] border border-[rgb(var(--cor-borda-forte))] rounded-lg hover:bg-[rgb(var(--cor-fundo))]">
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarExclusao}
+                disabled={confirmandoExclusao}
+                className="px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--cor-erro))] rounded-lg hover:bg-[rgb(var(--cor-erro))]/90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {confirmandoExclusao && <Loader2 className="w-4 h-4 animate-spin" />}
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Edição */}
       {editandoAluno && (

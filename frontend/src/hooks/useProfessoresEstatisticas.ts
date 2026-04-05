@@ -19,6 +19,7 @@ export interface ProfessorEstatisticas {
   bancas: TCCResumo[];
   total_orientacoes: number;  // Total de orientações + co-orientações
   total_bancas: number;
+  disponivel_para_listas: boolean;
 }
 
 interface UseProfessoresEstatisticasResult {

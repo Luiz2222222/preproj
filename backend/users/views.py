@@ -31,7 +31,8 @@ class ListarProfessoresView(APIView):
     def get(self, request):
         """Retorna lista de professores com dados completos."""
         professores = Usuario.objects.filter(
-            tipo_usuario='PROFESSOR'
+            tipo_usuario='PROFESSOR',
+            disponivel_para_listas=True
         ).order_by('nome_completo')
 
         serializer = ProfessorListSerializer(professores, many=True)
@@ -47,7 +48,8 @@ class ListarCoorientadoresView(APIView):
         """Retorna lista de professores e avaliadores externos."""
         from django.db.models import Q
         coorientadores = Usuario.objects.filter(
-            Q(tipo_usuario='PROFESSOR') | Q(tipo_usuario='AVALIADOR')
+            Q(tipo_usuario='PROFESSOR') | Q(tipo_usuario='AVALIADOR'),
+            disponivel_para_listas=True
         ).order_by('nome_completo')
 
         serializer = ProfessorListSerializer(coorientadores, many=True)
@@ -519,4 +521,70 @@ class ResetarSenhaUsuarioView(APIView):
 
         return Response({
             'message': f'Senha de {usuario.nome_completo} resetada com sucesso.'
+        })
+
+
+class ExcluirUsuarioView(APIView):
+    """View para coordenador excluir um usuario."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, usuario_id):
+        if request.user.tipo_usuario != 'COORDENADOR':
+            return Response(
+                {'error': 'Apenas coordenadores podem excluir usuarios.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if request.user.id == usuario_id:
+            return Response(
+                {'error': 'Você não pode excluir sua própria conta.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuario nao encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        nome = usuario.nome_completo
+        usuario.delete()
+        return Response({'message': f'Usuário {nome} excluído com sucesso.'})
+
+
+class ToggleDisponivelListasView(APIView):
+    """View para coordenador ativar/desativar professor nas listas de seleção."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, usuario_id):
+        if request.user.tipo_usuario != 'COORDENADOR':
+            return Response(
+                {'error': 'Apenas coordenadores podem alterar esta configuração.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            usuario = Usuario.objects.get(id=usuario_id)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuario nao encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        disponivel = request.data.get('disponivel_para_listas')
+        if disponivel is None:
+            return Response(
+                {'error': 'Campo disponivel_para_listas é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        usuario.disponivel_para_listas = bool(disponivel)
+        usuario.save()
+        return Response({
+            'message': 'Configuração atualizada.',
+            'disponivel_para_listas': usuario.disponivel_para_listas
         })

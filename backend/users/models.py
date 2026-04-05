@@ -76,6 +76,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     afiliacao_customizada = models.CharField('Afiliacao Customizada', max_length=200, blank=True, null=True)
     curso = models.CharField('Curso', max_length=50, choices=CURSO_CHOICES, blank=True, null=True)
 
+    disponivel_para_listas = models.BooleanField('Disponível para seleção em listas', default=True)
     is_staff = models.BooleanField('Staff', default=False)
     date_joined = models.DateTimeField('Data de Cadastro', default=timezone.now)
 

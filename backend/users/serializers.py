@@ -227,6 +227,7 @@ class ProfessorEstatisticasSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'nome_completo', 'email',
             'tratamento', 'tratamento_customizado', 'departamento',
+            'disponivel_para_listas',
             'orientacoes', 'bancas',
             'total_orientacoes', 'total_bancas'
         ]

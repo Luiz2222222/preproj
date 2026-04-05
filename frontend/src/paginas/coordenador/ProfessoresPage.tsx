@@ -14,11 +14,12 @@ import {
   FileCheck,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2
 } from 'lucide-react';
 import { MiniTimelineTCC } from '../../componentes/MiniTimelineTCC';
 import { useProfessoresEstatisticas, type ProfessorEstatisticas } from '../../hooks/useProfessoresEstatisticas';
-import { editarUsuario, resetarSenhaUsuario } from '../../servicos/usuarios';
+import { editarUsuario, resetarSenhaUsuario, excluirUsuario, toggleDisponivelListas } from '../../servicos/usuarios';
 
 const TRATAMENTOS = ['Prof. Dr.', 'Prof. Ms.', 'Prof.', 'Dr.', 'Eng.', 'Outro'];
 const DEPARTAMENTOS = ['Departamento de Engenharia Elétrica', 'Departamento de Controle e Automação'];
@@ -45,6 +46,12 @@ export function ProfessoresPage() {
   const [erroEdicao, setErroEdicao] = useState('');
   const [sucessoEdicao, setSucessoEdicao] = useState('');
 
+  // Modal de exclusão
+  const [excluindoProfessor, setExcluindoProfessor] = useState<ProfessorEstatisticas | null>(null);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState('');
+  const [togglingDisponivel, setTogglingDisponivel] = useState<number | null>(null);
+
   // Modal de reset de senha
   const [resetandoProfessor, setResetandoProfessor] = useState<ProfessorEstatisticas | null>(null);
   const [novaSenha, setNovaSenha] = useState('');
@@ -53,6 +60,33 @@ export function ProfessoresPage() {
   const [salvandoReset, setSalvandoReset] = useState(false);
   const [erroReset, setErroReset] = useState('');
   const [sucessoReset, setSucessoReset] = useState('');
+
+  const confirmarExclusao = async () => {
+    if (!excluindoProfessor) return;
+    setConfirmandoExclusao(true);
+    setErroExclusao('');
+    try {
+      await excluirUsuario(excluindoProfessor.id);
+      setExcluindoProfessor(null);
+      await recarregar();
+    } catch (err: any) {
+      setErroExclusao(err.message || 'Erro ao excluir usuário.');
+    } finally {
+      setConfirmandoExclusao(false);
+    }
+  };
+
+  const handleToggleDisponivel = async (prof: ProfessorEstatisticas) => {
+    setTogglingDisponivel(prof.id);
+    try {
+      await toggleDisponivelListas(prof.id, !prof.disponivel_para_listas);
+      await recarregar();
+    } catch (err: any) {
+      console.error('Erro ao alterar disponibilidade:', err);
+    } finally {
+      setTogglingDisponivel(null);
+    }
+  };
 
   const abrirModalEdicao = (prof: ProfessorEstatisticas) => {
     setEditandoProfessor(prof);
@@ -418,6 +452,19 @@ export function ProfessoresPage() {
                       {/* Coluna Ações */}
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
+                          onClick={() => handleToggleDisponivel(professor)}
+                          disabled={togglingDisponivel === professor.id}
+                          className={`mr-3 ${professor.disponivel_para_listas ? 'text-[rgb(var(--cor-sucesso))] hover:text-[rgb(var(--cor-sucesso))]/80' : 'text-[rgb(var(--cor-icone))] hover:text-[rgb(var(--cor-texto-primario))]'}`}
+                          title={professor.disponivel_para_listas ? 'Visível nas listas — clique para ocultar' : 'Oculto nas listas — clique para tornar visível'}
+                        >
+                          {togglingDisponivel === professor.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : professor.disponivel_para_listas
+                              ? <Eye className="w-4 h-4" />
+                              : <EyeOff className="w-4 h-4" />
+                          }
+                        </button>
+                        <button
                           onClick={() => abrirModalEdicao(professor)}
                           className="text-[rgb(var(--cor-destaque))] hover:text-[rgb(var(--cor-destaque))]/80 mr-3"
                           title="Editar"
@@ -426,10 +473,17 @@ export function ProfessoresPage() {
                         </button>
                         <button
                           onClick={() => abrirModalReset(professor)}
-                          className="text-[rgb(var(--cor-alerta))] hover:text-[rgb(var(--cor-alerta))]/80"
+                          className="text-[rgb(var(--cor-alerta))] hover:text-[rgb(var(--cor-alerta))]/80 mr-3"
                           title="Resetar Senha"
                         >
                           <Key className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setExcluindoProfessor(professor)}
+                          className="text-[rgb(var(--cor-erro))] hover:text-[rgb(var(--cor-erro))]/80"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
@@ -567,6 +621,49 @@ export function ProfessoresPage() {
               >
                 {salvandoEdicao && <Loader2 className="w-4 h-4 animate-spin" />}
                 Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Exclusão */}
+      {excluindoProfessor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--cor-borda))]">
+              <h2 className="text-lg font-semibold text-[rgb(var(--cor-erro))]">Excluir professor</h2>
+              <button onClick={() => { setExcluindoProfessor(null); setErroExclusao(''); }} className="text-[rgb(var(--cor-icone))] hover:text-[rgb(var(--cor-texto-primario))]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                Tem certeza que deseja excluir o professor{' '}
+                <strong className="text-[rgb(var(--cor-texto-primario))]">{excluindoProfessor.nome_completo}</strong>?
+                Esta ação não pode ser desfeita.
+              </p>
+              {erroExclusao && (
+                <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-erro))]">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{erroExclusao}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={() => { setExcluindoProfessor(null); setErroExclusao(''); }}
+                className="px-4 py-2 text-sm font-medium text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-texto-primario))] border border-[rgb(var(--cor-borda-forte))] rounded-lg hover:bg-[rgb(var(--cor-fundo))]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarExclusao}
+                disabled={confirmandoExclusao}
+                className="px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--cor-erro))] rounded-lg hover:bg-[rgb(var(--cor-erro))]/90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {confirmandoExclusao && <Loader2 className="w-4 h-4 animate-spin" />}
+                Excluir
               </button>
             </div>
           </div>

@@ -10,11 +10,12 @@ import {
   FileCheck,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2
 } from 'lucide-react';
 import { MiniTimelineTCC } from '../../componentes/MiniTimelineTCC';
 import { useExternosEstatisticas, type ExternoEstatisticas } from '../../hooks/useExternosEstatisticas';
-import { editarUsuario, resetarSenhaUsuario } from '../../servicos/usuarios';
+import { editarUsuario, resetarSenhaUsuario, excluirUsuario } from '../../servicos/usuarios';
 
 const TRATAMENTOS = ['Prof. Dr.', 'Prof. Ms.', 'Prof.', 'Dr.', 'Eng.', 'Outro'];
 const AFILIACOES = ['Universidade Federal de Pernambuco', 'UFRPE', 'IFPE', 'Outro'];
@@ -40,6 +41,26 @@ export function ExternosPage() {
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [erroEdicao, setErroEdicao] = useState('');
   const [sucessoEdicao, setSucessoEdicao] = useState('');
+
+  // Modal de exclusão
+  const [excluindoExterno, setExcluindoExterno] = useState<ExternoEstatisticas | null>(null);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState('');
+
+  const confirmarExclusao = async () => {
+    if (!excluindoExterno) return;
+    setConfirmandoExclusao(true);
+    setErroExclusao('');
+    try {
+      await excluirUsuario(excluindoExterno.id);
+      setExcluindoExterno(null);
+      await recarregar();
+    } catch (err: any) {
+      setErroExclusao(err.message || 'Erro ao excluir usuário.');
+    } finally {
+      setConfirmandoExclusao(false);
+    }
+  };
 
   // Modal de reset de senha
   const [resetandoExterno, setResetandoExterno] = useState<ExternoEstatisticas | null>(null);
@@ -302,10 +323,17 @@ export function ExternosPage() {
                       </button>
                       <button
                         onClick={() => abrirModalReset(externo)}
-                        className="text-[rgb(var(--cor-alerta))] hover:text-[rgb(var(--cor-alerta))]/80"
+                        className="text-[rgb(var(--cor-alerta))] hover:text-[rgb(var(--cor-alerta))]/80 mr-3"
                         title="Resetar Senha"
                       >
                         <Key className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setExcluindoExterno(externo)}
+                        className="text-[rgb(var(--cor-erro))] hover:text-[rgb(var(--cor-erro))]/80"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -449,6 +477,49 @@ export function ExternosPage() {
               >
                 {salvandoEdicao && <Loader2 className="w-4 h-4 animate-spin" />}
                 Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Exclusão */}
+      {excluindoExterno && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[rgb(var(--cor-superficie))] rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--cor-borda))]">
+              <h2 className="text-lg font-semibold text-[rgb(var(--cor-erro))]">Excluir membro externo</h2>
+              <button onClick={() => { setExcluindoExterno(null); setErroExclusao(''); }} className="text-[rgb(var(--cor-icone))] hover:text-[rgb(var(--cor-texto-primario))]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-[rgb(var(--cor-texto-secundario))]">
+                Tem certeza que deseja excluir o membro externo{' '}
+                <strong className="text-[rgb(var(--cor-texto-primario))]">{excluindoExterno.nome_completo}</strong>?
+                Esta ação não pode ser desfeita.
+              </p>
+              {erroExclusao && (
+                <div className="flex items-center gap-2 text-sm text-[rgb(var(--cor-erro))]">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{erroExclusao}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-[rgb(var(--cor-borda))]">
+              <button
+                onClick={() => { setExcluindoExterno(null); setErroExclusao(''); }}
+                className="px-4 py-2 text-sm font-medium text-[rgb(var(--cor-texto-secundario))] hover:text-[rgb(var(--cor-texto-primario))] border border-[rgb(var(--cor-borda-forte))] rounded-lg hover:bg-[rgb(var(--cor-fundo))]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarExclusao}
+                disabled={confirmandoExclusao}
+                className="px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--cor-erro))] rounded-lg hover:bg-[rgb(var(--cor-erro))]/90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {confirmandoExclusao && <Loader2 className="w-4 h-4 animate-spin" />}
+                Excluir
               </button>
             </div>
           </div>

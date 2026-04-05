@@ -17,6 +17,8 @@ from .views import (
     ChangePasswordView,
     EditarUsuarioView,
     ResetarSenhaUsuarioView,
+    ExcluirUsuarioView,
+    ToggleDisponivelListasView,
 )
 from definicoes.views import CodigoCadastroViewSet, CalendarioSemestreViewSet, DocumentoReferenciaViewSet
 
@@ -57,6 +59,8 @@ urlpatterns = [
     # Gerenciamento de usuarios pelo coordenador
     path('usuarios/<int:usuario_id>/', EditarUsuarioView.as_view(), name='editar_usuario'),
     path('usuarios/<int:usuario_id>/resetar-senha/', ResetarSenhaUsuarioView.as_view(), name='resetar_senha_usuario'),
+    path('usuarios/<int:usuario_id>/excluir/', ExcluirUsuarioView.as_view(), name='excluir_usuario'),
+    path('usuarios/<int:usuario_id>/disponivel-listas/', ToggleDisponivelListasView.as_view(), name='toggle_disponivel_listas'),
 
     # Gerenciamento de códigos (coordenador)
     path('config/', include(router.urls)),

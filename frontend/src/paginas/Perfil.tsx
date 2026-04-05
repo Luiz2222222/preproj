@@ -355,7 +355,7 @@ export function Perfil() {
             <div>
               <p className="text-sm text-cor-texto">
                 <strong>Atenção:</strong> Para alterar seus dados cadastrais (nome, e-mail, curso, etc.),
-                entre em contato com o coordenador do curso.
+                entre em contato com o coordenador de TCCs do departamento.
               </p>
             </div>
           </div>

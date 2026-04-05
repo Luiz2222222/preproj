@@ -149,3 +149,31 @@ export async function resetarSenhaUsuario(id: number, novaSenha: string): Promis
     throw new Error(mensagem);
   }
 }
+
+/**
+ * Excluir um usuario (coordenador only)
+ * DELETE /usuarios/{id}/excluir/
+ */
+export async function excluirUsuario(id: number): Promise<{ message: string }> {
+  try {
+    const resposta = await api.delete<{ message: string }>(`/usuarios/${id}/excluir/`);
+    return resposta.data;
+  } catch (erro) {
+    const mensagem = extrairMensagemErro(erro);
+    throw new Error(mensagem);
+  }
+}
+
+/**
+ * Ativar/desativar professor nas listas de seleção (coordenador only)
+ * PATCH /usuarios/{id}/disponivel-listas/
+ */
+export async function toggleDisponivelListas(id: number, disponivel: boolean): Promise<{ message: string; disponivel_para_listas: boolean }> {
+  try {
+    const resposta = await api.patch(`/usuarios/${id}/disponivel-listas/`, { disponivel_para_listas: disponivel });
+    return resposta.data;
+  } catch (erro) {
+    const mensagem = extrairMensagemErro(erro);
+    throw new Error(mensagem);
+  }
+}
