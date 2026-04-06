@@ -497,7 +497,7 @@ export function DashboardAluno() {
                               onClick={() => {
                                 const link = document.createElement('a')
                                 link.href = doc.arquivo!
-                                link.download = doc.arquivo!.split('/').pop() || 'termo_aceite.pdf'
+                                link.download = doc.nome_original || 'termo_aceite.pdf'
                                 link.click()
                               }}
                               className="text-cor-destaque hover:opacity-80"
@@ -575,7 +575,7 @@ export function DashboardAluno() {
                               onClick={() => {
                                 const link = document.createElement('a')
                                 link.href = doc.arquivo!
-                                link.download = doc.arquivo!.split('/').pop() || 'plano_desenvolvimento.pdf'
+                                link.download = doc.nome_original || 'plano_desenvolvimento.pdf'
                                 link.click()
                               }}
                               className="text-cor-destaque hover:opacity-80"
@@ -651,7 +651,7 @@ export function DashboardAluno() {
                             onClick={() => {
                               const link = document.createElement('a')
                               link.href = doc.arquivo!
-                              link.download = doc.arquivo!.split('/').pop() || 'monografia.docx'
+                              link.download = doc.nome_original || 'monografia.docx'
                               link.click()
                             }}
                             className="text-cor-destaque hover:opacity-80"
