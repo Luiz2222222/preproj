@@ -30,6 +30,23 @@ export function DashboardAluno() {
   const navigate = useNavigate()
   const [showModalEnviar, setShowModalEnviar] = useState(false)
 
+  const baixarArquivo = async (url: string, nomeOriginal: string) => {
+    try {
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = nomeOriginal
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      toastErro('Erro ao baixar arquivo')
+    }
+  }
+
   // Handler para enviar documento via modal
   const handleEnviarDocumento = async (tipo: TipoDocumento, arquivo: File) => {
     try {
@@ -494,12 +511,7 @@ export function DashboardAluno() {
                               <Eye className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => {
-                                const link = document.createElement('a')
-                                link.href = doc.arquivo!
-                                link.download = doc.nome_original || 'termo_aceite.pdf'
-                                link.click()
-                              }}
+                              onClick={() => baixarArquivo(doc.arquivo!, doc.nome_original || 'termo_aceite.pdf')}
                               className="text-cor-destaque hover:opacity-80"
                               title="Baixar"
                             >
@@ -572,12 +584,7 @@ export function DashboardAluno() {
                               <Eye className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => {
-                                const link = document.createElement('a')
-                                link.href = doc.arquivo!
-                                link.download = doc.nome_original || 'plano_desenvolvimento.pdf'
-                                link.click()
-                              }}
+                              onClick={() => baixarArquivo(doc.arquivo!, doc.nome_original || 'plano_desenvolvimento.pdf')}
                               className="text-cor-destaque hover:opacity-80"
                               title="Baixar"
                             >
@@ -648,12 +655,7 @@ export function DashboardAluno() {
                       <div className="flex items-center justify-center gap-2">
                         {doc && doc.arquivo ? (
                           <button
-                            onClick={() => {
-                              const link = document.createElement('a')
-                              link.href = doc.arquivo!
-                              link.download = doc.nome_original || 'monografia.docx'
-                              link.click()
-                            }}
+                            onClick={() => baixarArquivo(doc.arquivo!, doc.nome_original || 'monografia.docx')}
                             className="text-cor-destaque hover:opacity-80"
                             title="Baixar"
                           >

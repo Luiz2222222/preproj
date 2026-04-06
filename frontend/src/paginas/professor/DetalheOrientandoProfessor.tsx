@@ -27,6 +27,23 @@ export function DetalheOrientandoProfessor() {
   const { sucesso, erro: toastErro } = useToast()
   const { usuario } = useAutenticacao()
 
+  const baixarArquivo = async (url: string, nomeOriginal: string) => {
+    try {
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = nomeOriginal
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      toastErro('Erro ao baixar arquivo')
+    }
+  }
+
   const { tcc, carregando, erro, naoEncontrado, recarregar } = useTCCProfessorDetalhe(tccId)
   const { eventos, carregando: carregandoEventos, recarregar: recarregarEventos } = useTimelineTCC({
     tccId: tcc?.id || null,
@@ -694,12 +711,7 @@ export function DetalheOrientandoProfessor() {
                     <div className="flex items-center gap-2 ml-3">
                       {doc.arquivo && (
                         <button
-                          onClick={() => {
-                            const link = document.createElement('a')
-                            link.href = doc.arquivo!
-                            link.download = doc.nome_original
-                            link.click()
-                          }}
+                          onClick={() => baixarArquivo(doc.arquivo!, doc.nome_original)}
                           className="p-2 text-cor-destaque hover:bg-cor-fundo rounded transition-colors"
                           title="Baixar"
                         >
