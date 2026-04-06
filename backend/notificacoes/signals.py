@@ -368,43 +368,10 @@ def notificar_avaliacao_fase2(sender, instance, created, **kwargs):
 def notificar_banca_fase1(sender, instance, created, **kwargs):
     """
     Notifica quando banca da Fase I é formada.
+    Atenção: a notificação real é enviada em concluir_banca_fase1 (views.py),
+    pois a criação lazy no GET não significa que a banca está completa.
     """
-    if created:
-        tcc = instance.tcc
-
-        # Notificar aluno
-        criar_notificacao(
-            usuario=tcc.aluno,
-            tipo=TipoNotificacao.BANCA_FORMADA,
-            titulo="Banca de avaliação formada!",
-            mensagem=f"Sua banca da Fase I foi formada",
-            action_url="/aluno/meu-tcc",
-            metadata={
-                "tcc_id": tcc.id,
-                "banca_id": instance.id
-            },
-            tcc_id=tcc.id,
-            prioridade=PrioridadeNotificacao.ALTA
-        )
-
-        # Notificar orientador
-        if tcc.orientador:
-            criar_notificacao(
-                usuario=tcc.orientador,
-                tipo=TipoNotificacao.BANCA_FORMADA,
-                titulo="Banca formada para seu orientando",
-                mensagem=f"A banca da Fase I foi formada para {tcc.aluno.nome_completo}",
-                action_url=f"/professor/orientacoes/meus-orientandos/{tcc.id}",
-                metadata={
-                    "tcc_id": tcc.id,
-                    "banca_id": instance.id,
-                    "aluno_nome": tcc.aluno.nome_completo
-                },
-                tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.ALTA
-            )
-
-        # Nota: membros são notificados via signal post_save de MembroBanca
+    pass  # notificação movida para concluir_banca_fase1
 
 
 @receiver(post_save, sender=MembroBanca)

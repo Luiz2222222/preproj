@@ -1135,9 +1135,34 @@ class TCCViewSet(viewsets.ModelViewSet):
                 visibilidade=Visibilidade.TODOS
             )
 
-            # Notificar avaliadores por email
-            from notificacoes.services import criar_notificacao_com_email
+            # Notificar aluno e orientador que a banca foi formada
+            from notificacoes.services import criar_notificacao, criar_notificacao_com_email
             from notificacoes.constants import TipoNotificacao, PrioridadeNotificacao
+
+            criar_notificacao(
+                usuario=tcc.aluno,
+                tipo=TipoNotificacao.BANCA_FORMADA,
+                titulo="Banca de avaliação formada!",
+                mensagem="Sua banca da Fase I foi formada",
+                action_url="/aluno/meu-tcc",
+                metadata={"tcc_id": tcc.id, "banca_id": banca.id},
+                tcc_id=tcc.id,
+                prioridade=PrioridadeNotificacao.ALTA
+            )
+
+            if tcc.orientador:
+                criar_notificacao(
+                    usuario=tcc.orientador,
+                    tipo=TipoNotificacao.BANCA_FORMADA,
+                    titulo="Banca formada para seu orientando",
+                    mensagem=f"A banca da Fase I foi formada para {tcc.aluno.nome_completo}",
+                    action_url=f"/professor/orientacoes/meus-orientandos/{tcc.id}",
+                    metadata={"tcc_id": tcc.id, "banca_id": banca.id, "aluno_nome": tcc.aluno.nome_completo},
+                    tcc_id=tcc.id,
+                    prioridade=PrioridadeNotificacao.ALTA
+                )
+
+            # Notificar avaliadores por email
 
             for membro in avaliadores:
                 prof = membro.usuario

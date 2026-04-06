@@ -647,27 +647,18 @@ export function DashboardAluno() {
                     <td className="py-2 px-3 text-center">
                       <div className="flex items-center justify-center gap-2">
                         {doc && doc.arquivo ? (
-                          <>
-                            <button
-                              onClick={() => window.open(doc.arquivo!, '_blank')}
-                              className="text-cor-destaque hover:opacity-80"
-                              title="Visualizar"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                const link = document.createElement('a')
-                                link.href = doc.arquivo!
-                                link.download = doc.arquivo!.split('/').pop() || 'monografia.pdf'
-                                link.click()
-                              }}
-                              className="text-cor-destaque hover:opacity-80"
-                              title="Baixar"
-                            >
-                              <Download className="h-4 w-4" />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => {
+                              const link = document.createElement('a')
+                              link.href = doc.arquivo!
+                              link.download = doc.arquivo!.split('/').pop() || 'monografia.docx'
+                              link.click()
+                            }}
+                            className="text-cor-destaque hover:opacity-80"
+                            title="Baixar"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
                         ) : (
                           <span className="text-[rgb(var(--cor-texto-terciario))] text-sm">-</span>
                         )}
