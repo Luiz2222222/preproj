@@ -22,6 +22,7 @@ export function DashboardAluno() {
   const { sucesso, erro: toastErro } = useToast()
   const { tcc, recusa, carregando, recarregar: recarregarTCC } = useMeuTCC()
   const [mostrarRecusa, setMostrarRecusa] = useState(true)
+  const [mostrarFeedbackRejeicao, setMostrarFeedbackRejeicao] = useState(true)
   const { calendario } = useCalendarioSemestre()
   const { enviarDocumento, enviando } = useDocumentosTCC({
     tccId: tcc?.id || null,
@@ -293,8 +294,15 @@ export function DashboardAluno() {
   return (
     <div>
       {/* Alerta de Monografia Rejeitada */}
-      {ultimaMonografia?.status === StatusDocumento.REJEITADO && (
-        <div className="bg-[rgb(var(--cor-erro))]/10 border-2 border-[rgb(var(--cor-erro))]/40 rounded-lg p-5 shadow-sm mb-6">
+      {ultimaMonografia?.status === StatusDocumento.REJEITADO && mostrarFeedbackRejeicao && (
+        <div className="bg-[rgb(var(--cor-erro))]/10 border-2 border-[rgb(var(--cor-erro))]/40 rounded-lg p-5 shadow-sm mb-6 relative">
+          <button
+            onClick={() => setMostrarFeedbackRejeicao(false)}
+            className="absolute top-3 right-3 text-[rgb(var(--cor-erro))] hover:text-[rgb(var(--cor-erro))]/80 transition-colors"
+            aria-label="Fechar aviso"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <div className="flex items-start gap-3">
             <AlertCircle className="h-6 w-6 text-[rgb(var(--cor-erro))] flex-shrink-0 mt-0.5" />
             <div className="flex-1">

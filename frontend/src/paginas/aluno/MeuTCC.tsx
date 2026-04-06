@@ -37,6 +37,7 @@ export function MeuTCC() {
   const [erro, setErro] = useState<string | null>(null)
   const [modoTimeline, setModoTimeline] = useState<'horizontal' | 'vertical'>('vertical')
   const [mostrarRecusa, setMostrarRecusa] = useState(true)
+  const [mostrarFeedbackRejeicao, setMostrarFeedbackRejeicao] = useState(true)
 
   const handleCancelar = async () => {
     if (!tcc || !tcc.solicitacao_pendente_id) return
@@ -183,8 +184,15 @@ export function MeuTCC() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Alerta de Monografia Rejeitada */}
-      {ultimaMonografia?.status === StatusDocumento.REJEITADO && (
-        <div className="bg-[rgb(var(--cor-erro))]/10 border-2 border-[rgb(var(--cor-erro))]/40 rounded-lg p-5 shadow-sm">
+      {ultimaMonografia?.status === StatusDocumento.REJEITADO && mostrarFeedbackRejeicao && (
+        <div className="bg-[rgb(var(--cor-erro))]/10 border-2 border-[rgb(var(--cor-erro))]/40 rounded-lg p-5 shadow-sm relative">
+          <button
+            onClick={() => setMostrarFeedbackRejeicao(false)}
+            className="absolute top-3 right-3 text-[rgb(var(--cor-erro))] hover:text-[rgb(var(--cor-erro))]/80 transition-colors"
+            aria-label="Fechar aviso"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <div className="flex items-start gap-3">
             <XCircle className="h-6 w-6 text-[rgb(var(--cor-erro))] flex-shrink-0 mt-0.5" />
             <div className="flex-1">
