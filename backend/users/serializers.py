@@ -34,16 +34,16 @@ class RegistroAlunoSerializer(serializers.ModelSerializer):
         """Validar que o curso esta entre as opcoes validas."""
         cursos_validos = [choice[0] for choice in Usuario.CURSO_CHOICES]
         if value not in cursos_validos:
-            raise serializers.ValidationError(f'Curso invalido. Opcoes validas: {", ".join(cursos_validos)}')
+            raise serializers.ValidationError(f'Curso inválido. Opções válidas: {", ".join(cursos_validos)}')
         return value
 
     def validate(self, attrs):
         if attrs['senha'] != attrs['confirmar_senha']:
-            raise serializers.ValidationError({'confirmar_senha': 'As senhas nao coincidem.'})
+            raise serializers.ValidationError({'confirmar_senha': 'As senhas não coincidem.'})
 
         codigo = attrs.pop('codigo_cadastro')
         if not CodigoCadastro.validar_codigo('ALUNO', codigo):
-            raise serializers.ValidationError({'codigo_cadastro': 'Codigo de cadastro invalido.'})
+            raise serializers.ValidationError({'codigo_cadastro': 'Código de cadastro inválido.'})
 
         attrs.pop('confirmar_senha')
         return attrs
@@ -74,29 +74,29 @@ class RegistroProfessorSerializer(serializers.ModelSerializer):
         """Validar que o tratamento esta entre as opcoes validas."""
         tratamentos_validos = [choice[0] for choice in Usuario.TRATAMENTO_CHOICES]
         if value not in tratamentos_validos:
-            raise serializers.ValidationError(f'Tratamento invalido. Opcoes validas: {", ".join(tratamentos_validos)}')
+            raise serializers.ValidationError(f'Tratamento inválido. Opções válidas: {", ".join(tratamentos_validos)}')
         return value
 
     def validate_departamento(self, value):
         """Validar que o departamento esta entre as opcoes validas."""
         departamentos_validos = [choice[0] for choice in Usuario.DEPARTAMENTO_CHOICES]
         if value not in departamentos_validos:
-            raise serializers.ValidationError(f'Departamento invalido. Opcoes validas: {", ".join(departamentos_validos)}')
+            raise serializers.ValidationError(f'Departamento inválido. Opções válidas: {", ".join(departamentos_validos)}')
         return value
 
     def validate(self, attrs):
         if attrs['senha'] != attrs['confirmar_senha']:
-            raise serializers.ValidationError({'confirmar_senha': 'As senhas nao coincidem.'})
+            raise serializers.ValidationError({'confirmar_senha': 'As senhas não coincidem.'})
 
         codigo = attrs.pop('codigo_cadastro')
         if not CodigoCadastro.validar_codigo('PROFESSOR', codigo):
-            raise serializers.ValidationError({'codigo_cadastro': 'Codigo de cadastro invalido.'})
+            raise serializers.ValidationError({'codigo_cadastro': 'Código de cadastro inválido.'})
 
         attrs.pop('confirmar_senha')
 
         # Validar tratamento customizado se "Outro" foi selecionado
         if attrs.get('tratamento') == 'Outro' and not attrs.get('tratamento_customizado'):
-            raise serializers.ValidationError({'tratamento_customizado': 'Tratamento customizado eh obrigatorio quando seleciona "Outro".'})
+            raise serializers.ValidationError({'tratamento_customizado': 'Tratamento customizado é obrigatório quando seleciona "Outro".'})
 
         # Remover afiliacao se vier no payload (sera forcada no model)
         attrs.pop('afiliacao', None)
@@ -131,33 +131,33 @@ class RegistroAvaliadorSerializer(serializers.ModelSerializer):
         """Validar que o tratamento esta entre as opcoes validas."""
         tratamentos_validos = [choice[0] for choice in Usuario.TRATAMENTO_CHOICES]
         if value not in tratamentos_validos:
-            raise serializers.ValidationError(f'Tratamento invalido. Opcoes validas: {", ".join(tratamentos_validos)}')
+            raise serializers.ValidationError(f'Tratamento inválido. Opções válidas: {", ".join(tratamentos_validos)}')
         return value
 
     def validate_afiliacao(self, value):
         """Validar que a afiliacao esta entre as opcoes validas."""
         afiliacoes_validas = [choice[0] for choice in Usuario.AFILIACAO_CHOICES]
         if value not in afiliacoes_validas:
-            raise serializers.ValidationError(f'Afiliacao invalida. Opcoes validas: {", ".join(afiliacoes_validas)}')
+            raise serializers.ValidationError(f'Afiliação inválida. Opções válidas: {", ".join(afiliacoes_validas)}')
         return value
 
     def validate(self, attrs):
         if attrs['senha'] != attrs['confirmar_senha']:
-            raise serializers.ValidationError({'confirmar_senha': 'As senhas nao coincidem.'})
+            raise serializers.ValidationError({'confirmar_senha': 'As senhas não coincidem.'})
 
         codigo = attrs.pop('codigo_cadastro')
         if not CodigoCadastro.validar_codigo('AVALIADOR', codigo):
-            raise serializers.ValidationError({'codigo_cadastro': 'Codigo de cadastro invalido.'})
+            raise serializers.ValidationError({'codigo_cadastro': 'Código de cadastro inválido.'})
 
         attrs.pop('confirmar_senha')
 
         # Validar tratamento customizado se "Outro" foi selecionado
         if attrs.get('tratamento') == 'Outro' and not attrs.get('tratamento_customizado'):
-            raise serializers.ValidationError({'tratamento_customizado': 'Tratamento customizado eh obrigatorio quando seleciona "Outro".'})
+            raise serializers.ValidationError({'tratamento_customizado': 'Tratamento customizado é obrigatório quando seleciona "Outro".'})
 
         # Validar afiliacao customizada se "Outro" foi selecionado
         if attrs.get('afiliacao') == 'Outro' and not attrs.get('afiliacao_customizada'):
-            raise serializers.ValidationError({'afiliacao_customizada': 'Afiliacao customizada eh obrigatoria quando seleciona "Outro".'})
+            raise serializers.ValidationError({'afiliacao_customizada': 'Afiliação customizada é obrigatória quando seleciona "Outro".'})
 
         return attrs
 
@@ -401,39 +401,39 @@ class EditarProfessorSerializer(serializers.ModelSerializer):
         if value:
             tratamentos_validos = [choice[0] for choice in Usuario.TRATAMENTO_CHOICES]
             if value not in tratamentos_validos:
-                raise serializers.ValidationError(f'Tratamento invalido.')
+                raise serializers.ValidationError('Tratamento inválido.')
         return value
 
     def validate_departamento(self, value):
         if value:
             departamentos_validos = [choice[0] for choice in Usuario.DEPARTAMENTO_CHOICES]
             if value not in departamentos_validos:
-                raise serializers.ValidationError(f'Departamento invalido.')
+                raise serializers.ValidationError('Departamento inválido.')
         return value
 
     def validate_curso(self, value):
         if value:
             cursos_validos = [choice[0] for choice in Usuario.CURSO_CHOICES]
             if value not in cursos_validos:
-                raise serializers.ValidationError(f'Curso invalido.')
+                raise serializers.ValidationError('Curso inválido.')
         return value
 
     def validate_afiliacao(self, value):
         if value:
             afiliacoes_validas = [choice[0] for choice in Usuario.AFILIACAO_CHOICES]
             if value not in afiliacoes_validas:
-                raise serializers.ValidationError(f'Afiliacao invalida.')
+                raise serializers.ValidationError('Afiliação inválida.')
         return value
 
     def validate_email(self, value):
         user = self.instance
         if Usuario.objects.filter(email=value).exclude(id=user.id).exists():
-            raise serializers.ValidationError('Este email ja esta em uso.')
+            raise serializers.ValidationError('Este e-mail já está em uso.')
         return value
 
     def validate(self, attrs):
         if attrs.get('tratamento') == 'Outro' and not attrs.get('tratamento_customizado'):
-            raise serializers.ValidationError({'tratamento_customizado': 'Tratamento customizado eh obrigatorio quando seleciona "Outro".'})
+            raise serializers.ValidationError({'tratamento_customizado': 'Tratamento customizado é obrigatório quando seleciona "Outro".'})
         return attrs
 
 

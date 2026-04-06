@@ -8,7 +8,7 @@ class UsuarioManager(BaseUserManager):
 
     def create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError('O email eh obrigatorio')
+            raise ValueError('O e-mail é obrigatório')
 
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)

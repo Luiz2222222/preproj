@@ -50,7 +50,7 @@ export function ModalCadastro({ onClose, onSuccess }: ModalCadastroProps) {
       value: 'aluno',
       label: 'Aluno',
       icon: '👨‍🎓',
-      descricao: 'Estudante de graduacao'
+      descricao: 'Estudante de graduação'
     },
     {
       value: 'professor',
@@ -68,56 +68,56 @@ export function ModalCadastro({ onClose, onSuccess }: ModalCadastroProps) {
 
   const validarFormulario = (): boolean => {
     if (!dadosFormulario.nome_completo.trim()) {
-      setErro('Nome completo eh obrigatorio')
+      setErro('Nome completo é obrigatório')
       return false
     }
     if (!dadosFormulario.email.trim()) {
-      setErro('Email eh obrigatorio')
+      setErro('E-mail é obrigatório')
       return false
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dadosFormulario.email)) {
-      setErro('Email invalido')
+      setErro('E-mail inválido')
       return false
     }
     if (!dadosFormulario.senha) {
-      setErro('Senha eh obrigatoria')
+      setErro('Senha é obrigatória')
       return false
     }
     if (dadosFormulario.senha.length < 6) {
-      setErro('Senha deve ter no minimo 6 caracteres')
+      setErro('Senha deve ter no mínimo 6 caracteres')
       return false
     }
     if (dadosFormulario.senha !== dadosFormulario.confirmar_senha) {
-      setErro('As senhas nao coincidem')
+      setErro('As senhas não coincidem')
       return false
     }
     if (!dadosFormulario.codigo_cadastro.trim()) {
-      setErro('Codigo de cadastro eh obrigatorio')
+      setErro('Código de cadastro é obrigatório')
       return false
     }
 
     // Validações específicas por tipo
     if (tipoSelecionado === 'aluno' && !dadosFormulario.curso) {
-      setErro('Curso eh obrigatorio')
+      setErro('Curso é obrigatório')
       return false
     }
     if (tipoSelecionado === 'professor') {
       if (!dadosFormulario.tratamento) {
-        setErro('Tratamento eh obrigatorio')
+        setErro('Tratamento é obrigatório')
         return false
       }
       if (!dadosFormulario.departamento?.trim()) {
-        setErro('Departamento eh obrigatorio')
+        setErro('Departamento é obrigatório')
         return false
       }
     }
     if (tipoSelecionado === 'avaliador') {
       if (!dadosFormulario.tratamento) {
-        setErro('Tratamento eh obrigatorio')
+        setErro('Tratamento é obrigatório')
         return false
       }
       if (!dadosFormulario.afiliacao?.trim()) {
-        setErro('Afiliacao eh obrigatoria')
+        setErro('Afiliação é obrigatória')
         return false
       }
     }
@@ -199,7 +199,7 @@ export function ModalCadastro({ onClose, onSuccess }: ModalCadastroProps) {
         onClose()
       }, 500)
     } catch (error) {
-      setErro('Erro de conexao. Tente novamente.')
+      setErro('Erro de conexão. Tente novamente.')
       setCarregando(false)
     }
   }

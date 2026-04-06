@@ -458,7 +458,7 @@ class EditarUsuarioView(APIView):
     def patch(self, request, usuario_id):
         if request.user.tipo_usuario != 'COORDENADOR':
             return Response(
-                {'error': 'Apenas coordenadores podem editar usuarios.'},
+                {'error': 'Apenas coordenadores podem editar usuários.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -466,7 +466,7 @@ class EditarUsuarioView(APIView):
             usuario = Usuario.objects.get(id=usuario_id)
         except Usuario.DoesNotExist:
             return Response(
-                {'error': 'Usuario nao encontrado.'},
+                {'error': 'Usuário não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -477,7 +477,7 @@ class EditarUsuarioView(APIView):
         serializer.save()
 
         return Response({
-            'message': 'Usuario atualizado com sucesso.',
+            'message': 'Usuário atualizado com sucesso.',
             'usuario': {
                 'id': usuario.id,
                 'nome_completo': usuario.nome_completo,
@@ -505,7 +505,7 @@ class ResetarSenhaUsuarioView(APIView):
             usuario = Usuario.objects.get(id=usuario_id)
         except Usuario.DoesNotExist:
             return Response(
-                {'error': 'Usuario nao encontrado.'},
+                {'error': 'Usuário não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -532,7 +532,7 @@ class ExcluirUsuarioView(APIView):
     def delete(self, request, usuario_id):
         if request.user.tipo_usuario != 'COORDENADOR':
             return Response(
-                {'error': 'Apenas coordenadores podem excluir usuarios.'},
+                {'error': 'Apenas coordenadores podem excluir usuários.'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -546,7 +546,7 @@ class ExcluirUsuarioView(APIView):
             usuario = Usuario.objects.get(id=usuario_id)
         except Usuario.DoesNotExist:
             return Response(
-                {'error': 'Usuario nao encontrado.'},
+                {'error': 'Usuário não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -571,7 +571,7 @@ class ToggleDisponivelListasView(APIView):
             usuario = Usuario.objects.get(id=usuario_id)
         except Usuario.DoesNotExist:
             return Response(
-                {'error': 'Usuario nao encontrado.'},
+                {'error': 'Usuário não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
