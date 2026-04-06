@@ -16,6 +16,23 @@ export function DetalheCoOrientacao() {
   const navigate = useNavigate()
   const tccId = id ? parseInt(id, 10) : null
 
+  const baixarArquivo = async (url: string, nomeOriginal: string) => {
+    try {
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = nomeOriginal
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      console.error('Erro ao baixar arquivo')
+    }
+  }
+
   const { tcc, carregando, erro, naoEncontrado } = useTCCProfessorDetalhe(tccId)
   const { eventos, carregando: carregandoEventos } = useTimelineTCC({
     tccId: tcc?.id || null,
@@ -330,15 +347,13 @@ export function DetalheCoOrientacao() {
                         {getStatusBadge(doc.status).label}
                       </Badge>
                       {doc.arquivo && (
-                        <a
-                          href={doc.arquivo}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => baixarArquivo(doc.arquivo!, doc.nome_original || doc.tipo_display)}
                           className="p-2 text-cor-destaque hover:bg-cor-fundo rounded-lg transition-colors"
                           title="Baixar documento"
                         >
                           <Download className="h-4 w-4" />
-                        </a>
+                        </button>
                       )}
                     </div>
                   </div>
