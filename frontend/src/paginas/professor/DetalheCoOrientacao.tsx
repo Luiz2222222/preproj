@@ -259,15 +259,13 @@ export function DetalheCoOrientacao() {
                       {getStatusBadge(monografiaRecente.status).label}
                     </Badge>
                     {monografiaRecente.arquivo && (
-                      <a
-                        href={monografiaRecente.arquivo}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => baixarArquivo(monografiaRecente.arquivo!, monografiaRecente.nome_original || 'Monografia')}
                         className="p-2 text-cor-destaque hover:bg-cor-fundo rounded-lg transition-colors"
                         title="Baixar documento"
                       >
                         <Download className="h-4 w-4" />
-                      </a>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -301,14 +299,12 @@ export function DetalheCoOrientacao() {
                             {getStatusBadge(doc.status).label}
                           </Badge>
                           {doc.arquivo && (
-                            <a
-                              href={doc.arquivo}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => baixarArquivo(doc.arquivo!, doc.nome_original || `Versão ${doc.versao}`)}
                               className="p-1 text-cor-destaque hover:bg-cor-fundo rounded transition-colors"
                             >
                               <Download className="h-3 w-3" />
-                            </a>
+                            </button>
                           )}
                         </div>
                       </div>

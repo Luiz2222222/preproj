@@ -260,6 +260,7 @@ export function CoOrientacoesProfessor() {
                     tcc={tcc}
                     documentos={tcc.documentos as DocumentoTCC[] | undefined}
                     className="rounded-none shadow-none border-t border-[rgb(var(--cor-borda))]"
+                    mostrarNotas={tcc.etapa_atual === 'CONCLUIDO'}
                   />
                 </div>
 

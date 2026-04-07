@@ -11,7 +11,7 @@ export function DashboardAvaliador() {
           <div className="flex justify-between items-center h-16">
             <div>
               <h1 className="text-xl font-bold text-cor-texto">Dashboard do Avaliador</h1>
-              <p className="text-sm text-cor-texto opacity-75">Bem-vindo, {usuario?.nome_completo}</p>
+              <p className="text-sm text-cor-texto opacity-75">Bem-vindo(a), {usuario?.nome_completo}</p>
             </div>
             <button
               onClick={logout}

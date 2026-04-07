@@ -554,14 +554,13 @@ export function DetalheOrientandoProfessor() {
                       </p>
                     </div>
                     {doc.arquivo && (
-                      <a
-                        href={doc.arquivo}
-                        download
+                      <button
+                        onClick={() => baixarArquivo(doc.arquivo!, doc.nome_original)}
                         className="ml-3 p-2 text-cor-destaque hover:bg-cor-fundo rounded transition-colors"
                         title="Baixar"
                       >
                         <Download className="h-4 w-4" />
-                      </a>
+                      </button>
                     )}
                   </div>
                 ))}

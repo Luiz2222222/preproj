@@ -371,7 +371,7 @@ export function DashboardCoordenador() {
       {/* Header da página */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-cor-texto">
-          Seja bem-vindo, {usuario?.nome_completo?.split(' ')[0]}!
+          Seja bem-vindo(a), {usuario?.nome_completo?.split(' ')[0]}!
         </h1>
       </div>
 
