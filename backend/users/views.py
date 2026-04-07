@@ -292,43 +292,43 @@ class TokenRefreshView(BaseTokenRefreshView):
                 'detail': 'Refresh token não encontrado. Faça login novamente.'
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Adicionar ao body (simplejwt espera lá)
-        request.data._mutable = True  # Permitir modificar QueryDict
-        request.data['refresh'] = refresh_token
-        request.data._mutable = False
+        # Instanciar o serializer diretamente com o token do cookie
+        serializer = self.get_serializer(data={'refresh': refresh_token})
 
-        # Refresh normal
-        response = super().post(request, *args, **kwargs)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            return Response({
+                'detail': 'Token inválido ou expirado. Faça login novamente.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
-        if response.status_code == 200:
-            new_access = response.data.get('access')
-            new_refresh = response.data.get('refresh')
+        new_access = serializer.validated_data.get('access')
+        new_refresh = serializer.validated_data.get('refresh')
 
-            # Limpar JSON
-            response.data = {'detail': 'Token renovado'}
+        response = Response({'detail': 'Token renovado'})
 
-            # Atualizar access token (60 min = ACCESS_TOKEN_LIFETIME)
+        # Atualizar access token (60 min = ACCESS_TOKEN_LIFETIME)
+        response.set_cookie(
+            key='access_token',
+            value=new_access,
+            max_age=3600,
+            httponly=True,
+            secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
+            samesite='Lax',
+            path='/'
+        )
+
+        # Atualizar refresh se vier novo (rotation)
+        if new_refresh:
             response.set_cookie(
-                key='access_token',
-                value=new_access,
-                max_age=3600,
+                key='refresh_token',
+                value=new_refresh,
+                max_age=604800,
                 httponly=True,
                 secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
                 samesite='Lax',
                 path='/'
             )
-
-            # Atualizar refresh se vier novo (rotation)
-            if new_refresh:
-                response.set_cookie(
-                    key='refresh_token',
-                    value=new_refresh,
-                    max_age=604800,
-                    httponly=True,
-                    secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
-                    samesite='Lax',
-                    path='/'
-                )
 
         return response
 

@@ -378,9 +378,9 @@ def notificar_banca_fase1(sender, instance, created, **kwargs):
 def notificar_membro_banca(sender, instance, created, **kwargs):
     """
     Notifica quando um membro é adicionado à banca.
-    Dispara CONVITE_BANCA para o avaliador.
+    Dispara CONVITE_BANCA apenas para avaliadores (não para o orientador).
     """
-    if created:
+    if created and instance.tipo == 'AVALIADOR':
         tcc = instance.banca.tcc
 
         criar_notificacao(

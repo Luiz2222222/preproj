@@ -58,8 +58,9 @@ api.interceptors.response.use(
   async (erro: AxiosError) => {
     const requisicaoOriginal = erro.config as typeof erro.config & { _retry?: boolean };
 
-    // Erro 401: tentar refresh
-    if (erro.response?.status === 401 && !requisicaoOriginal?._retry) {
+    // Erro 401: tentar refresh (exceto se já tentou ou se é a própria rota de refresh)
+    const isRefreshEndpoint = requisicaoOriginal?.url?.includes('/auth/refresh/');
+    if (erro.response?.status === 401 && !requisicaoOriginal?._retry && !isRefreshEndpoint) {
       requisicaoOriginal._retry = true;
 
       try {
@@ -69,10 +70,10 @@ api.interceptors.response.use(
           { withCredentials: true }
         );
 
-        // Repetir requisição
+        // Repetir requisição original uma única vez
         return api(requisicaoOriginal);
       } catch {
-        // Refresh falhou
+        // Refresh falhou → redirecionar para login
         window.location.href = '/login';
         return Promise.reject(erro);
       }

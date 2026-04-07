@@ -581,7 +581,7 @@ export function FormularioAvaliacaoFase1({
               <button
                 onClick={handleSalvarRascunho}
                 disabled={processando}
-                className="px-6 py-3 bg-[rgb(var(--cor-borda-forte))] text-[rgb(var(--cor-texto-sobre-destaque))] rounded-lg hover:bg-[rgb(var(--cor-borda-forte))]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
+                className="px-6 py-3 bg-slate-500 text-white rounded-lg hover:bg-slate-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
               >
                 {processando ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
