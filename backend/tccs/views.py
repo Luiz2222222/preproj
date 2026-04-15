@@ -560,10 +560,10 @@ class TCCViewSet(viewsets.ModelViewSet):
         tcc = self.get_object()
         usuario = request.user
 
-        # Validar que usuario é orientador ou coorientador
-        if tcc.orientador != usuario and tcc.coorientador != usuario:
+        # Validar que usuario é orientador
+        if tcc.orientador != usuario:
             return Response(
-                {'detail': 'Apenas orientador ou coorientador pode confirmar continuidade'},
+                {'detail': 'Apenas o orientador pode confirmar continuidade'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -660,10 +660,10 @@ class TCCViewSet(viewsets.ModelViewSet):
         tcc = self.get_object()
         usuario = request.user
 
-        # Validar que usuario é orientador ou coorientador
-        if tcc.orientador != usuario and tcc.coorientador != usuario:
+        # Validar que usuario é orientador
+        if tcc.orientador != usuario:
             return Response(
-                {'detail': 'Apenas orientador ou coorientador pode rejeitar continuidade'},
+                {'detail': 'Apenas o orientador pode rejeitar continuidade'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -752,10 +752,10 @@ class TCCViewSet(viewsets.ModelViewSet):
         tcc = self.get_object()
         usuario = request.user
 
-        # Validar que usuario é orientador ou coorientador
-        if tcc.orientador != usuario and tcc.coorientador != usuario:
+        # Validar que usuario é orientador
+        if tcc.orientador != usuario:
             return Response(
-                {'detail': 'Apenas orientador ou coorientador pode enviar termo de avaliação'},
+                {'detail': 'Apenas o orientador pode enviar termo de avaliação'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -1906,10 +1906,10 @@ Tema: {tcc.titulo}
         tcc = self.get_object()
         usuario = request.user
 
-        # Validar que usuário é orientador ou coorientador
-        if tcc.orientador != usuario and tcc.coorientador != usuario:
+        # Validar que usuário é orientador
+        if tcc.orientador != usuario:
             return Response(
-                {'detail': 'Apenas orientador ou coorientador pode agendar defesa'},
+                {'detail': 'Apenas o orientador pode agendar defesa'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
