@@ -535,7 +535,7 @@ class MembroBanca(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='participacoes_banca',
-        limit_choices_to={'tipo_usuario__in': ['PROFESSOR', 'COORDENADOR']},
+        limit_choices_to={'tipo_usuario__in': ['PROFESSOR', 'COORDENADOR', 'AVALIADOR']},
         verbose_name='Membro'
     )
     tipo = models.CharField(
@@ -585,7 +585,7 @@ class AvaliacaoFase1(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='avaliacoes_realizadas',
-        limit_choices_to={'tipo_usuario__in': ['PROFESSOR', 'COORDENADOR']},
+        limit_choices_to={'tipo_usuario__in': ['PROFESSOR', 'COORDENADOR', 'AVALIADOR']},
         verbose_name='Avaliador'
     )
 
@@ -756,7 +756,7 @@ class AvaliacaoFase2(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='avaliacoes_fase2_realizadas',
-        limit_choices_to={'tipo_usuario__in': ['PROFESSOR', 'COORDENADOR']},
+        limit_choices_to={'tipo_usuario__in': ['PROFESSOR', 'COORDENADOR', 'AVALIADOR']},
         verbose_name='Avaliador'
     )
 
