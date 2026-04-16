@@ -1623,11 +1623,14 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
+                # Avaliar queryset antes do update para preservar os nomes
+                avaliacoes_lista = list(avaliacoes)
+
                 # Bloquear avaliações selecionadas
                 count = avaliacoes.update(status='BLOQUEADO')
 
                 # Criar evento
-                nomes_avaliadores = ', '.join([av.avaliador.nome_completo for av in avaliacoes])
+                nomes_avaliadores = ', '.join([av.avaliador.nome_completo for av in avaliacoes_lista])
                 EventoTimeline.objects.create(
                     tcc=tcc,
                     usuario=request.user,
@@ -1638,7 +1641,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                 )
 
                 # Criar notificações para os avaliadores aprovados
-                for avaliacao in avaliacoes:
+                for avaliacao in avaliacoes_lista:
                     criar_notificacao(
                         usuario=avaliacao.avaliador,
                         tipo=TipoNotificacao.AVALIACAO_APROVADA,
@@ -2441,6 +2444,9 @@ Tema: {tcc.titulo}
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Avaliar queryset antes do update para preservar os nomes
+        avaliacoes_fase2_lista = list(avaliacoes_fase2)
+
         # Usar transação atômica
         with transaction.atomic():
             # Desbloquear avaliações Fase II selecionadas
@@ -2487,7 +2493,7 @@ Tema: {tcc.titulo}
             DocumentoTCC.objects.filter(tcc=tcc, tipo_documento=TipoDocumento.RELATORIO_AVALIACAO).delete()
 
             # Criar evento na timeline
-            avaliadores_nomes = ', '.join([av.avaliador.nome_completo for av in avaliacoes_fase2])
+            avaliadores_nomes = ', '.join([av.avaliador.nome_completo for av in avaliacoes_fase2_lista])
             descricao = f'Ajustes finais solicitados por {request.user.nome_completo} para {len(avaliadores_ids)} avaliador(es): {avaliadores_nomes}'
 
             # Detalhar quais fases foram desbloqueadas
@@ -2587,6 +2593,12 @@ Tema: {tcc.titulo}
         if avaliacoes_bloqueadas != 3:
             return Response(
                 {'detail': f'Todas as 3 avaliações devem estar bloqueadas. Bloqueadas: {avaliacoes_bloqueadas}/3'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if tcc.nf2 is None or tcc.media_final is None or tcc.resultado_final is None:
+            return Response(
+                {'detail': 'NF2 e média final ainda não foram calculadas. Verifique se todas as avaliações foram enviadas corretamente.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -2725,272 +2737,8 @@ Tema: {tcc.titulo}
         response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
         return response
 
-    @action(detail=True, methods=['post'], url_path='aprovar-avaliacoes-fase2', permission_classes=[IsCoordenador])
-    def aprovar_avaliacoes_fase2(self, request, pk=None):
-        """
-        POST /api/tccs/{id}/aprovar-avaliacoes-fase2/
-        Coordenador aprova avaliações da Fase II:
-        - Verifica que todas as avaliações foram enviadas
-        - Calcula NF2 = média ponderada de NF1 (40%) + média das notas da apresentação (60%)
-        - Bloqueia todas as avaliações
-        - Move TCC para APROVADO (se NF2 ≥ 6) ou REPROVADO_FASE_2 (se < 6)
-        - Cria evento com resultado
-        """
-        from django.db import transaction
-        from decimal import Decimal
-        from .models import AvaliacaoFase2, AvaliacaoFase1
-
-        tcc = self.get_object()
-
-        # Validar etapa
-        if tcc.etapa_atual != EtapaTCC.APRESENTACAO_FASE_2:
-            return Response(
-                {'detail': f'TCC deve estar em APRESENTACAO_FASE_2. Etapa atual: {tcc.get_etapa_atual_display()}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Verificar se todas as avaliações da Fase II foram enviadas
-        total_avaliacoes = AvaliacaoFase2.objects.filter(tcc=tcc).count()
-        avaliacoes_enviadas = AvaliacaoFase2.objects.filter(tcc=tcc, status='ENVIADO')
-
-        if avaliacoes_enviadas.count() != total_avaliacoes:
-            pendentes = total_avaliacoes - avaliacoes_enviadas.count()
-            return Response(
-                {'detail': f'Existem {pendentes} avaliação(ões) da Fase II pendente(s). Todas devem estar ENVIADAS para aprovação'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Verificar que há pelo menos uma avaliação
-        if total_avaliacoes == 0:
-            return Response(
-                {'detail': 'Não há avaliações da Fase II para aprovar'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Usar transação atômica
-        with transaction.atomic():
-            # Calcular média das notas da Fase II
-            notas_fase2 = []
-            for avaliacao in avaliacoes_enviadas:
-                # Verificar se todas as notas foram preenchidas
-                if (avaliacao.nota_coerencia_conteudo is None or
-                    avaliacao.nota_qualidade_apresentacao is None or
-                    avaliacao.nota_dominio_tema is None or
-                    avaliacao.nota_clareza_fluencia is None or
-                    avaliacao.nota_observancia_tempo is None):
-                    return Response(
-                        {'detail': f'Avaliador {avaliacao.avaliador.nome_completo} não preencheu todas as notas da Fase II'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                # Calcular nota total do avaliador na Fase II
-                nota_total_fase2 = avaliacao.calcular_nota_total()
-                notas_fase2.append(nota_total_fase2)
-
-            # Média das notas da Fase II
-            media_fase2 = sum(notas_fase2) / len(notas_fase2)
-
-            # Calcular NF1 (média das avaliações da Fase I concluídas/bloqueadas)
-            avaliacoes_fase1 = AvaliacaoFase1.objects.filter(tcc=tcc, status__in=['BLOQUEADO', 'CONCLUIDO'])
-            if avaliacoes_fase1.count() == 0:
-                return Response(
-                    {'detail': 'Não há avaliações da Fase I aprovadas. A aprovação da Fase I deve ser feita primeiro.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            notas_fase1 = []
-            for avaliacao in avaliacoes_fase1:
-                nota_total_fase1 = avaliacao.calcular_nota_total()
-                notas_fase1.append(nota_total_fase1)
-
-            nf1 = sum(notas_fase1) / len(notas_fase1)
-
-            # Calcular NF2: 40% de NF1 + 60% da média da Fase II
-            nf2 = (Decimal('0.4') * Decimal(str(nf1))) + (Decimal('0.6') * Decimal(str(media_fase2)))
-            nf2_arredondado = round(nf2, 2)
-
-            # Concluir todas as avaliações da Fase II (ENVIADO → CONCLUIDO)
-            avaliacoes_enviadas.update(status='CONCLUIDO')
-
-            # Definir próxima etapa
-            if nf2_arredondado >= 6:
-                tcc.etapa_atual = EtapaTCC.APROVADO
-                resultado = 'APROVADO'
-            else:
-                tcc.etapa_atual = EtapaTCC.REPROVADO_FASE_2
-                resultado = 'REPROVADO'
-
-            tcc.save()
-
-            # Criar evento
-            EventoTimeline.objects.create(
-                tcc=tcc,
-                usuario=request.user,
-                tipo_evento=TipoEvento.RESULTADO_FINAL,
-                descricao=f'Resultado Final: {resultado} (NF2 = {nf2_arredondado}). NF1 = {round(nf1, 2)} (40%), Média Apresentação = {round(media_fase2, 2)} (60%). Aprovado por {request.user.nome_completo}. Etapa: {tcc.get_etapa_atual_display()}',
-                detalhes_json={
-                    'nf2': str(nf2_arredondado),
-                    'nf1': str(round(nf1, 2)),
-                    'media_fase2': str(round(media_fase2, 2)),
-                    'resultado': resultado,
-                    'notas_fase2': [str(n) for n in notas_fase2]
-                },
-                visibilidade=Visibilidade.TODOS
-            )
-
-            # Criar notificações
-            # Notificar aluno
-            criar_notificacao(
-                usuario=tcc.aluno,
-                tipo=TipoNotificacao.RESULTADO_FINAL,
-                titulo=f'Resultado Final: {resultado}',
-                mensagem=f'Seu TCC foi {resultado.lower()} com nota final {nf2_arredondado}.',
-                action_url=f'/tccs/{tcc.id}',
-                tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.URGENTE
-            )
-
-            # Notificar orientador e coorientador com e-mail HTML
-            from notificacoes.services import criar_notificacao_com_email
-
-            rodape_html = """<p>---<br>
-Portal TCC<br>
-Esta é uma notificação automática. Para mais informações, acesse o sistema.</p>"""
-
-            rodape_texto = """---
-Portal TCC
-Esta é uma notificação automática. Para mais informações, acesse o sistema."""
-
-            if resultado == 'APROVADO':
-                def _gerar_email_fase2_aprovado(nome_destinatario):
-                    corpo_html = f"""
-<p>Olá, {nome_destinatario},</p>
-
-<p>A avaliação da <b>defesa</b> do TCC foi concluída e confirmada pela coordenação.</p>
-
-<p>O aluno <b>{tcc.aluno.nome_completo}</b> foi <b>aprovado</b> na defesa.</p>
-
-<p><b>Tema:</b> {tcc.titulo}</p>
-
-{rodape_html}
-"""
-                    corpo_texto = f"""Olá, {nome_destinatario},
-
-A avaliação da defesa do TCC foi concluída e confirmada pela coordenação.
-
-O aluno {tcc.aluno.nome_completo} foi APROVADO na defesa.
-
-Tema: {tcc.titulo}
-
-{rodape_texto}
-"""
-                    return corpo_html, corpo_texto
-
-                html_ori, texto_ori = _gerar_email_fase2_aprovado(tcc.orientador.nome_completo)
-                criar_notificacao_com_email(
-                    usuario=tcc.orientador,
-                    tipo=TipoNotificacao.RESULTADO_FINAL,
-                    titulo='Resultado da Defesa: Aprovado',
-                    mensagem=f'A avaliação da defesa do TCC "{tcc.titulo}" foi aprovada.',
-                    campo_preferencia='prof_resultado_fase_1',
-                    action_url=f'/tccs/{tcc.id}',
-                    tcc_id=tcc.id,
-                    prioridade=PrioridadeNotificacao.ALTA,
-                    corpo_html_customizado=html_ori,
-                    corpo_texto_customizado=texto_ori
-                )
-
-                if tcc.coorientador:
-                    html_coori, texto_coori = _gerar_email_fase2_aprovado(tcc.coorientador.nome_completo)
-                    criar_notificacao_com_email(
-                        usuario=tcc.coorientador,
-                        tipo=TipoNotificacao.RESULTADO_FINAL,
-                        titulo='Resultado da Defesa: Aprovado',
-                        mensagem=f'A avaliação da defesa do TCC "{tcc.titulo}" foi aprovada.',
-                        campo_preferencia=_pref(tcc.coorientador, 'prof_resultado_fase_1'),
-                        action_url=f'/tccs/{tcc.id}',
-                        tcc_id=tcc.id,
-                        prioridade=PrioridadeNotificacao.ALTA,
-                        corpo_html_customizado=html_coori,
-                        corpo_texto_customizado=texto_coori
-                    )
-
-            else:
-                # REPROVADO na defesa
-                def _gerar_email_fase2_reprovado(nome_destinatario):
-                    corpo_html = f"""
-<p>Olá, {nome_destinatario},</p>
-
-<p>A avaliação da <b>defesa</b> do TCC foi concluída e confirmada pela coordenação.</p>
-
-<p>O aluno <b>{tcc.aluno.nome_completo}</b> foi <b>reprovado</b> na defesa.</p>
-
-<p><b>Tema:</b> {tcc.titulo}</p>
-
-{rodape_html}
-"""
-                    corpo_texto = f"""Olá, {nome_destinatario},
-
-A avaliação da defesa do TCC foi concluída e confirmada pela coordenação.
-
-O aluno {tcc.aluno.nome_completo} foi REPROVADO na defesa.
-
-Tema: {tcc.titulo}
-
-{rodape_texto}
-"""
-                    return corpo_html, corpo_texto
-
-                html_ori, texto_ori = _gerar_email_fase2_reprovado(tcc.orientador.nome_completo)
-                criar_notificacao_com_email(
-                    usuario=tcc.orientador,
-                    tipo=TipoNotificacao.RESULTADO_FINAL,
-                    titulo='Resultado da Defesa: Reprovado',
-                    mensagem=f'O aluno {tcc.aluno.nome_completo} foi reprovado na defesa do TCC "{tcc.titulo}".',
-                    campo_preferencia='prof_resultado_fase_1',
-                    action_url=f'/tccs/{tcc.id}',
-                    tcc_id=tcc.id,
-                    prioridade=PrioridadeNotificacao.ALTA,
-                    corpo_html_customizado=html_ori,
-                    corpo_texto_customizado=texto_ori
-                )
-
-                if tcc.coorientador:
-                    html_coori, texto_coori = _gerar_email_fase2_reprovado(tcc.coorientador.nome_completo)
-                    criar_notificacao_com_email(
-                        usuario=tcc.coorientador,
-                        tipo=TipoNotificacao.RESULTADO_FINAL,
-                        titulo='Resultado da Defesa: Reprovado',
-                        mensagem=f'O aluno {tcc.aluno.nome_completo} foi reprovado na defesa do TCC "{tcc.titulo}".',
-                        campo_preferencia=_pref(tcc.coorientador, 'prof_resultado_fase_1'),
-                        action_url=f'/tccs/{tcc.id}',
-                        tcc_id=tcc.id,
-                        prioridade=PrioridadeNotificacao.ALTA,
-                        corpo_html_customizado=html_coori,
-                        corpo_texto_customizado=texto_coori
-                    )
-
-            # Notificar membros da banca
-            membros_banca = [av.avaliador for av in avaliacoes_enviadas]
-            criar_notificacao_em_massa(
-                usuarios=membros_banca,
-                tipo=TipoNotificacao.RESULTADO_FINAL,
-                titulo=f'Resultado Final: {resultado}',
-                mensagem=f'TCC "{tcc.titulo}" foi {resultado.lower()} com nota final {nf2_arredondado}.',
-                action_url=f'/tccs/{tcc.id}',
-                tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.NORMAL
-            )
-
-        return Response({
-            'message': 'Aprovação da Fase II concluída',
-            'nf1': round(nf1, 2),
-            'media_fase2': round(media_fase2, 2),
-            'nf2': nf2_arredondado,
-            'resultado': resultado,
-            'etapa_atual': tcc.etapa_atual,
-            'etapa_display': tcc.get_etapa_atual_display()
-        }, status=status.HTTP_200_OK)
+    # Endpoint aprovar-avaliacoes-fase2 removido — era código legado inacessível no fluxo atual.
+    # O fluxo real usa: signal verificar_transicao_fase2 → bloquear → analise-final/aprovar-concluir.
 
     @action(detail=True, methods=['post'], url_path='avaliacao-fase1/editar-coordenador', permission_classes=[IsCoordenador])
     def editar_avaliacao_fase1_coordenador(self, request, pk=None):

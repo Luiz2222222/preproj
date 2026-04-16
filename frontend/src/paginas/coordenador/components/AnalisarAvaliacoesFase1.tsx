@@ -431,7 +431,6 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
           const todasComNota = avaliacoes.length > 0 && avaliacoes.every(a => a.nota_final != null);
           const fmt = (v: number) => v.toFixed(2).replace('.', ',');
           const media = todasComNota ? avaliacoes.reduce((s, a) => s + Number(a.nota_final), 0) / avaliacoes.length : null;
-          const comPeso = media != null ? media * 0.6 : null;
           const aprovada = media != null && media >= 6;
           return (
             <div className="mt-6 pt-4 border-t border-[rgb(var(--cor-borda))]">
@@ -445,10 +444,6 @@ export function AnalisarAvaliacoesFase1({ tcc, onAvaliacoesAtualizadas, somenteL
                 <div className="p-3 bg-[rgb(var(--cor-destaque))]/5 rounded-lg border border-[rgb(var(--cor-destaque))]/20">
                   <p className="text-xs text-[rgb(var(--cor-destaque))]">Média</p>
                   <p className="text-2xl font-bold text-[rgb(var(--cor-destaque))]">{media != null ? fmt(media) : '-'}</p>
-                </div>
-                <div className="p-3 bg-[rgb(var(--cor-info))]/5 rounded-lg border border-[rgb(var(--cor-info))]/20">
-                  <p className="text-xs text-[rgb(var(--cor-info))]">Nota com peso (x0,6)</p>
-                  <p className="text-2xl font-bold text-[rgb(var(--cor-info))]">{comPeso != null ? fmt(comPeso) : '-'}</p>
                 </div>
                 <div className={`p-3 rounded-lg border ${!todasComNota ? 'bg-[rgb(var(--cor-fundo))] border-[rgb(var(--cor-borda))]' : aprovada ? 'bg-[rgb(var(--cor-sucesso))]/5 border-[rgb(var(--cor-sucesso))]/20' : 'bg-[rgb(var(--cor-erro))]/5 border-[rgb(var(--cor-erro))]/20'}`}>
                   <p className="text-xs text-[rgb(var(--cor-texto-secundario))]">Fase I</p>
