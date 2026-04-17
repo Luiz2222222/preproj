@@ -9,6 +9,7 @@ Lembretes:
 2. Envio do termo de solicitação de avaliação - 1 dia antes de submissao_monografia_fim
 """
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
@@ -83,6 +84,8 @@ class Command(BaseCommand):
 
 <p>A confirmação de continuidade de TCC é <b>amanhã ({data_fim})</b>.</p>
 
+<p>Acesse o sistema: <a href="{settings.FRONTEND_URL}">{settings.FRONTEND_URL}</a></p>
+
 <p>---<br>
 Portal TCC<br>
 Esta é uma notificação automática. Para mais informações, acesse o sistema.</p>
@@ -90,6 +93,8 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                 corpo_texto = f"""Olá, {prof.nome_completo},
 
 A confirmação de continuidade de TCC é amanhã ({data_fim}).
+
+Acesse o sistema: {settings.FRONTEND_URL}
 
 ---
 Portal TCC
@@ -146,7 +151,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
 
 <p>O envio é habilitado no sistema após a aprovação da monografia.</p>
 
-<p>Acesse o sistema: <a href="http://localhost:5500">http://localhost:5500</a></p>
+<p>Acesse o sistema: <a href="{settings.FRONTEND_URL}">{settings.FRONTEND_URL}</a></p>
 
 <p>---<br>
 Portal TCC<br>
@@ -158,7 +163,7 @@ O prazo para envio do Termo de Solicitação de Avaliação da Monografia encerr
 
 O envio é habilitado no sistema após a aprovação da monografia.
 
-Acesse o sistema: http://localhost:5500
+Acesse o sistema: {settings.FRONTEND_URL}
 
 ---
 Portal TCC

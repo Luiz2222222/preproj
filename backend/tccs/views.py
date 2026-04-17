@@ -1174,7 +1174,7 @@ class TCCViewSet(viewsets.ModelViewSet):
 
 <p>Você foi adicionado como avaliador em uma banca de avaliação de TCC.</p>
 
-<p>A monografia para avaliação já está disponível no sistema. Acesse o sistema: <a href="http://localhost:5500">http://localhost:5500</a></p>
+<p>A monografia para avaliação já está disponível no sistema. Acesse o sistema: <a href="{settings.FRONTEND_URL}">{settings.FRONTEND_URL}</a></p>
 
 <p>---<br>
 Portal TCC<br>
@@ -1184,7 +1184,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
 
 Você foi adicionado como avaliador em uma banca de avaliação de TCC.
 
-A monografia para avaliação já está disponível no sistema. Acesse o sistema: http://localhost:5500
+A monografia para avaliação já está disponível no sistema. Acesse o sistema: {settings.FRONTEND_URL}
 
 ---
 Portal TCC
@@ -1733,7 +1733,9 @@ Portal TCC
 Esta é uma notificação automática. Para mais informações, acesse o sistema."""
 
                 if resultado == 'APROVADO':
-                    def _gerar_email_fase1_aprovado(nome_destinatario):
+                    def _gerar_email_fase1_aprovado(nome_destinatario, incluir_agendamento=True):
+                        linha_agend_html = '<p>O agendamento da defesa já pode ser realizado no sistema.</p>\n\n' if incluir_agendamento else ''
+                        linha_agend_texto = '\nO agendamento da defesa já pode ser realizado no sistema.\n' if incluir_agendamento else ''
                         corpo_html = f"""
 <p>Olá, {nome_destinatario},</p>
 
@@ -1743,9 +1745,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
 
 <p><b>Tema:</b> {tcc.titulo}</p>
 
-<p>O agendamento da defesa já pode ser realizado no sistema.</p>
-
-<p>Acesse o sistema: <a href="http://localhost:5500">http://localhost:5500</a></p>
+{linha_agend_html}<p>Acesse o sistema: <a href="{settings.FRONTEND_URL}">{settings.FRONTEND_URL}</a></p>
 
 {rodape_html}
 """
@@ -1756,10 +1756,8 @@ A avaliação da banca da Fase I do TCC foi concluída e confirmada pela coorden
 O aluno {tcc.aluno.nome_completo} foi APROVADO na Fase I.
 
 Tema: {tcc.titulo}
-
-O agendamento da defesa já pode ser realizado no sistema.
-
-Acesse o sistema: http://localhost:5500
+{linha_agend_texto}
+Acesse o sistema: {settings.FRONTEND_URL}
 
 {rodape_texto}
 """
@@ -1780,7 +1778,7 @@ Acesse o sistema: http://localhost:5500
                     )
 
                     if tcc.coorientador:
-                        html_coori, texto_coori = _gerar_email_fase1_aprovado(tcc.coorientador.nome_completo)
+                        html_coori, texto_coori = _gerar_email_fase1_aprovado(tcc.coorientador.nome_completo, incluir_agendamento=False)
                         criar_notificacao_com_email(
                             usuario=tcc.coorientador,
                             tipo=TipoNotificacao.RESULTADO_FASE_1,
@@ -2624,31 +2622,107 @@ Tema: {tcc.titulo}
             )
 
             # Criar notificações
-            # Notificar aluno COM e-mail
             from notificacoes.services import criar_notificacao_com_email, criar_notificacao_em_massa_com_email
+
+            _rodape_html = """<p>---<br>
+Portal TCC<br>
+Esta é uma notificação automática. Para mais informações, acesse o sistema.</p>"""
+            _rodape_texto = """---
+Portal TCC
+Esta é uma notificação automática. Para mais informações, acesse o sistema."""
+
+            resultado_display = tcc.resultado_final.title() if tcc.resultado_final else '-'
+
+            # Notificar aluno COM e-mail
+            corpo_html_aluno_concluido = f"""
+<p>Olá, {tcc.aluno.nome_completo},</p>
+
+<p>Parabéns! Seu TCC foi <b>concluído</b> com sucesso.</p>
+
+<p><b>Tema:</b> {tcc.titulo}</p>
+
+<p><b>NF1:</b> {tcc.nf1}<br>
+<b>NF2:</b> {tcc.nf2}<br>
+<b>Média Final:</b> {tcc.media_final}<br>
+<b>Resultado:</b> {resultado_display}</p>
+
+<p>Acesse o sistema: <a href="{settings.FRONTEND_URL}/tccs/{tcc.id}">{settings.FRONTEND_URL}/tccs/{tcc.id}</a></p>
+
+{_rodape_html}
+"""
+            corpo_texto_aluno_concluido = f"""Olá, {tcc.aluno.nome_completo},
+
+Parabéns! Seu TCC foi concluído com sucesso.
+
+Tema: {tcc.titulo}
+
+NF1: {tcc.nf1}
+NF2: {tcc.nf2}
+Média Final: {tcc.media_final}
+Resultado: {resultado_display}
+
+Acesse o sistema: {settings.FRONTEND_URL}/tccs/{tcc.id}
+
+{_rodape_texto}
+"""
             criar_notificacao_com_email(
                 usuario=tcc.aluno,
                 tipo=TipoNotificacao.TCC_CONCLUIDO,
                 titulo='TCC Concluído!',
-                mensagem=f'Parabéns! Seu TCC "{tcc.titulo}" foi concluído com sucesso!',
+                mensagem=f'Parabéns! Seu TCC "{tcc.titulo}" foi concluído. Resultado: {resultado_display}.',
                 campo_preferencia='aluno_finalizacao_tcc',
                 action_url=f'/tccs/{tcc.id}',
                 tcc_id=tcc.id,
-                prioridade=PrioridadeNotificacao.URGENTE
+                prioridade=PrioridadeNotificacao.URGENTE,
+                corpo_html_customizado=corpo_html_aluno_concluido,
+                corpo_texto_customizado=corpo_texto_aluno_concluido
             )
 
             # Notificar orientador e coorientador COM e-mail
             for dest in [tcc.orientador, tcc.coorientador]:
                 if dest:
+                    corpo_html_dest_concluido = f"""
+<p>Olá, {dest.nome_completo},</p>
+
+<p>O TCC do aluno <b>{tcc.aluno.nome_completo}</b> foi concluído com sucesso.</p>
+
+<p><b>Tema:</b> {tcc.titulo}</p>
+
+<p><b>NF1:</b> {tcc.nf1}<br>
+<b>NF2:</b> {tcc.nf2}<br>
+<b>Média Final:</b> {tcc.media_final}<br>
+<b>Resultado:</b> {resultado_display}</p>
+
+<p>Acesse o sistema: <a href="{settings.FRONTEND_URL}/tccs/{tcc.id}">{settings.FRONTEND_URL}/tccs/{tcc.id}</a></p>
+
+{_rodape_html}
+"""
+                    corpo_texto_dest_concluido = f"""Olá, {dest.nome_completo},
+
+O TCC do aluno {tcc.aluno.nome_completo} foi concluído com sucesso.
+
+Tema: {tcc.titulo}
+
+NF1: {tcc.nf1}
+NF2: {tcc.nf2}
+Média Final: {tcc.media_final}
+Resultado: {resultado_display}
+
+Acesse o sistema: {settings.FRONTEND_URL}/tccs/{tcc.id}
+
+{_rodape_texto}
+"""
                     criar_notificacao_com_email(
                         usuario=dest,
                         tipo=TipoNotificacao.TCC_CONCLUIDO,
                         titulo='TCC Concluído',
-                        mensagem=f'O TCC "{tcc.titulo}" foi aprovado e concluído.',
+                        mensagem=f'O TCC "{tcc.titulo}" (aluno: {tcc.aluno.nome_completo}) foi concluído. NF2: {tcc.nf2}, MF: {tcc.media_final}, Resultado: {resultado_display}.',
                         campo_preferencia=_pref(dest, 'prof_finalizacao_tcc'),
                         action_url=f'/tccs/{tcc.id}',
                         tcc_id=tcc.id,
-                        prioridade=PrioridadeNotificacao.ALTA
+                        prioridade=PrioridadeNotificacao.ALTA,
+                        corpo_html_customizado=corpo_html_dest_concluido,
+                        corpo_texto_customizado=corpo_texto_dest_concluido
                     )
 
         # Gerar Relatório de Avaliação automaticamente
@@ -3936,7 +4010,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
 <b>Orientador:</b> {solicitacao.professor.nome_completo}{linha_coori_html}</p>
 
 <p>A função de envio do TCC para análise do orientador já está habilitada em sua conta.
-Acesse o sistema pelo link: <a href="http://localhost:5500">http://localhost:5500</a></p>
+Acesse o sistema pelo link: <a href="{settings.FRONTEND_URL}">{settings.FRONTEND_URL}</a></p>
 
 {bloco_prazos_html}
 
@@ -3951,7 +4025,7 @@ Tema: {tcc.titulo}
 Orientador: {solicitacao.professor.nome_completo}{linha_coori_texto}
 
 A função de envio do TCC para análise do orientador já está habilitada em sua conta.
-Acesse o sistema pelo link: http://localhost:5500
+Acesse o sistema pelo link: {settings.FRONTEND_URL}
 
 {bloco_prazos_texto}
 
@@ -4116,7 +4190,7 @@ Orientador: {solicitacao.professor.nome_completo}{linha_coori_texto}
 <p><b>Tema:</b> {tcc_titulo}<br>
 <b>Orientador:</b> {professor_nome}</p>
 
-<p>Acesse o sistema em <a href="http://localhost:5500">http://localhost:5500</a> para realizar uma nova solicitação ou entre em contato com a coordenação.</p>
+<p>Acesse o sistema em <a href="{settings.FRONTEND_URL}">{settings.FRONTEND_URL}</a> para realizar uma nova solicitação ou entre em contato com a coordenação.</p>
 
 <p>---<br>
 Portal TCC<br>
@@ -4133,7 +4207,7 @@ Motivo:
 Tema: {tcc_titulo}
 Orientador: {professor_nome}
 
-Acesse o sistema em http://localhost:5500 para realizar uma nova solicitação ou entre em contato com a coordenação.
+Acesse o sistema em {settings.FRONTEND_URL} para realizar uma nova solicitação ou entre em contato com a coordenação.
 
 ---
 Portal TCC
@@ -4336,7 +4410,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
 <b>Orientador:</b> {tcc.orientador.nome_completo}{linha_coori_html}<br>
 <b>Versão:</b> {documento.versao}</p>
 
-<p>Acesse o sistema para revisar: <a href="http://localhost:5500/tccs/{tcc.id}">http://localhost:5500/tccs/{tcc.id}</a></p>
+<p>Acesse o sistema para revisar: <a href="{settings.FRONTEND_URL}/tccs/{tcc.id}">{settings.FRONTEND_URL}/tccs/{tcc.id}</a></p>
 
 <p><b>📅 Prazo para submissão da monografia aprovada:</b> {data_submissao}</p>
 
@@ -4350,7 +4424,7 @@ Tema: {tcc.titulo}
 Orientador: {tcc.orientador.nome_completo}{linha_coori_texto}
 Versão: {documento.versao}
 
-Acesse o sistema para revisar: http://localhost:5500/tccs/{tcc.id}
+Acesse o sistema para revisar: {settings.FRONTEND_URL}/tccs/{tcc.id}
 
 Prazo para submissão da monografia aprovada: {data_submissao}
 
