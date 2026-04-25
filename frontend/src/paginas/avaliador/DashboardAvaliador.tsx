@@ -28,9 +28,19 @@ export function DashboardAvaliador() {
   const { tccs: tccsParaAvaliar } = useTCCsParaAvaliar()
 
   // Filtrar bancas que ainda têm avaliação pendente
+  const ETAPAS_FASE1_ATIVAS = ['AVALIACAO_FASE_1', 'VALIDACAO_FASE_1', 'AGUARDANDO_AJUSTES_FINAIS'];
+  const ETAPAS_FASE2_ATIVAS = ['APRESENTACAO_FASE_2', 'ANALISE_FINAL_COORDENADOR', 'AGUARDANDO_AJUSTES_FINAIS'];
   const tccsComAvaliacaoPendente = tccsParaAvaliar.filter(tcc => {
-    const fase1Pendente = tcc.minha_avaliacao_fase1_status !== 'ENVIADO' && tcc.minha_avaliacao_fase1_status !== 'BLOQUEADO' && tcc.minha_avaliacao_fase1_status !== 'CONCLUIDO' && tcc.nf1 == null;
-    const fase2Pendente = tcc.minha_avaliacao_fase2_status !== 'ENVIADO' && tcc.minha_avaliacao_fase2_status !== 'BLOQUEADO' && tcc.minha_avaliacao_fase2_status !== 'CONCLUIDO' && tcc.etapa_atual !== 'CONCLUIDO';
+    const fase1Pendente =
+      tcc.minha_avaliacao_fase1_status !== 'ENVIADO' &&
+      tcc.minha_avaliacao_fase1_status !== 'BLOQUEADO' &&
+      tcc.minha_avaliacao_fase1_status !== 'CONCLUIDO' &&
+      ETAPAS_FASE1_ATIVAS.includes(tcc.etapa_atual);
+    const fase2Pendente =
+      tcc.minha_avaliacao_fase2_status !== 'ENVIADO' &&
+      tcc.minha_avaliacao_fase2_status !== 'BLOQUEADO' &&
+      tcc.minha_avaliacao_fase2_status !== 'CONCLUIDO' &&
+      ETAPAS_FASE2_ATIVAS.includes(tcc.etapa_atual);
     return fase1Pendente || fase2Pendente;
   });
 

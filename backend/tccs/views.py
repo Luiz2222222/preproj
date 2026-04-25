@@ -43,6 +43,7 @@ from .permissions import (
 )
 from .constants import StatusSolicitacao, EtapaTCC, TipoEvento, Visibilidade, StatusDocumento, TipoDocumento
 from .services import calcular_permissoes_tcc
+from .signals import _verificar_etapa_fase1
 from definicoes.models import CalendarioSemestre
 
 
@@ -1414,6 +1415,9 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                 visibilidade=Visibilidade.ORIENTADOR_COORDENADOR
             )
 
+            # Como .update() não dispara signal, força verificação de transição
+            _verificar_etapa_fase1(tcc)
+
         return Response({
             'message': 'Avaliações bloqueadas com sucesso',
             'avaliacoes_bloqueadas': count
@@ -1458,6 +1462,9 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                 detalhes_json={'avaliacoes_desbloqueadas': count},
                 visibilidade=Visibilidade.ORIENTADOR_COORDENADOR
             )
+
+            # Como .update() não dispara signal, força verificação de transição
+            _verificar_etapa_fase1(tcc)
 
         return Response({
             'message': 'Avaliações desbloqueadas com sucesso',
@@ -1660,6 +1667,9 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                         prioridade=PrioridadeNotificacao.NORMAL
                     )
 
+                # Como .update() não dispara signal, força verificação de transição
+                _verificar_etapa_fase1(tcc)
+
                 return Response({
                     'message': 'Aprovação parcial concluída',
                     'tipo': 'parcial',
@@ -1712,6 +1722,9 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                 else:
                     tcc.etapa_atual = EtapaTCC.REPROVADO_FASE_1
                     resultado = 'REPROVADO'
+
+                # Limpar flag de bloqueio (Fase I encerrada)
+                tcc.avaliacao_fase1_bloqueada = False
 
                 tcc.save()
 
@@ -2366,6 +2379,11 @@ Tema: {tcc.titulo}
             # Desbloquear apenas as avaliações selecionadas
             count = avaliacoes.update(status='PENDENTE')
 
+            # Limpar flag global para permitir reenvio do avaliador
+            if tcc.avaliacao_fase2_bloqueada:
+                tcc.avaliacao_fase2_bloqueada = False
+                tcc.save(update_fields=['avaliacao_fase2_bloqueada'])
+
             # Criar evento na timeline
             avaliadores_nomes = ', '.join([av.avaliador.nome_completo for av in avaliacoes])
             descricao = f'Ajustes solicitados por {request.user.nome_completo} para {count} avaliador(es): {avaliadores_nomes}'
@@ -2619,8 +2637,10 @@ Tema: {tcc.titulo}
 
         # Usar transação atômica
         with transaction.atomic():
-            # Mudar TCC para CONCLUIDO
+            # Mudar TCC para CONCLUIDO e limpar flags de bloqueio
             tcc.etapa_atual = EtapaTCC.CONCLUIDO
+            tcc.avaliacao_fase1_bloqueada = False
+            tcc.avaliacao_fase2_bloqueada = False
             tcc.save()
 
             # Criar evento na timeline

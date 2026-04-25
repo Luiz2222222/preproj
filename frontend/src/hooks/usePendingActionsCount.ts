@@ -68,33 +68,33 @@ export function usePendingActionsProfessor() {
 
 /**
  * Hook para coordenador - calcula todas as ações pendentes
- * (solicitações + formação de bancas + validações)
+ * (solicitações + formação de bancas + validações Fase I + análise final Fase II)
  */
 export function usePendingActionsCoordenador() {
   const { solicitacoes } = useSolicitacoesPendentesCoordenador()
   const { tccs } = useTCCsCoordenador()
 
   const counts = useMemo(() => {
-    // Lógica extraída de DashboardCoordenador.tsx (linhas 189-244)
-
-    // Solicitações pendentes
     const solicitacoesPendentes = solicitacoes.length
 
-    // TCCs que precisam de formação de banca
     const tccsPendentesBanca = tccs.filter(tcc => tcc.etapa_atual === EtapaTCC.FORMACAO_BANCA_FASE_1).length
 
-    // TCCs que precisam de validação das avaliações
     const tccsPendentesValidacao = tccs.filter(tcc => tcc.etapa_atual === EtapaTCC.VALIDACAO_FASE_1).length
 
-    // Total de ações pendentes
-    const total = solicitacoesPendentes + tccsPendentesBanca + tccsPendentesValidacao
+    const tccsPendentesFinal = tccs.filter(tcc =>
+      tcc.etapa_atual === EtapaTCC.ANALISE_FINAL_COORDENADOR ||
+      tcc.etapa_atual === EtapaTCC.AGUARDANDO_AJUSTES_FINAIS
+    ).length
+
+    const total = solicitacoesPendentes + tccsPendentesBanca + tccsPendentesValidacao + tccsPendentesFinal
 
     return {
       total,
       solicitacoes: solicitacoesPendentes,
       bancas: tccsPendentesBanca,
       validacoes: tccsPendentesValidacao,
-      tccs: tccsPendentesBanca + tccsPendentesValidacao // TCCs precisando de ação
+      analiseFinal: tccsPendentesFinal,
+      tccs: tccsPendentesBanca + tccsPendentesValidacao + tccsPendentesFinal
     }
   }, [solicitacoes, tccs])
 

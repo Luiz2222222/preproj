@@ -200,11 +200,16 @@ export function DashboardCoordenador() {
     return tccs.filter(tcc => tcc.etapa_atual === EtapaTCC.ANALISE_FINAL_COORDENADOR)
   }, [tccs])
 
+  // TCCs aguardando reenvio dos avaliadores após coordenador solicitar ajustes finais
+  const tccsAguardandoAjustes = useMemo(() => {
+    return tccs.filter(tcc => tcc.etapa_atual === EtapaTCC.AGUARDANDO_AJUSTES_FINAIS)
+  }, [tccs])
+
   // Consolidar todas as ações pendentes (solicitações + bancas pendentes + validações pendentes)
   const acoesPendentes = useMemo(() => {
     const acoes: Array<{
       id: string
-      tipo: 'solicitacao' | 'banca' | 'validacao' | 'validacao_fase2'
+      tipo: 'solicitacao' | 'banca' | 'validacao' | 'validacao_fase2' | 'aguardando_ajustes'
       titulo: string
       aluno: string
       tccId?: number
@@ -255,8 +260,19 @@ export function DashboardCoordenador() {
       })
     })
 
+    // Adicionar TCCs aguardando reenvio dos avaliadores (ajustes finais solicitados)
+    tccsAguardandoAjustes.forEach(tcc => {
+      acoes.push({
+        id: `aguardando-${tcc.id}`,
+        tipo: 'aguardando_ajustes',
+        titulo: 'Aguardando reenvio dos avaliadores (ajustes finais)',
+        aluno: tcc.aluno_dados.nome_completo,
+        tccId: tcc.id
+      })
+    })
+
     return acoes
-  }, [solicitacoes, tccsPendentesBanca, tccsPendentesValidacao, tccsPendentesValidacaoFase2])
+  }, [solicitacoes, tccsPendentesBanca, tccsPendentesValidacao, tccsPendentesValidacaoFase2, tccsAguardandoAjustes])
 
   // Datas importantes do calendário acadêmico
   const datasImportantes = useMemo(() => {
