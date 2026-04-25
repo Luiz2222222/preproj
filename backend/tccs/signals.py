@@ -80,13 +80,13 @@ def verificar_transicao_fase2(sender, instance, created, **kwargs):
                 tcc.etapa_atual = EtapaTCC.ANALISE_FINAL_COORDENADOR
                 tcc.save()
 
-                # Registrar evento na timeline
+                # Registrar evento na timeline (somente coordenador — contém notas)
                 EventoTimeline.objects.create(
                     tcc=tcc,
                     usuario=None,  # Transição automática
                     tipo_evento=TipoEvento.FASE2_CONCLUIDA,
                     descricao=f'Todas as avaliações da Fase II foram enviadas. NF2 = {nf2:.2f}, MF = {media_final:.2f}, Resultado: {resultado}',
-                    visibilidade=Visibilidade.TODOS
+                    visibilidade=Visibilidade.COORDENADOR_APENAS
                 )
 
                 # Criar notificações COM e-mail
@@ -186,13 +186,13 @@ def verificar_transicao_fase2(sender, instance, created, **kwargs):
                             tcc.avaliacao_fase2_bloqueada = True
                             tcc.save()
 
-                            # Registrar evento na timeline
+                            # Registrar evento na timeline (somente coordenador — contém notas)
                             EventoTimeline.objects.create(
                                 tcc=tcc,
                                 usuario=None,  # Transição automática
                                 tipo_evento=TipoEvento.FASE2_CONCLUIDA,
                                 descricao=f'Todos os avaliadores solicitados reenviaram suas avaliações. NF2 recalculada = {nf2:.2f}, MF = {media_final:.2f}, Resultado: {resultado}. TCC retornou para Análise Final do Coordenador.',
-                                visibilidade=Visibilidade.TODOS
+                                visibilidade=Visibilidade.COORDENADOR_APENAS
                             )
 
 

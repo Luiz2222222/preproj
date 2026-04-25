@@ -1209,7 +1209,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
             'etapa_display': tcc.get_etapa_atual_display()
         }, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['get'], url_path='avaliacoes-fase1', permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['get'], url_path='avaliacoes-fase1', permission_classes=[IsAuthenticated, IsTCCOwnerOrRelated])
     def avaliacoes_fase1(self, request, pk=None):
         """
         GET /api/tccs/{id}/avaliacoes-fase1/
@@ -1217,9 +1217,17 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
         - Coordenador: vê todas
         - Orientador/Coorientador: vê todas
         - Avaliador: vê apenas a sua própria
+        - Aluno: bloqueado (403)
         """
         tcc = self.get_object()
         usuario = request.user
+
+        # Aluno não pode ver avaliações da banca
+        if usuario.tipo_usuario == 'ALUNO':
+            return Response(
+                {'detail': 'Você não tem permissão para visualizar as avaliações da banca'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         # Filtrar conforme papel
         avaliacoes = AvaliacaoFase1.objects.filter(tcc=tcc)
@@ -1707,7 +1715,7 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
 
                 tcc.save()
 
-                # Criar evento
+                # Evento detalhado para coordenador (com NF1)
                 EventoTimeline.objects.create(
                     tcc=tcc,
                     usuario=request.user,
@@ -1718,6 +1726,15 @@ Esta é uma notificação automática. Para mais informações, acesse o sistema
                         'resultado': resultado,
                         'notas_finais': [str(n) for n in notas_finais]
                     },
+                    visibilidade=Visibilidade.COORDENADOR_APENAS
+                )
+
+                # Evento público (sem nota) para aluno/orientador/banca
+                EventoTimeline.objects.create(
+                    tcc=tcc,
+                    usuario=request.user,
+                    tipo_evento=TipoEvento.RESULTADO_FASE_1,
+                    descricao=f'Fase I: {resultado}. Confirmado pela coordenação. Etapa: {tcc.get_etapa_atual_display()}',
                     visibilidade=Visibilidade.TODOS
                 )
 

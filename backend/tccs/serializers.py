@@ -111,6 +111,21 @@ class TCCSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['criado_em', 'atualizado_em']
 
+    def to_representation(self, instance):
+        """Ocultar nf1/nf2/media_final/resultado_final de não-coordenadores enquanto o TCC não estiver concluído."""
+        representation = super().to_representation(instance)
+
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            usuario = request.user
+            if usuario.tipo_usuario != 'COORDENADOR' and instance.etapa_atual != EtapaTCC.CONCLUIDO:
+                representation['nf1'] = None
+                representation['nf2'] = None
+                representation['media_final'] = None
+                representation['resultado_final'] = None
+
+        return representation
+
     def get_solicitacao_pendente_id(self, obj):
         """Retorna o ID da solicitação pendente, se houver."""
         solicitacao = obj.solicitacoes.filter(status=StatusSolicitacao.PENDENTE).first()
